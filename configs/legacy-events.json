@@ -9,7 +9,7 @@
     "maxPages": 80,
     "maxConcurrency": 5,
     "requestTimeoutSecs": 90,
-    "excludeUrlPatterns": ["/wp-admin", "\?replytocom=", "/feed/?$"],
+    "excludeUrlPatterns": ["/wp-admin", "\\?replytocom=", "/feed/?$"],
     "sitemapSeeding": {
       "enabled": true,
       "urls": [],

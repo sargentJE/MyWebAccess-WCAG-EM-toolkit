@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { loadConfig } from './lib/config.mjs';
-import { ensureDir, readJsonMaybe, writeJson, writeText } from './lib/fs-utils.mjs';
-import { selectorComponentHint } from './lib/urls.mjs';
-import { classifyRule } from './lib/axe-utils.mjs';
+import { loadConfig } from '../lib/config.mjs';
+import { ensureDir, readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
+import { selectorComponentHint } from '../lib/urls.mjs';
+import { classifyRule } from '../lib/axe-utils.mjs';
 
 const { config } = await loadConfig();
 const inventoryDir = await ensureDir('output', 'inventory');

@@ -1,9 +1,9 @@
 import path from 'node:path';
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
-import { loadConfig } from './lib/config.mjs';
-import { ensureDir, writeJson } from './lib/fs-utils.mjs';
-import { fileSafeFromUrl } from './lib/urls.mjs';
+import { loadConfig } from '../lib/config.mjs';
+import { ensureDir, writeJson } from '../lib/fs-utils.mjs';
+import { fileSafeFromUrl } from '../lib/urls.mjs';
 
 const { config } = await loadConfig();
 const resultsDir = await ensureDir('output', 'results');

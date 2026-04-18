@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { PlaywrightCrawler } from 'crawlee';
-import { loadConfig } from './lib/config.mjs';
-import { ensureDir, writeJson, writeText } from './lib/fs-utils.mjs';
+import { loadConfig } from '../lib/config.mjs';
+import { ensureDir, writeJson, writeText } from '../lib/fs-utils.mjs';
 import {
   normalizeUrl,
   guessPageType,
@@ -9,8 +9,8 @@ import {
   guessProcessTypes,
   urlAllowedByScope,
   urlExcludedByPatterns,
-} from './lib/urls.mjs';
-import { getSitemapSeeds } from './lib/sitemap.mjs';
+} from '../lib/urls.mjs';
+import { getSitemapSeeds } from '../lib/sitemap.mjs';
 
 const { config } = await loadConfig();
 const inventoryDir = await ensureDir('output', 'inventory');

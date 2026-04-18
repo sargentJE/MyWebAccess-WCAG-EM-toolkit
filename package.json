@@ -8,12 +8,12 @@
     "node": ">=22.11.0"
   },
   "scripts": {
-    "discover": "node scripts/discover.mjs",
-    "sample": "node scripts/build-sample.mjs",
-    "scan:sample": "node scripts/scan-sample.mjs",
-    "scan:processes": "node scripts/scan-processes.mjs",
-    "summarize": "node scripts/summarize-results.mjs",
-    "audit": "node scripts/discover.mjs && node scripts/build-sample.mjs && node scripts/scan-sample.mjs && node scripts/scan-processes.mjs && node scripts/summarize-results.mjs",
+    "discover": "node src/commands/discover.mjs",
+    "sample": "node src/commands/sample.mjs",
+    "scan:sample": "node src/commands/scan.mjs",
+    "scan:processes": "node src/commands/scan-processes.mjs",
+    "summarize": "node src/commands/summarize.mjs",
+    "audit": "node src/commands/discover.mjs && node src/commands/sample.mjs && node src/commands/scan.mjs && node src/commands/scan-processes.mjs && node src/commands/summarize.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
