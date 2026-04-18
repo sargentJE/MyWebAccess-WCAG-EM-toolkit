@@ -14,7 +14,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2023",
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2024", "DOM"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

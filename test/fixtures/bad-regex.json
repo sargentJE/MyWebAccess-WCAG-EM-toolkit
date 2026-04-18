@@ -1,0 +1,11 @@
+{
+  "name": "bad-regex-test",
+  "rootUrl": "https://example.com/",
+  "scope": { "mode": "same-hostname" },
+  "crawl": {
+    "maxPages": 10,
+    "excludeUrlPatterns": ["(unclosed-group", "/good"]
+  },
+  "sample": { "structuredManual": ["https://example.com/"], "randomSeed": 1 },
+  "scan": {}
+}

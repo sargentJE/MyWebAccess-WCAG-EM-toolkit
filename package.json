@@ -7,6 +7,18 @@
   "engines": {
     "node": ">=22.11.0"
   },
+  "bin": {
+    "wcag-em": "./bin/wcag-em.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/types/index.d.ts",
+      "default": "./src/index.mjs"
+    },
+    "./commands/*": "./src/commands/*.mjs",
+    "./reporters/*": "./src/reporters/*.mjs",
+    "./lib/*": "./src/lib/*.mjs"
+  },
   "scripts": {
     "discover": "node src/commands/discover.mjs",
     "sample": "node src/commands/sample.mjs",
@@ -23,15 +35,25 @@
     "test:watch": "node --test --watch 'test/unit/**/*.test.mjs'",
     "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec 'test/unit/**/*.test.mjs' 'test/e2e/**/*.test.mjs'"
   },
-  "devDependencies": {
+  "dependencies": {
     "@axe-core/playwright": "^4.11.2",
-    "@eslint/js": "^9.15.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1",
+    "better-ajv-errors": "^2.0.2",
+    "commander": "^12.1.0",
     "crawlee": "^3.16.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/node": "^22.0.0",
     "eslint": "^9.15.0",
     "eslint-plugin-jsdoc": "^50.5.0",
     "eslint-plugin-n": "^17.14.0",
     "globals": "^15.13.0",
-    "playwright": "^1.59.1",
+    "json-schema-to-typescript": "^15.0.3",
     "prettier": "^3.4.1",
     "typescript": "^5.7.0"
   }

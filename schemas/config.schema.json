@@ -1,44 +1,374 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "WCAG-EM Toolkit V2 Recommended Config",
+  "$id": "https://github.com/jamiesargent/wcag-em-a11y-toolkit/schema/config.schema.json",
+  "title": "WCAG-EM Accessibility Toolkit Config",
+  "description": "Per-site configuration for the WCAG-EM-aligned automated accessibility testing toolkit. Validated by Ajv at config-load; see docs/adr/0002-config-is-ajv-validated.md.",
   "type": "object",
   "required": ["name", "rootUrl", "scope", "crawl", "sample", "scan"],
+  "additionalProperties": false,
   "properties": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Short identifier for this audit run; appears in reports."
     },
     "rootUrl": {
-      "type": "string"
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://",
+      "description": "Absolute URL of the site root; discovery begins here."
     },
     "scope": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
       "properties": {
         "mode": {
-          "enum": ["same-hostname", "same-origin", "allowed-hosts"]
+          "enum": ["same-hostname", "same-origin", "allowed-hosts"],
+          "description": "Crawl scope discipline. `same-hostname` (default) is safest for public sites."
         },
         "allowedHosts": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Extra hostnames when mode is `allowed-hosts`."
+        },
+        "includeSubdomains": {
+          "type": "boolean",
+          "description": "Legacy field retained for backcompat; prefer `allowed-hosts` mode."
         }
-      },
-      "required": ["mode"]
+      }
     },
     "crawl": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxPages": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "requestTimeoutSecs": { "type": "integer", "minimum": 5, "maximum": 600 },
+        "requestDelayMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000,
+          "description": "Politeness throttle between requests."
+        },
+        "excludeUrlPatterns": {
+          "type": "array",
+          "items": { "type": "string", "validRegex": true },
+          "description": "Regex source strings; validated at load by the `validRegex` custom keyword."
+        },
+        "sitemapSeeding": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "urls": {
+              "type": "array",
+              "items": { "type": "string", "format": "uri" },
+              "uniqueItems": true
+            },
+            "commonPaths": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^/" },
+              "uniqueItems": true
+            },
+            "maxUrls": { "type": "integer", "minimum": 1, "maximum": 10000 }
+          }
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "captureH1": { "type": "boolean" },
+        "captureCanonical": { "type": "boolean" },
+        "captureForms": { "type": "boolean" },
+        "captureLandmarks": { "type": "boolean" },
+        "captureSearchInputs": { "type": "boolean" }
+      }
     },
     "sample": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "structuredManual": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "uniqueItems": true,
+          "description": "Evaluator-chosen sample URLs (WCAG-EM Step 3a)."
+        },
+        "autoSuggest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "perCluster": { "type": "integer", "minimum": 1, "maximum": 20 },
+            "preferTypes": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "homepage",
+                  "form-or-contact",
+                  "policy",
+                  "listing",
+                  "detail",
+                  "content",
+                  "search-or-results",
+                  "process-entry"
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "randomPercentOfStructured": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minRandomPages": { "type": "integer", "minimum": 0 },
+        "randomSeed": {
+          "type": "integer",
+          "description": "Recorded in metadata; same seed reproduces the same sample (WCAG-EM Step 3b)."
+        },
+        "smallSiteSupplementaryScanThreshold": { "type": "integer", "minimum": 0 }
+      }
     },
     "scan": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "viewport": {
+          "type": "object",
+          "description": "Legacy single-viewport; prefer `viewports` (Layer 3a).",
+          "properties": {
+            "width": { "type": "integer", "minimum": 280 },
+            "height": { "type": "integer", "minimum": 300 }
+          }
+        },
+        "viewports": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "width", "height"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "width": { "type": "integer", "minimum": 280 },
+              "height": { "type": "integer", "minimum": 300 }
+            }
+          }
+        },
+        "waitUntil": { "enum": ["load", "domcontentloaded", "networkidle", "commit"] },
+        "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 600000 },
+        "retries": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "fullPageScreenshots": { "type": "boolean" },
+        "beforeScan": {
+          "type": "object",
+          "description": "Pre-scan hooks for cookie-consent dismissal, modal close, hydration waits.",
+          "additionalProperties": false,
+          "properties": {
+            "actions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/action" }
+            }
+          }
+        },
+        "axe": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "include": { "type": "array", "items": { "type": "string" } },
+            "exclude": { "type": "array", "items": { "type": "string" } },
+            "withRules": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "withTags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "runOnly": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["type", "values"],
+                  "properties": {
+                    "type": { "enum": ["tag", "rule"] },
+                    "values": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": {
+              "type": "array",
+              "description": "Per-URL axe-config overrides matched by `urlPattern`.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["urlPattern"],
+                "properties": {
+                  "urlPattern": { "type": "string", "validRegex": true },
+                  "include": { "type": "array", "items": { "type": "string" } },
+                  "exclude": { "type": "array", "items": { "type": "string" } },
+                  "withRules": { "type": "array", "items": { "type": "string" } },
+                  "withTags": { "type": "array", "items": { "type": "string" } },
+                  "runOnly": {
+                    "oneOf": [
+                      { "type": "null" },
+                      {
+                        "type": "object",
+                        "required": ["type", "values"],
+                        "properties": {
+                          "type": { "enum": ["tag", "rule"] },
+                          "values": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/action" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "processes": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "startUrl"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "startUrl": { "type": "string", "format": "uri" },
+          "pattern": {
+            "oneOf": [{ "enum": ["blank-submit", "partial-submit"] }, { "type": "null" }]
+          },
+          "forceInclude": { "type": "boolean" },
+          "relatedUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
+          "steps": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+          "selectors": { "type": "object", "additionalProperties": { "type": "string" } },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["selector"],
+              "properties": {
+                "selector": { "type": "string" },
+                "value": { "type": "string" }
+              }
+            }
+          },
+          "stepTimeoutMs": { "type": "integer", "minimum": 100, "maximum": 600000 }
+        }
+      }
     },
     "reporting": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reporters": {
+          "type": "array",
+          "items": { "enum": ["json", "markdown", "html", "earl-jsonld", "junit"] },
+          "uniqueItems": true
+        },
+        "includePasses": { "type": "boolean" },
+        "groupBestPracticeSeparately": { "type": "boolean" },
+        "markdownReport": {
+          "type": "boolean",
+          "description": "Legacy alias for `reporters: [markdown]`; ignored when `reporters` is set."
+        },
+        "screenshotFormat": { "enum": ["png", "jpeg"] },
+        "screenshotQuality": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "failOnFindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "impacts": {
+              "type": "array",
+              "items": { "enum": ["critical", "serious", "moderate", "minor"] },
+              "uniqueItems": true
+            },
+            "classifications": {
+              "type": "array",
+              "items": {
+                "enum": ["primary-automated-finding", "best-practice-or-manual-review"]
+              },
+              "uniqueItems": true
+            },
+            "threshold": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "storageState": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "object" }]
+        },
+        "httpCredentials": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["username", "password"],
+          "properties": {
+            "username": { "type": "string" },
+            "password": { "type": "string" }
+          }
+        },
+        "setupScript": { "type": "string", "minLength": 1 },
+        "ttlMinutes": { "type": "integer", "minimum": 1 },
+        "extraHttpHeaders": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "wcagEm": {
+      "type": "object",
+      "description": "WCAG-EM Step-5 report fields.",
+      "additionalProperties": false,
+      "properties": {
+        "evaluator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "contact": { "type": "string" }
+          }
+        },
+        "wcagVersion": { "enum": ["2.0", "2.1", "2.2"] },
+        "conformanceTarget": { "enum": ["A", "AA", "AAA"] },
+        "atBaseline": { "type": "array", "items": { "type": "string" } },
+        "technologiesReliedUpon": { "type": "array", "items": { "type": "string" } },
+        "samplingMethodNotes": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "enum": ["goto", "click", "fill", "press", "waitFor", "screenshot", "axe", "evaluate"]
+        },
+        "url": { "type": "string" },
+        "selector": { "type": "string" },
+        "value": { "type": "string" },
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "state": { "type": "string" },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 600000 },
+        "urlPattern": { "type": "string", "validRegex": true }
+      }
     }
   }
 }
