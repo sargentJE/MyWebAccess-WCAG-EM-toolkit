@@ -46,3 +46,26 @@ export function classifyRule(rule, reportingConfig = {}) {
         : 'primary-automated-finding',
   };
 }
+
+// ANCHOR: isValidRunOnly — shape guard for axe `runOnly` option
+/**
+ * Is an `axe.runOnly` value structurally valid?
+ *
+ * Layer 1's Ajv schema rejects malformed `runOnly` at config-load, but stale
+ * v0.3 configs constructed programmatically may still reach `scan.mjs` with
+ * the wrong shape. This defence-in-depth predicate keeps the builder call
+ * off a clearly-bad value rather than letting axe throw a cryptic error.
+ *
+ * Valid shape: `{ type: string, values: string[] }`.
+ *
+ * @param {unknown} runOnly
+ * @returns {boolean}
+ */
+export function isValidRunOnly(runOnly) {
+  return (
+    typeof runOnly === 'object' &&
+    runOnly !== null &&
+    typeof /** @type {any} */ (runOnly).type === 'string' &&
+    Array.isArray(/** @type {any} */ (runOnly).values)
+  );
+}

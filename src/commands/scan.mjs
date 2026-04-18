@@ -26,6 +26,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
+import { isValidRunOnly } from '../lib/axe-utils.mjs';
 import { buildContext } from '../lib/context.mjs';
 
 // SECTION: Public API
@@ -69,14 +70,10 @@ export async function run(ctx) {
       builder = builder.withRules(axeConfig.withRules);
     if (Array.isArray(axeConfig.withTags) && axeConfig.withTags.length > 0)
       builder = builder.withTags(axeConfig.withTags);
-    if (
-      axeConfig.runOnly &&
-      typeof axeConfig.runOnly === 'object' &&
-      axeConfig.runOnly.type &&
-      Array.isArray(axeConfig.runOnly.values)
-    ) {
+    if (isValidRunOnly(axeConfig.runOnly)) {
       // NOTE: schema now enforces the { type, values } shape; this runtime
       // guard protects against stale configs produced before Layer 1.
+      // LINK: src/lib/axe-utils.mjs → isValidRunOnly
       builder = builder.options({ runOnly: axeConfig.runOnly });
     }
 
