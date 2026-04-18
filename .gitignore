@@ -1,7 +1,23 @@
 node_modules/
+
+# Runtime artefacts
 output/inventory/*.json
 output/inventory/*.txt
 output/results/*.json
 output/screenshots/*.png
 output/reports/*.json
 output/reports/*.md
+output/reports/*.html
+output/reports/*.jsonld
+output/reports/*.xml
+logs/
+.auth/
+sample.json
+
+# Tooling
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Test scratch
+test/.tmp/
