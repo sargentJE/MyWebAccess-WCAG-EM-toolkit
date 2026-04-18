@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WCAG-EM Toolkit V2 Recommended Config",
+  "type": "object",
+  "required": [
+    "name",
+    "rootUrl",
+    "scope",
+    "crawl",
+    "sample",
+    "scan"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "rootUrl": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "same-hostname",
+            "same-origin",
+            "allowed-hosts"
+          ]
+        },
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    },
+    "crawl": {
+      "type": "object"
+    },
+    "sample": {
+      "type": "object"
+    },
+    "scan": {
+      "type": "object"
+    },
+    "processes": {
+      "type": "array"
+    },
+    "reporting": {
+      "type": "object"
+    }
+  }
+}

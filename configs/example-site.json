@@ -1,0 +1,62 @@
+{
+  "name": "example-site",
+  "rootUrl": "https://example.com/",
+  "scope": {
+    "mode": "same-hostname",
+    "allowedHosts": []
+  },
+  "crawl": {
+    "maxPages": 80,
+    "maxConcurrency": 5,
+    "requestTimeoutSecs": 90,
+    "excludeUrlPatterns": [
+      "/wp-admin",
+      "\?replytocom=",
+      "/feed/?$"
+    ],
+    "sitemapSeeding": {
+      "enabled": true,
+      "urls": [],
+      "commonPaths": ["/sitemap.xml", "/sitemap_index.xml"],
+      "maxUrls": 500
+    }
+  },
+  "discovery": {
+    "captureH1": true,
+    "captureCanonical": true,
+    "captureForms": true,
+    "captureLandmarks": true,
+    "captureSearchInputs": true
+  },
+  "sample": {
+    "structuredManual": [],
+    "autoSuggest": {
+      "enabled": true,
+      "perCluster": 1,
+      "preferTypes": ["homepage", "form-or-contact", "policy", "listing", "detail", "content"]
+    },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 2,
+    "randomSeed": 1,
+    "smallSiteSupplementaryScanThreshold": 50
+  },
+  "scan": {
+    "viewport": { "width": 1440, "height": 900 },
+    "waitUntil": "load",
+    "timeoutMs": 60000,
+    "retries": 1,
+    "fullPageScreenshots": true,
+    "axe": {
+      "include": [],
+      "exclude": [],
+      "withRules": [],
+      "withTags": [],
+      "runOnly": null
+    }
+  },
+  "processes": [],
+  "reporting": {
+    "groupBestPracticeSeparately": true,
+    "markdownReport": true
+  }
+}

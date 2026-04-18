@@ -1,0 +1,20 @@
+{
+  "name": "wcag-em-a11y-toolkit-v2-recommended",
+  "version": "0.3.0",
+  "type": "module",
+  "private": true,
+  "description": "Recommended V2 toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
+  "scripts": {
+    "discover": "node scripts/discover.mjs",
+    "sample": "node scripts/build-sample.mjs",
+    "scan:sample": "node scripts/scan-sample.mjs",
+    "scan:processes": "node scripts/scan-processes.mjs",
+    "summarize": "node scripts/summarize-results.mjs",
+    "audit": "node scripts/discover.mjs && node scripts/build-sample.mjs && node scripts/scan-sample.mjs && node scripts/scan-processes.mjs && node scripts/summarize-results.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
+    "crawlee": "^3.16.0",
+    "playwright": "^1.59.1"
+  }
+}

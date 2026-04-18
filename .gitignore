@@ -1,0 +1,7 @@
+node_modules/
+output/inventory/*.json
+output/inventory/*.txt
+output/results/*.json
+output/screenshots/*.png
+output/reports/*.json
+output/reports/*.md

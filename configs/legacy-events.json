@@ -1,0 +1,85 @@
+{
+  "name": "legacy-events",
+  "rootUrl": "https://legacy-events.com/",
+  "scope": {
+    "mode": "same-hostname",
+    "allowedHosts": []
+  },
+  "crawl": {
+    "maxPages": 80,
+    "maxConcurrency": 5,
+    "requestTimeoutSecs": 90,
+    "excludeUrlPatterns": [
+      "/wp-admin",
+      "\?replytocom=",
+      "/feed/?$"
+    ],
+    "sitemapSeeding": {
+      "enabled": true,
+      "urls": [],
+      "commonPaths": ["/sitemap.xml", "/sitemap_index.xml"],
+      "maxUrls": 500
+    }
+  },
+  "discovery": {
+    "captureH1": true,
+    "captureCanonical": true,
+    "captureForms": true,
+    "captureLandmarks": true,
+    "captureSearchInputs": true
+  },
+  "sample": {
+    "structuredManual": [
+      "https://legacy-events.com/",
+      "https://legacy-events.com/about",
+      "https://legacy-events.com/contact-us",
+      "https://legacy-events.com/privacy-policy",
+      "https://legacy-events.com/sustainability",
+      "https://legacy-events.com/what-we-do",
+      "https://legacy-events.com/what-we-do/event-management",
+      "https://legacy-events.com/what-we-do/strategy-training",
+      "https://legacy-events.com/our-work",
+      "https://legacy-events.com/our-work/100-together-conference-2024",
+      "https://legacy-events.com/latest",
+      "https://legacy-events.com/latest/why-we-changed-our-name"
+    ],
+    "autoSuggest": {
+      "enabled": true,
+      "perCluster": 1,
+      "preferTypes": ["homepage", "form-or-contact", "policy", "listing", "detail", "content"]
+    },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 2,
+    "randomSeed": 1,
+    "smallSiteSupplementaryScanThreshold": 50
+  },
+  "scan": {
+    "viewport": { "width": 1440, "height": 900 },
+    "waitUntil": "load",
+    "timeoutMs": 60000,
+    "retries": 1,
+    "fullPageScreenshots": true,
+    "axe": {
+      "include": [],
+      "exclude": [],
+      "withRules": [],
+      "withTags": [],
+      "runOnly": null
+    }
+  },
+  "processes": [
+    {
+      "name": "contact-blank-submit",
+      "startUrl": "https://legacy-events.com/contact-us",
+      "pattern": "blank-submit",
+      "forceInclude": true,
+      "selectors": {
+        "submit": "button[type='submit'], input[type='submit']"
+      }
+    }
+  ],
+  "reporting": {
+    "groupBestPracticeSeparately": true,
+    "markdownReport": true
+  }
+}
