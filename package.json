@@ -4,6 +4,9 @@
   "type": "module",
   "private": true,
   "description": "Recommended V2 toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
     "discover": "node scripts/discover.mjs",
     "sample": "node scripts/build-sample.mjs",
