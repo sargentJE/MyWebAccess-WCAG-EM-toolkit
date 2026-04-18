@@ -22,6 +22,9 @@
 // SECTION: Engine guard — before ANY other import
 // NOTE: process.exit is intentional here — we must abort before any
 // ES2023-requiring module is even loaded.
+// LINK: src/lib/engine-check.mjs mirrors this predicate for unit tests.
+//   The inline version stays canonical here so the guard runs before the
+//   import machinery touches any ES2023 feature.
 const [major, minor] = process.versions.node.split('.').map(Number);
 if (major < 22 || (major === 22 && minor < 11)) {
   process.stderr.write(
