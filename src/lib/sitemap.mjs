@@ -9,17 +9,16 @@
  * entries up to the configured `maxUrls` cap. Failures are swallowed by design
  * — a missing sitemap must not abort discovery.
  *
- * FIXME: Layer 2 fix — the `|| scope.mode === 'allowed-hosts'` bypass at the
- * hostname check wrongly admits any host when the scope mode is `allowed-hosts`.
- * Replaced in Layer 2 with a proper `urlAllowedByScope(...)` call. Tracked in
- * the v0.3 bug list under "sitemap scope bypass".
+ * Scope enforcement delegates to `urlAllowedByScope` from `./urls.mjs` so all
+ * three modes (`same-hostname`, `same-origin`, `allowed-hosts`) are respected
+ * uniformly with the rest of the crawler.
  *
  * @see docs/adr/0005-fail-fast-on-config.md
  * @see https://www.sitemaps.org/protocol.html
  */
 
 // SECTION: Imports
-import { normalizeUrl } from './urls.mjs';
+import { normalizeUrl, urlAllowedByScope } from './urls.mjs';
 
 // SECTION: Public API
 
@@ -85,12 +84,8 @@ export async function getSitemapSeeds(rootUrl, sitemapSeeding, scope) {
         }
         try {
           const normalized = normalizeUrl(loc);
-          // FIXME(Layer 2): replace with urlAllowedByScope() — current check
-          // bypasses hostname filter when mode is `allowed-hosts`.
-          if (
-            new URL(normalized).hostname === new URL(rootUrl).hostname ||
-            scope.mode === 'allowed-hosts'
-          ) {
+          // LINK: src/lib/urls.mjs → urlAllowedByScope handles all three modes.
+          if (urlAllowedByScope(normalized, rootUrl, scope)) {
             foundUrls.add(normalized);
             if (foundUrls.size >= maxUrls) break;
           }
