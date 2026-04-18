@@ -15,12 +15,24 @@
     "summarize": "node src/commands/summarize.mjs",
     "audit": "node src/commands/discover.mjs && node src/commands/sample.mjs && node src/commands/scan.mjs && node src/commands/scan-processes.mjs && node src/commands/summarize.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc -p jsconfig.json --noEmit",
+    "test": "node --test --test-reporter=spec 'test/unit/**/*.test.mjs'",
+    "test:watch": "node --test --watch 'test/unit/**/*.test.mjs'",
+    "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec 'test/unit/**/*.test.mjs' 'test/e2e/**/*.test.mjs'"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
+    "@eslint/js": "^9.15.0",
     "crawlee": "^3.16.0",
+    "eslint": "^9.15.0",
+    "eslint-plugin-jsdoc": "^50.5.0",
+    "eslint-plugin-n": "^17.14.0",
+    "globals": "^15.13.0",
     "playwright": "^1.59.1",
-    "prettier": "^3.4.1"
+    "prettier": "^3.4.1",
+    "typescript": "^5.7.0"
   }
 }

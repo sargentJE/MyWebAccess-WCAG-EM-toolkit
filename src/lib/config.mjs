@@ -1,7 +1,34 @@
+// @ts-check
+/**
+ * @file Configuration loader and DEFAULTS merge base.
+ * @module lib/config
+ *
+ * @description
+ * v0.3 `loadConfig()` — reads the config JSON from disk, deep-merges against
+ * `DEFAULTS`, and runs an imperative validator. Layer 1 replaces the
+ * imperative checks with Ajv + `better-ajv-errors` against the JSON schema,
+ * while preserving `DEFAULTS` and `deepMerge()` (private helper retained per
+ * the reuse-over-rewrite clause of ADR-0001).
+ *
+ * Layer 2 extends the loader to compile `crawl.excludeUrlPatterns` into
+ * `RegExp[]` once at load, so bad patterns fail fast instead of at crawl time
+ * (see `sitemap.mjs` / `urls.mjs` FIXMEs).
+ *
+ * @see docs/adr/0001-project-conventions.md
+ * @see docs/adr/0002-config-is-ajv-validated.md
+ * @see docs/adr/0005-fail-fast-on-config.md
+ */
+
+// SECTION: Imports
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from './args.mjs';
 
+// SECTION: Constants
+
+// ANCHOR: DEFAULTS — every key the toolkit understands, with a shippable default.
+// Layer 3a adds `scan.viewports`, `crawl.requestDelayMs`, and default axe tag
+// profile. Layer 3b adds `auth`, `wcagEm`. Layer 4 adds `reporting.reporters`.
 const DEFAULTS = {
   scope: {
     mode: 'same-hostname',
@@ -59,9 +86,23 @@ const DEFAULTS = {
   processes: [],
 };
 
+// SECTION: Public API
+
+/**
+ * @typedef {object} LoadConfigResult
+ * @property {Record<string, any>} config - DEFAULTS-merged, validated config.
+ * @property {string} configPath - Absolute path to the source JSON file.
+ * @property {Record<string, string | boolean>} args - Parsed CLI arguments.
+ */
+
+/**
+ * Load, default-merge, and validate a config file.
+ *
+ * @returns {Promise<LoadConfigResult>}
+ */
 export async function loadConfig() {
   const args = parseArgs();
-  const configPath = args.config || 'configs/example-site.json';
+  const configPath = typeof args.config === 'string' ? args.config : 'configs/example-site.json';
   const resolved = path.resolve(configPath);
   const raw = await fs.readFile(resolved, 'utf8');
   const config = deepMerge(DEFAULTS, JSON.parse(raw));
@@ -69,11 +110,22 @@ export async function loadConfig() {
   return { config, configPath: resolved, args };
 }
 
+// SECTION: Internal helpers
+
+/**
+ * Recursively merge `override` on top of `base`. Arrays replace wholesale so
+ * user-supplied arrays don't accidentally concat with DEFAULTS.
+ *
+ * @param {any} base
+ * @param {any} override
+ * @returns {any}
+ */
 function deepMerge(base, override) {
   if (Array.isArray(base) || Array.isArray(override)) return override ?? base;
   if (typeof base !== 'object' || typeof override !== 'object' || !base || !override) {
     return override ?? base;
   }
+  /** @type {Record<string, any>} */
   const out = { ...base };
   for (const [key, value] of Object.entries(override)) {
     out[key] = key in base ? deepMerge(base[key], value) : value;
@@ -81,6 +133,14 @@ function deepMerge(base, override) {
   return out;
 }
 
+/**
+ * Imperative validator — superseded by Ajv in Layer 1. Keeps behaviour
+ * identical during Layer 0 so the tree stays green during the transition.
+ *
+ * @param {Record<string, any>} config
+ * @param {string} configPath
+ * @returns {void}
+ */
 function validateConfig(config, configPath) {
   const requiredTopLevel = ['name', 'rootUrl', 'scope', 'crawl', 'sample', 'scan'];
   for (const key of requiredTopLevel) {

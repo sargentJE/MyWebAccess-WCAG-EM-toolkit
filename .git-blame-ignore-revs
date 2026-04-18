@@ -1,0 +1,9 @@
+# Commits listed here are skipped by `git blame` when the viewer honours
+# the ignore-revs file (GitHub's blame UI, most editors). Use only for
+# commits whose sole purpose is formatting / style, never for logic.
+#
+# Configure git to use this file automatically:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Prettier bulk reformat — Layer 0a, see ADR-0001.
+8edced904c2ea970154d58e87304f02a964265f0
