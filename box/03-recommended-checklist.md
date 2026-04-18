@@ -3,12 +3,14 @@
 Use this as the mark-up version of the decisions already chosen for this build.
 
 ## Scope model
+
 - [x] Default scope mode is `same-hostname`
 - [x] Subdomains are excluded by default
 - [x] Third-party flows are discovered but not auto-included
 - [x] Small-site supplementary scan rule is defined
 
 ## Discovery
+
 - [x] URL normalization rules are fixed for V2
 - [x] Sitemap seeding is included
 - [x] Discovery captures metadata for clustering
@@ -16,6 +18,7 @@ Use this as the mark-up version of the decisions already chosen for this build.
 - [x] Discovery flags likely process entry points
 
 ## Sampling
+
 - [x] Structured sample supports manual seeding
 - [x] Structured sample also supports auto-suggestion from clusters
 - [x] Random sample rounding rule is fixed
@@ -24,6 +27,7 @@ Use this as the mark-up version of the decisions already chosen for this build.
 - [x] Complete-process expansion hooks are defined
 
 ## Scanning
+
 - [x] Baseline axe scan defaults remain broad
 - [x] Best-practice findings are split in summaries
 - [x] Rule and tag filtering live in config
@@ -31,6 +35,7 @@ Use this as the mark-up version of the decisions already chosen for this build.
 - [x] Retries are built in
 
 ## Process/state coverage
+
 - [x] Process definitions are config-driven
 - [x] Simple process DSL is used for V2
 - [ ] Full Playwright Test migration is deferred
@@ -38,6 +43,7 @@ Use this as the mark-up version of the decisions already chosen for this build.
 - [ ] Trace and video capture are deferred
 
 ## Reporting
+
 - [x] JSON summary is the source of truth
 - [x] Markdown report is included
 - [ ] HTML report is deferred
@@ -46,6 +52,7 @@ Use this as the mark-up version of the decisions already chosen for this build.
 - [x] Grouping by likely component is included
 
 ## Method
+
 - [x] Guardrails against overclaiming are explicit
 - [x] Manual testing backlog format is defined
 - [x] Random sample findings can trigger sample expansion

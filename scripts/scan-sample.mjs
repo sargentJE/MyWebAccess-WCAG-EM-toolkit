@@ -30,8 +30,10 @@ async function runForPage(page, url) {
 
   for (const selector of axeConfig.exclude || []) builder = builder.exclude(selector);
   for (const selector of axeConfig.include || []) builder = builder.include(selector);
-  if (Array.isArray(axeConfig.withRules) && axeConfig.withRules.length > 0) builder = builder.withRules(axeConfig.withRules);
-  if (Array.isArray(axeConfig.withTags) && axeConfig.withTags.length > 0) builder = builder.withTags(axeConfig.withTags);
+  if (Array.isArray(axeConfig.withRules) && axeConfig.withRules.length > 0)
+    builder = builder.withRules(axeConfig.withRules);
+  if (Array.isArray(axeConfig.withTags) && axeConfig.withTags.length > 0)
+    builder = builder.withTags(axeConfig.withTags);
   if (axeConfig.runOnly) builder = builder.options({ runOnly: axeConfig.runOnly });
 
   const axeResults = await builder.analyze();
@@ -69,7 +71,12 @@ for (const url of sampleUrls) {
   }
 
   if (!success) {
-    allResults.push({ url, attempts: attempt, error: lastError?.message ?? 'Unknown error', violations: [] });
+    allResults.push({
+      url,
+      attempts: attempt,
+      error: lastError?.message ?? 'Unknown error',
+      violations: [],
+    });
   }
 }
 

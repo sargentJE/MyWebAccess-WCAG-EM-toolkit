@@ -13,11 +13,14 @@
     "scan:sample": "node scripts/scan-sample.mjs",
     "scan:processes": "node scripts/scan-processes.mjs",
     "summarize": "node scripts/summarize-results.mjs",
-    "audit": "node scripts/discover.mjs && node scripts/build-sample.mjs && node scripts/scan-sample.mjs && node scripts/scan-processes.mjs && node scripts/summarize-results.mjs"
+    "audit": "node scripts/discover.mjs && node scripts/build-sample.mjs && node scripts/scan-sample.mjs && node scripts/scan-processes.mjs && node scripts/summarize-results.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
     "crawlee": "^3.16.0",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "prettier": "^3.4.1"
   }
 }

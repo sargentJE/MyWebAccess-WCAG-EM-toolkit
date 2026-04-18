@@ -1,6 +1,7 @@
 # V1 Against Recommended V2
 
 ## V1 already proved
+
 - root-URL discovery works
 - bounded crawl works
 - structured sample creation works
@@ -11,6 +12,7 @@
 - raw JSON output works
 
 ## Recommended V2 adds
+
 - stronger config defaults
 - optional sitemap seeding
 - crawl-time exclusions

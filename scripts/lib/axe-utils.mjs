@@ -3,8 +3,9 @@ export function classifyRule(rule, reportingConfig = {}) {
   const bestPractice = tags.has('best-practice');
   return {
     bestPractice,
-    classification: bestPractice && reportingConfig.groupBestPracticeSeparately !== false
-      ? 'best-practice-or-manual-review'
-      : 'primary-automated-finding',
+    classification:
+      bestPractice && reportingConfig.groupBestPracticeSeparately !== false
+        ? 'best-practice-or-manual-review'
+        : 'primary-automated-finding',
   };
 }

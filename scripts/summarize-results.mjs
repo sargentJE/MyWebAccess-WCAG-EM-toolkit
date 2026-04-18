@@ -17,9 +17,17 @@ const [inventory, sampleMetadata, axeResults, processResults] = await Promise.al
   readJsonMaybe(path.join(resultsDir, 'process-results.json'), []),
 ]);
 
-const inventoryByUrl = new Map(inventory.map(item => [item.url, item]));
-const structuredSet = new Set((await fs.readFile(path.join(inventoryDir, 'structured-sample.txt'), 'utf8').catch(() => '')).split(/\r?\n/).filter(Boolean));
-const randomSet = new Set((await fs.readFile(path.join(inventoryDir, 'random-sample.txt'), 'utf8').catch(() => '')).split(/\r?\n/).filter(Boolean));
+const inventoryByUrl = new Map(inventory.map((item) => [item.url, item]));
+const structuredSet = new Set(
+  (await fs.readFile(path.join(inventoryDir, 'structured-sample.txt'), 'utf8').catch(() => ''))
+    .split(/\r?\n/)
+    .filter(Boolean),
+);
+const randomSet = new Set(
+  (await fs.readFile(path.join(inventoryDir, 'random-sample.txt'), 'utf8').catch(() => ''))
+    .split(/\r?\n/)
+    .filter(Boolean),
+);
 
 const groupedByRule = new Map();
 const groupedByComponent = new Map();
@@ -88,7 +96,13 @@ for (const pageResult of axeResults) {
   for (const violation of pageResult.violations || []) {
     for (const node of violation.nodes || []) {
       const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
-      addRuleFinding({ sourceType: 'page-scan', pageUrl: pageResult.url, rule: violation, target, html: node.html ?? null });
+      addRuleFinding({
+        sourceType: 'page-scan',
+        pageUrl: pageResult.url,
+        rule: violation,
+        target,
+        html: node.html ?? null,
+      });
       addComponentFinding({ pageUrl: pageResult.url, rule: violation, target });
     }
   }
@@ -99,44 +113,59 @@ for (const processResult of processResults) {
     for (const violation of state.violations || []) {
       for (const node of violation.nodes || []) {
         const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
-        addRuleFinding({ sourceType: `process:${processResult.name}:${state.state}`, pageUrl: processResult.startUrl, rule: violation, target, html: node.html ?? null });
+        addRuleFinding({
+          sourceType: `process:${processResult.name}:${state.state}`,
+          pageUrl: processResult.startUrl,
+          rule: violation,
+          target,
+          html: node.html ?? null,
+        });
         addComponentFinding({ pageUrl: processResult.startUrl, rule: violation, target });
       }
     }
   }
 }
 
-const groupedFindings = [...groupedByRule.values()].map(item => ({
-  ...item,
-  pages: [...item.pages].sort(),
-  pageCount: item.pages.size,
-  targets: [...item.targets].sort(),
-  sourceTypes: [...item.sourceTypes].sort(),
-  pageTypes: [...item.pageTypes].sort(),
-  clusters: [...item.clusters].sort(),
-})).sort((a, b) => {
-  const impactOrder = { critical: 4, serious: 3, moderate: 2, minor: 1, null: 0 };
-  return (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
-});
+const groupedFindings = [...groupedByRule.values()]
+  .map((item) => ({
+    ...item,
+    pages: [...item.pages].sort(),
+    pageCount: item.pages.size,
+    targets: [...item.targets].sort(),
+    sourceTypes: [...item.sourceTypes].sort(),
+    pageTypes: [...item.pageTypes].sort(),
+    clusters: [...item.clusters].sort(),
+  }))
+  .sort((a, b) => {
+    const impactOrder = { critical: 4, serious: 3, moderate: 2, minor: 1, null: 0 };
+    return (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
+  });
 
-const groupedComponents = [...groupedByComponent.values()].map(item => ({
-  ...item,
-  pages: [...item.pages].sort(),
-  pageCount: item.pages.size,
-  targets: [...item.targets].sort(),
-})).sort((a, b) => b.occurrences - a.occurrences || a.key.localeCompare(b.key));
+const groupedComponents = [...groupedByComponent.values()]
+  .map((item) => ({
+    ...item,
+    pages: [...item.pages].sort(),
+    pageCount: item.pages.size,
+    targets: [...item.targets].sort(),
+  }))
+  .sort((a, b) => b.occurrences - a.occurrences || a.key.localeCompare(b.key));
 
 const ruleIdsSeenInRandom = new Set();
-for (const pageResult of axeResults.filter(item => randomSet.has(item.url))) {
+for (const pageResult of axeResults.filter((item) => randomSet.has(item.url))) {
   for (const violation of pageResult.violations || []) ruleIdsSeenInRandom.add(violation.id);
 }
-const newRuleIdsOnlyInRandom = [...ruleIdsSeenInRandom].filter(id => !structuredRuleIds.has(id)).sort();
-const newClustersOnlyInRandom = [...randomClusters].filter(key => !structuredClusters.has(key)).sort();
+const newRuleIdsOnlyInRandom = [...ruleIdsSeenInRandom]
+  .filter((id) => !structuredRuleIds.has(id))
+  .sort();
+const newClustersOnlyInRandom = [...randomClusters]
+  .filter((key) => !structuredClusters.has(key))
+  .sort();
 
 const comparison = {
   randomSampleIntroducedNewRuleIds: newRuleIdsOnlyInRandom,
   randomSampleIntroducedNewClusters: newClustersOnlyInRandom,
-  expandStructuredSampleRecommended: newRuleIdsOnlyInRandom.length > 0 || newClustersOnlyInRandom.length > 0,
+  expandStructuredSampleRecommended:
+    newRuleIdsOnlyInRandom.length > 0 || newClustersOnlyInRandom.length > 0,
 };
 
 const summary = {

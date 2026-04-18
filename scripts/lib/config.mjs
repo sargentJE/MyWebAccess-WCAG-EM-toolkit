@@ -33,7 +33,7 @@ const DEFAULTS = {
       perCluster: 1,
       preferTypes: ['homepage', 'form-or-contact', 'policy', 'listing', 'detail', 'content'],
     },
-    randomPercentOfStructured: 0.10,
+    randomPercentOfStructured: 0.1,
     minRandomPages: 2,
     randomSeed: 1,
     smallSiteSupplementaryScanThreshold: 50,

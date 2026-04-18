@@ -15,18 +15,28 @@ function expandPattern(processDef) {
   if (processDef.pattern === 'blank-submit') {
     return [
       { action: 'goto', url: processDef.startUrl },
-      { action: 'click', selector: processDef.selectors?.submit ?? "button[type='submit'], input[type='submit']" },
+      {
+        action: 'click',
+        selector: processDef.selectors?.submit ?? "button[type='submit'], input[type='submit']",
+      },
       { action: 'screenshot', name: 'blank-submit' },
       { action: 'axe', state: 'blank-submit' },
     ];
   }
 
   if (processDef.pattern === 'partial-submit') {
-    const fills = (processDef.fields || []).map(field => ({ action: 'fill', selector: field.selector, value: field.value ?? '' }));
+    const fills = (processDef.fields || []).map((field) => ({
+      action: 'fill',
+      selector: field.selector,
+      value: field.value ?? '',
+    }));
     return [
       { action: 'goto', url: processDef.startUrl },
       ...fills,
-      { action: 'click', selector: processDef.selectors?.submit ?? "button[type='submit'], input[type='submit']" },
+      {
+        action: 'click',
+        selector: processDef.selectors?.submit ?? "button[type='submit'], input[type='submit']",
+      },
       { action: 'screenshot', name: 'partial-submit' },
       { action: 'axe', state: 'partial-submit' },
     ];
@@ -69,17 +79,26 @@ for (const processDef of config.processes ?? []) {
 
     for (const step of steps) {
       if (step.action === 'goto') {
-        await page.goto(step.url, { waitUntil: config.scan.waitUntil, timeout: config.scan.timeoutMs });
+        await page.goto(step.url, {
+          waitUntil: config.scan.waitUntil,
+          timeout: config.scan.timeoutMs,
+        });
       } else if (step.action === 'click') {
         await page.locator(step.selector).first().click();
       } else if (step.action === 'fill') {
-        await page.locator(step.selector).first().fill(step.value ?? '');
+        await page
+          .locator(step.selector)
+          .first()
+          .fill(step.value ?? '');
       } else if (step.action === 'press') {
         await page.keyboard.press(step.key);
       } else if (step.action === 'waitFor') {
         await page.waitForTimeout(step.timeoutMs ?? 500);
       } else if (step.action === 'screenshot') {
-        const screenshot = path.join(screenshotsDir, `${fileSafeFromUrl(processDef.startUrl)}__${processDef.name}__${step.name ?? 'state'}.png`);
+        const screenshot = path.join(
+          screenshotsDir,
+          `${fileSafeFromUrl(processDef.startUrl)}__${processDef.name}__${step.name ?? 'state'}.png`,
+        );
         await page.screenshot({ path: screenshot, fullPage: true });
         states.push({ state: `screenshot:${step.name ?? 'state'}`, screenshot });
       } else if (step.action === 'axe') {

@@ -4,13 +4,16 @@ export function normalizeUrl(rawUrl, options = {}) {
   const url = new URL(rawUrl);
   url.hash = '';
 
-  if ((url.protocol === 'https:' && url.port === '443') || (url.protocol === 'http:' && url.port === '80')) {
+  if (
+    (url.protocol === 'https:' && url.port === '443') ||
+    (url.protocol === 'http:' && url.port === '80')
+  ) {
     url.port = '';
   }
 
   if (options.removeTrackingParams !== false) {
     for (const key of [...url.searchParams.keys()]) {
-      if (TRACKING_PARAM_PATTERNS.some(pattern => pattern.test(key))) {
+      if (TRACKING_PARAM_PATTERNS.some((pattern) => pattern.test(key))) {
         url.searchParams.delete(key);
       }
     }
@@ -45,8 +48,14 @@ export function guessPageType(urlString) {
   if (/privacy|terms|cookies|policy|accessibility/i.test(pathname)) return 'policy';
   if (/contact|support|get-in-touch/i.test(pathname)) return 'form-or-contact';
   if (/search|results/i.test(pathname)) return 'search-or-results';
-  if (/cart|basket|checkout|book|apply|register|signup|sign-up/i.test(pathname)) return 'process-entry';
-  if ((/blog|latest|news|articles/i.test(pathname) || /our-work|portfolio|projects|case-studies/i.test(pathname)) && segments.length === 1) return 'listing';
+  if (/cart|basket|checkout|book|apply|register|signup|sign-up/i.test(pathname))
+    return 'process-entry';
+  if (
+    (/blog|latest|news|articles/i.test(pathname) ||
+      /our-work|portfolio|projects|case-studies/i.test(pathname)) &&
+    segments.length === 1
+  )
+    return 'listing';
   if (segments.length >= 2) return 'detail';
   return 'content';
 }
@@ -86,5 +95,5 @@ export function urlAllowedByScope(targetUrl, rootUrl, scope) {
 }
 
 export function urlExcludedByPatterns(urlString, patterns = []) {
-  return patterns.some(pattern => new RegExp(pattern).test(urlString));
+  return patterns.some((pattern) => new RegExp(pattern).test(urlString));
 }
