@@ -74,6 +74,10 @@ export async function run(ctx) {
     requestHandlerTimeoutSecs: config.crawl.requestTimeoutSecs,
 
     async requestHandler({ page, request, enqueueLinks }) {
+      // NOTE: Crawlee's requestHandlerTimeoutSecs bounds the whole handler;
+      // page.setDefaultTimeout also bounds per-locator ops (click, waitFor…)
+      // so a single slow element can't stall the handler up to the outer cap.
+      page.setDefaultTimeout(config.crawl.requestTimeoutSecs * 1000);
       await page.waitForLoadState('domcontentloaded');
 
       const currentUrl = normalizeUrl(page.url());
