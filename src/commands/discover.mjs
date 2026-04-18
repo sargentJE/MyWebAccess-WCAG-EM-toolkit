@@ -61,7 +61,7 @@ export async function run(ctx) {
   )) {
     if (
       urlAllowedByScope(url, config.rootUrl, config.scope) &&
-      !urlExcludedByPatterns(url, config.crawl.excludeUrlPatterns)
+      !urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])
     ) {
       seeds.push(url);
     }
@@ -144,7 +144,7 @@ export async function run(ctx) {
             excludedOutOfScope.add(normalized);
             return false;
           }
-          if (urlExcludedByPatterns(normalized, config.crawl.excludeUrlPatterns)) {
+          if (urlExcludedByPatterns(normalized, config.crawl.excludeUrlPatternsCompiled ?? [])) {
             excludedByPattern.add(normalized);
             return false;
           }

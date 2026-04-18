@@ -201,14 +201,16 @@ export function urlAllowedByScope(targetUrl, rootUrl, scope) {
 /**
  * Match a URL against user-supplied exclude patterns.
  *
- * FIXME(Layer 2): patterns are currently compiled on every call. Layer 2
- * changes the signature to accept pre-compiled `RegExp[]` produced at
- * config-load time, so invalid patterns fail at load rather than mid-crawl.
+ * Patterns are compiled once at config-load (see the `CompileRuntimeFields`
+ * block in `src/lib/context.mjs`) and threaded through as a `RegExp[]` so
+ * this hot path never touches `new RegExp(...)`. Bad regex source strings
+ * fail at Ajv validation time via the `validRegex` keyword, not mid-crawl.
  *
  * @param {string} urlString
- * @param {string[]} [patterns] - Regex source strings.
+ * @param {RegExp[]} [compiledPatterns] - Pre-compiled patterns.
  * @returns {boolean}
+ * @see docs/adr/0005-fail-fast-on-config.md
  */
-export function urlExcludedByPatterns(urlString, patterns = []) {
-  return patterns.some((pattern) => new RegExp(pattern).test(urlString));
+export function urlExcludedByPatterns(urlString, compiledPatterns = []) {
+  return compiledPatterns.some((rx) => rx.test(urlString));
 }

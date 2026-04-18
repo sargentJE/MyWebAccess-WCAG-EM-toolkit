@@ -98,11 +98,19 @@ const DEFAULTS = {
 /**
  * Load, default-merge, and validate a config file.
  *
+ * Resolution priority: explicit `overridePath` argument → `--config` CLI
+ * flag → `configs/example-site.json` fallback. `overridePath` is the hook
+ * programmatic API callers use to point at an arbitrary config file without
+ * having to mutate `process.argv`.
+ *
+ * @param {string} [overridePath] - Absolute or relative path; wins over argv.
  * @returns {Promise<LoadConfigResult>}
  */
-export async function loadConfig() {
+export async function loadConfig(overridePath) {
   const args = parseArgs();
-  const configPath = typeof args.config === 'string' ? args.config : 'configs/example-site.json';
+  const configPath =
+    overridePath ??
+    (typeof args.config === 'string' ? args.config : 'configs/example-site.json');
   const resolved = path.resolve(configPath);
   const raw = await fs.readFile(resolved, 'utf8');
   const config = deepMerge(DEFAULTS, JSON.parse(raw));

@@ -64,13 +64,27 @@ import { runPreflight } from './preflight.mjs';
  * @returns {Promise<RunContext>}
  */
 export async function buildContext(options = {}) {
-  // ANCHOR: StepA — argv loading
-  const loaded = await loadConfig();
-  const configPath = options.configPath ? path.resolve(options.configPath) : loaded.configPath;
+  // ANCHOR: StepA — argv loading (options.configPath wins over --config flag)
+  const loaded = await loadConfig(options.configPath);
+  const configPath = loaded.configPath;
 
   // ANCHOR: StepB — Ajv validation (supersedes the imperative validator
   // retained inside loadConfig() for backcompat during Layer 0/1 transition).
   await assertValidConfig(loaded.config, configPath);
+
+  // ANCHOR: CompileRuntimeFields — regex strings become RegExp[] once, at load.
+  // Ajv's `validRegex` keyword (see `validate-config.mjs:54-81`) has already
+  // confirmed compilability for every entry, so `new RegExp(p)` cannot throw
+  // here. Attached non-enumerable + non-writable so the compiled array never
+  // leaks into JSON-serialised artefacts.
+  // LINK: docs/adr/0005-fail-fast-on-config.md
+  const excludePatterns = loaded.config.crawl.excludeUrlPatterns ?? [];
+  Object.defineProperty(loaded.config.crawl, 'excludeUrlPatternsCompiled', {
+    value: excludePatterns.map((/** @type {string} */ p) => new RegExp(p)),
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
 
   // ANCHOR: StepC — logger
   const logger = createLogger({ level: options.logLevel });
