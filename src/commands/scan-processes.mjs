@@ -10,20 +10,19 @@
  * `partial-submit` patterns expand into step sequences; custom `steps[]`
  * arrays override the pattern.
  *
- * Layer 2 extracts the step-dispatch switch into `src/lib/process-runner.mjs`
- * with per-step timeout + respect for `config.scan.fullPageScreenshots`.
+ * Step dispatch and per-step timeout live in `src/lib/process-runner.mjs`
+ * (see ADR-0005 — fail fast on config). This command is now thin: open
+ * browser, expand patterns, delegate to `runProcessSteps`, write results.
  *
+ * @see docs/adr/0005-fail-fast-on-config.md
  * @see https://www.w3.org/TR/WCAG-EM/#step3d
  */
 
 // SECTION: Imports
 import path from 'node:path';
 import { chromium } from 'playwright';
-// NOTE: see scan.mjs for rationale on the AxeBuilder type cast.
-import AxeBuilderImport from '@axe-core/playwright';
-const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
-import { fileSafeFromUrl } from '../lib/urls.mjs';
+import { runProcessSteps } from '../lib/process-runner.mjs';
 import { buildContext } from '../lib/context.mjs';
 
 // SECTION: Internal helpers
@@ -73,19 +72,6 @@ function expandPattern(processDef) {
   return [];
 }
 
-/**
- * @param {import('playwright').Page} page
- */
-async function runAxe(page) {
-  const result = await new AxeBuilder({ page }).analyze();
-  return {
-    violations: result.violations,
-    passes: result.passes.length,
-    incomplete: result.incomplete.length,
-    inapplicable: result.inapplicable.length,
-  };
-}
-
 // SECTION: Public API
 
 /**
@@ -102,8 +88,6 @@ export async function run(ctx) {
     const context = await browser.newContext({ viewport: config.scan.viewport });
     const page = await context.newPage();
     const steps = expandPattern(processDef);
-    /** @type {any[]} */
-    const states = [];
 
     try {
       logger.info({ name: processDef.name }, 'process start');
@@ -118,37 +102,13 @@ export async function run(ctx) {
         continue;
       }
 
-      // ANCHOR: StepDispatch — tiny DSL; extended in Layer 2
-      for (const step of steps) {
-        if (step.action === 'goto') {
-          await page.goto(step.url, {
-            waitUntil: config.scan.waitUntil,
-            timeout: config.scan.timeoutMs,
-          });
-        } else if (step.action === 'click') {
-          await page.locator(step.selector).first().click();
-        } else if (step.action === 'fill') {
-          await page
-            .locator(step.selector)
-            .first()
-            .fill(step.value ?? '');
-        } else if (step.action === 'press') {
-          await page.keyboard.press(step.key);
-        } else if (step.action === 'waitFor') {
-          await page.waitForTimeout(step.timeoutMs ?? 500);
-        } else if (step.action === 'screenshot') {
-          const screenshot = path.join(
-            paths.screenshotsDir,
-            `${fileSafeFromUrl(processDef.startUrl)}__${processDef.name}__${step.name ?? 'state'}.png`,
-          );
-          // FIXME(Layer 2): respect config.scan.fullPageScreenshots here.
-          await page.screenshot({ path: screenshot, fullPage: true });
-          states.push({ state: `screenshot:${step.name ?? 'state'}`, screenshot });
-        } else if (step.action === 'axe') {
-          const axe = await runAxe(page);
-          states.push({ state: step.state ?? 'state', ...axe });
-        }
-      }
+      const states = await runProcessSteps(processDef, steps, {
+        page,
+        config,
+        logger,
+        paths,
+        processDef,
+      });
 
       processResults.push({
         name: processDef.name,
@@ -163,7 +123,7 @@ export async function run(ctx) {
         startUrl: processDef.startUrl,
         pattern: processDef.pattern ?? null,
         error: message,
-        states,
+        states: [],
       });
       logger.error({ name: processDef.name, err: message }, 'process failed');
     } finally {

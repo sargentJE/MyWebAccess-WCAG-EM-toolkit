@@ -1,0 +1,176 @@
+// @ts-check
+/**
+ * @file Unit tests for `src/lib/process-runner.mjs`.
+ * @module test/unit/process-runner
+ *
+ * @description
+ * Covers action routing, `fullPageScreenshots` propagation, per-step timeout
+ * via Promise.race, and the error-to-state conversion path. Every mock
+ * returns an explicit resolved Promise so Promise.race against the timeout
+ * reaches the intended outcome.
+ */
+
+// SECTION: Imports
+import { mock, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { runStep, StepTimeoutError } from '../../src/lib/process-runner.mjs';
+
+// SECTION: Helpers
+
+function silentLogger() {
+  return {
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {},
+    trace: () => {},
+    fatal: () => {},
+  };
+}
+
+/**
+ * Variadic async no-op — typed so `mock.fn(anyAsync)` captures a tuple of
+ * any length in `call.arguments`, letting the test assert positional args.
+ *
+ * @param {...any} _args
+ * @returns {Promise<any>}
+ */
+const anyAsync = async (..._args) => undefined;
+
+/**
+ * Build a fake StepContext whose page exposes only the methods `runStep`
+ * touches. Returns the ctx plus the mock functions so tests can assert
+ * call count and arguments.
+ *
+ * @param {Partial<{ timeoutMs: number, fullPageScreenshots: boolean | undefined }>} [overrides]
+ * @returns {{ ctx: any, mocks: Record<string, any> }}
+ */
+function buildStepCtx(overrides = {}) {
+  const click = mock.fn(anyAsync);
+  const fill = mock.fn(anyAsync);
+  const press = mock.fn(anyAsync);
+  const waitForTimeout = mock.fn(anyAsync);
+  const screenshot = mock.fn(anyAsync);
+  const goto = mock.fn(anyAsync);
+
+  const page = {
+    goto,
+    locator: () => ({
+      first: () => ({ click, fill }),
+    }),
+    keyboard: { press },
+    waitForTimeout,
+    screenshot,
+  };
+
+  // NOTE: the fake page implements only the subset runStep touches; cast
+  // to `any` so TypeScript's checkJs accepts the narrow shape in place of
+  // the full Playwright Page surface.
+  const ctx = /** @type {any} */ ({
+    page,
+    config: {
+      scan: {
+        waitUntil: 'load',
+        timeoutMs: overrides.timeoutMs ?? 5000,
+        fullPageScreenshots: overrides.fullPageScreenshots,
+      },
+    },
+    logger: silentLogger(),
+    paths: {
+      outDir: '/tmp/out',
+      inventoryDir: '/tmp/out/inventory',
+      resultsDir: '/tmp/out/results',
+      reportsDir: '/tmp/out/reports',
+      screenshotsDir: '/tmp/out/screenshots',
+      sampleJsonPath: '/tmp/out/sample.json',
+    },
+    processDef: { name: 'signup', startUrl: 'https://example.com/join' },
+  });
+
+  return { ctx, mocks: { goto, click, fill, press, waitForTimeout, screenshot } };
+}
+
+// SECTION: Routing tests
+
+test('goto action calls page.goto with waitUntil + timeout', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  const result = await runStep({ action: 'goto', url: 'https://example.com/' }, ctx);
+  assert.strictEqual(result, null, 'goto produces no state entry');
+  assert.strictEqual(mocks.goto.mock.calls.length, 1);
+  assert.strictEqual(mocks.goto.mock.calls[0].arguments[0], 'https://example.com/');
+});
+
+test('click action clicks the first matching locator', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  const result = await runStep({ action: 'click', selector: 'button' }, ctx);
+  assert.strictEqual(result, null);
+  assert.strictEqual(mocks.click.mock.calls.length, 1);
+});
+
+test('fill action fills with the provided value', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  await runStep({ action: 'fill', selector: 'input[name=email]', value: 'a@b.co' }, ctx);
+  assert.strictEqual(mocks.fill.mock.calls.length, 1);
+  assert.strictEqual(mocks.fill.mock.calls[0].arguments[0], 'a@b.co');
+});
+
+test('press action presses the keyboard key', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  await runStep({ action: 'press', key: 'Enter' }, ctx);
+  assert.strictEqual(mocks.press.mock.calls.length, 1);
+  assert.strictEqual(mocks.press.mock.calls[0].arguments[0], 'Enter');
+});
+
+test('waitFor action calls page.waitForTimeout', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  await runStep({ action: 'waitFor', timeoutMs: 100 }, ctx);
+  assert.strictEqual(mocks.waitForTimeout.mock.calls.length, 1);
+  assert.strictEqual(mocks.waitForTimeout.mock.calls[0].arguments[0], 100);
+});
+
+// SECTION: fullPageScreenshots propagation
+
+test('screenshot honours fullPageScreenshots=false', async () => {
+  const { ctx, mocks } = buildStepCtx({ fullPageScreenshots: false });
+  const result = await runStep({ action: 'screenshot', name: 'blank' }, ctx);
+  assert.strictEqual(mocks.screenshot.mock.calls.length, 1);
+  assert.strictEqual(mocks.screenshot.mock.calls[0].arguments[0].fullPage, false);
+  assert.ok(result);
+  assert.strictEqual(result.state, 'screenshot:blank');
+});
+
+test('screenshot defaults to fullPage=true when flag is undefined', async () => {
+  const { ctx, mocks } = buildStepCtx({ fullPageScreenshots: undefined });
+  await runStep({ action: 'screenshot', name: 'blank' }, ctx);
+  assert.strictEqual(mocks.screenshot.mock.calls[0].arguments[0].fullPage, true);
+});
+
+// SECTION: Timeout + error paths
+
+test('a hanging step produces state: step-timeout', async () => {
+  const { ctx } = buildStepCtx({ timeoutMs: 50 });
+  // Override goto to never resolve.
+  ctx.page.goto = mock.fn(/** @type {any} */ (() => new Promise(() => {})));
+  const start = Date.now();
+  const result = await runStep({ action: 'goto', url: 'https://example.com/' }, ctx);
+  const elapsed = Date.now() - start;
+  assert.ok(result);
+  assert.strictEqual(result.state, 'step-timeout');
+  assert.strictEqual(result.name, 'goto');
+  assert.ok(elapsed < 5000, 'should return shortly after stepTimeoutMs, not hang');
+});
+
+test('unknown action type produces state: error with a useful message', async () => {
+  const { ctx } = buildStepCtx();
+  const result = await runStep({ action: 'mystery' }, ctx);
+  assert.ok(result);
+  assert.strictEqual(result.state, 'error');
+  assert.match(result.error ?? '', /unknown action: mystery/);
+});
+
+test('StepTimeoutError is the named error surface', () => {
+  const err = new StepTimeoutError('click', 1000);
+  assert.strictEqual(err.name, 'StepTimeoutError');
+  assert.strictEqual(err.action, 'click');
+  assert.strictEqual(err.timeoutMs, 1000);
+});
