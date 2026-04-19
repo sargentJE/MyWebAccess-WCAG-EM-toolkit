@@ -51,11 +51,14 @@ const ajv = new Ajv2020({
 addFormats(ajv);
 
 // ANCHOR: validRegex — custom keyword; compiles user regex at validation time
-// TODO(Layer 3): the validRegex keyword is attached to three schema fields
-// (crawl.excludeUrlPatterns[], scan.axe.overrides[].urlPattern,
-// processes[].actions[].urlPattern) but only the first is also compiled
-// at config-load via context.mjs → defineHidden. Extend compile-at-load to
-// the other two when Layer 3 wires them into the crawl/scan hot paths.
+// NOTE(Layer 3): the validRegex keyword is attached to three schema fields:
+// crawl.excludeUrlPatterns[], scan.axe.overrides[].urlPattern, and
+// processes[].actions[].urlPattern. The first two are compiled at config-load
+// via context.mjs → defineHidden (ANCHOR: CompileRuntimeFields and ANCHOR:
+// CompileOverrides). The third is intentionally deferred: the schema field
+// exists for forward-compat but has no runtime consumer today, so compile-
+// at-load would attach a RegExp array nothing reads (YAGNI). Wire it
+// alongside the first consumer.
 // See CHANGELOG.md [Unreleased] → "Layer 3 follow-ups" + ADR-0005 mechanism 2.
 ajv.addKeyword({
   keyword: 'validRegex',

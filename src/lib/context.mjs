@@ -101,10 +101,10 @@ export async function buildContext(options = {}) {
   await assertValidConfig(loaded.config, configPath);
 
   // ANCHOR: CompileRuntimeFields — regex strings become RegExp[] once, at load.
-  // Ajv's `validRegex` keyword (see `validate-config.mjs:54-81`) has already
-  // confirmed compilability for every entry, so `new RegExp(p)` cannot throw
-  // here. Attached non-enumerable + non-writable so the compiled array never
-  // leaks into JSON-serialised artefacts.
+  // Ajv's `validRegex` keyword has already confirmed compilability for every
+  // entry, so `new RegExp(p)` cannot throw here. Attached non-enumerable +
+  // non-writable so the compiled array never leaks into JSON-serialised
+  // artefacts.
   // LINK: docs/adr/0005-fail-fast-on-config.md
   const excludePatterns = loaded.config.crawl.excludeUrlPatterns ?? [];
   defineHidden(
@@ -112,6 +112,24 @@ export async function buildContext(options = {}) {
     'excludeUrlPatternsCompiled',
     excludePatterns.map((/** @type {string} */ p) => new RegExp(p)),
   );
+
+  // ANCHOR: CompileOverrides — per-URL axe override patterns.
+  // Each compiled entry preserves the original override's own keys (via
+  // spread) so `applyAxeOverride`'s replace-if-defined predicate — which
+  // uses `hasOwnProperty.call(override, key)` — still distinguishes
+  // `runOnly: null` (defined-as-null = clear) from absent (inherit base).
+  // The `regex` property is added on top for the hot-path `findMatchingOverride`.
+  if (loaded.config.scan?.axe) {
+    const overrides = loaded.config.scan.axe.overrides ?? [];
+    defineHidden(
+      loaded.config.scan.axe,
+      'overridesCompiled',
+      overrides.map((/** @type {any} */ o) => ({
+        ...o,
+        regex: new RegExp(o.urlPattern),
+      })),
+    );
+  }
 
   // ANCHOR: StepC — logger
   const logger = createLogger({ level: options.logLevel });
