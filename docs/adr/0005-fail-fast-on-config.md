@@ -48,19 +48,21 @@ validation time. Bad regex source strings produce a validation error at
 config-load with the exact offending pattern in the message; they never
 reach the crawl path.
 
-Currently attached at three schema fields (line numbers are supplementary
-navigation — the authoritative reference is the symbol form):
+Currently attached at three schema fields (symbol-first — line numbers
+drift; the schema location is authoritative):
 
-| Schema location (symbol-first) | Schema line | Compiled at load? |
-|---|---|---|
-| `crawl.excludeUrlPatterns[]` — `validRegex: true` | 59 | **yes** (mechanism 3) |
-| `scan.axe.overrides[].urlPattern` — `validRegex: true` | 212 | no (deferred to Layer 3) |
-| `processes[].actions[].urlPattern` — `validRegex: true` | 371 | no (deferred to Layer 3) |
+| Schema location (symbol-first) | Compiled at load? |
+|---|---|
+| `crawl.excludeUrlPatterns[]` — `validRegex: true` | **yes** (mechanism 3; ANCHOR: CompileRuntimeFields) |
+| `scan.axe.overrides[].urlPattern` — `validRegex: true` | **yes** (Layer 3a; ANCHOR: CompileOverrides) |
+| `processes[].actions[].urlPattern` — `validRegex: true` | no (deferred; no runtime consumer yet) |
 
-All three are *validated* on load; only the first is *compiled* on load.
-Expanding compile-at-load to the other two is tracked as a Layer 3
-addition to this ADR when `scan.axe.overrides` and `processes.actions`
-are wired into the crawl/scan hot paths.
+All three are *validated* on load; the first two are also *compiled* on
+load. The `processes[].actions[].urlPattern` field has no runtime
+consumer today, so compile-at-load would attach a `RegExp[]` nothing
+reads — tracked as a `CHANGELOG.md [Unreleased]` entry under
+"Layer 3 follow-ups" that will be picked up when the first consumer
+lands (likely Layer 3b's `beforeScan` action filtering).
 
 ### 3. Compile-at-load attachment (this ADR's new work)
 
@@ -135,5 +137,9 @@ double-running.
   schema ↔ dispatch invariant locked by
   `test/unit/process-runner-invariant.test.mjs`
 - `src/lib/preflight.mjs` — preflight check implementation
-- `CHANGELOG.md [Unreleased]` — Layer 3 follow-ups for the two
-  `urlPattern` fields still waiting on compile-at-load
+- `CHANGELOG.md [Unreleased]` — Layer 3 follow-ups (updated in Layer
+  3a's R2: `scan.axe.overrides[].urlPattern` is now compiled at load;
+  `processes[].actions[].urlPattern` remains deferred pending a
+  runtime consumer)
+- [ADR-0006 — Multi-viewport axe runs](./0006-multi-viewport-axe-runs.md)
+  — shares the `defineHidden` mechanism for `scan.axe.overridesCompiled`
