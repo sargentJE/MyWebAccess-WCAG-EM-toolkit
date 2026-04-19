@@ -169,7 +169,8 @@ program
       const ctx = await buildCtxFromProgram(cmd, { requirePlaywright: false });
       const { run } = await import('../src/commands/summarize.mjs');
       const result = await run(ctx);
-      // NOTE: exit-code policy lands in Layer 3; for now any run is treated as 0.
+      // Exit code comes from summarize's `computeExitCode` against the
+      // configured `reporting.failOnFindings` policy (Pa11y-compatible).
       if (result && typeof result.exitCode === 'number') return result.exitCode;
     }),
   );

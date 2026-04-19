@@ -24,6 +24,51 @@ import { selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule } from '../lib/axe-utils.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
+// SECTION: Pure helpers (exported for testability)
+
+/**
+ * Compute the process exit code for a summary given a `failOnFindings`
+ * policy. Pa11y-compatible semantics: exit 0 when the run is clean,
+ * exit 2 when at least `threshold` findings match the impact set OR
+ * classification set. The bin/wcag-em.mjs Commander entry already
+ * threads the returned code into `process.exitCode`.
+ *
+ * Guards: missing / non-object policy → 0 (feature off); threshold not
+ * a positive integer → 0 (schema minimum is 0, so 0 is a valid "off"
+ * signal that we must not accidentally treat as "trip on every run").
+ *
+ * Counts GROUPS of findings (one entry per axe rule), not occurrences.
+ * This matches the canonical plan's default `threshold: 1` semantic —
+ * any critical/serious finding fails. If occurrence-level counting is
+ * ever wanted, the schema can grow a `mode` field later.
+ *
+ * @param {{ findings?: Array<{ impact?: string|null, classification?: string }> }} summary
+ * @param {{ impacts?: string[], classifications?: string[], threshold?: number } | null | undefined} failOnFindings
+ * @returns {number} Process exit code: 0 (clean) or 2 (threshold hit).
+ */
+export function computeExitCode(summary, failOnFindings) {
+  if (!failOnFindings || typeof failOnFindings !== 'object') return 0;
+  const threshold = Number(failOnFindings.threshold);
+  if (!Number.isFinite(threshold) || threshold <= 0) return 0;
+  const impacts = new Set(Array.isArray(failOnFindings.impacts) ? failOnFindings.impacts : []);
+  const classifications = new Set(
+    Array.isArray(failOnFindings.classifications) ? failOnFindings.classifications : [],
+  );
+  if (impacts.size === 0 && classifications.size === 0) return 0;
+  const findings = Array.isArray(summary?.findings) ? summary.findings : [];
+  let count = 0;
+  for (const f of findings) {
+    const impactHit = typeof f.impact === 'string' && impacts.has(f.impact);
+    const classificationHit =
+      typeof f.classification === 'string' && classifications.has(f.classification);
+    if (impactHit || classificationHit) {
+      count += 1;
+      if (count >= threshold) return 2;
+    }
+  }
+  return 0;
+}
+
 // SECTION: Public API
 
 /**
@@ -309,13 +354,18 @@ export async function run(ctx) {
   }
 
   await writeText(path.join(paths.reportsDir, 'summary.md'), md.join('\n'));
+
+  const exitCode = computeExitCode(summary, config.reporting?.failOnFindings);
   logger.info(
-    { findings: summary.groupedFindingCount, reportsDir: paths.reportsDir },
+    {
+      findings: summary.groupedFindingCount,
+      reportsDir: paths.reportsDir,
+      exitCode,
+    },
     'summarize done',
   );
 
-  // NOTE: exit code policy lands in Layer 3. For Layer 1 transition, any run is 0.
-  return { exitCode: 0, summary };
+  return { exitCode, summary };
 }
 
 // SECTION: Standalone runner
