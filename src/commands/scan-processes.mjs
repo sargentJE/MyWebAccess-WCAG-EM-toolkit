@@ -23,7 +23,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { writeJson } from '../lib/fs-utils.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
-import { buildContext } from '../lib/context.mjs';
+import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Internal helpers
 
@@ -79,6 +79,7 @@ function expandPattern(processDef) {
  * @returns {Promise<{ processesRun: number }>}
  */
 export async function run(ctx) {
+  await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */

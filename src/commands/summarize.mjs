@@ -22,7 +22,7 @@ import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule } from '../lib/axe-utils.mjs';
-import { buildContext } from '../lib/context.mjs';
+import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Public API
 
@@ -31,6 +31,7 @@ import { buildContext } from '../lib/context.mjs';
  * @returns {Promise<{ exitCode: number, summary: any }>}
  */
 export async function run(ctx) {
+  await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
 
   /** @type {[any[], Record<string, any>, any[], any[]]} */

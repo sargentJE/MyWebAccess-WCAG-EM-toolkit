@@ -27,7 +27,7 @@ const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly } from '../lib/axe-utils.mjs';
-import { buildContext } from '../lib/context.mjs';
+import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Public API
 
@@ -36,6 +36,7 @@ import { buildContext } from '../lib/context.mjs';
  * @returns {Promise<{ pagesScanned: number, pagesFailed: number }>}
  */
 export async function run(ctx) {
+  await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
   const sampleUrls = JSON.parse(await fs.readFile(paths.sampleJsonPath, 'utf8'));
 

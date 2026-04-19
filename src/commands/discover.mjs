@@ -32,7 +32,7 @@ import {
   urlExcludedByPatterns,
 } from '../lib/urls.mjs';
 import { getSitemapSeeds } from '../lib/sitemap.mjs';
-import { buildContext } from '../lib/context.mjs';
+import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Public API
 
@@ -43,6 +43,7 @@ import { buildContext } from '../lib/context.mjs';
  * @returns {Promise<{ inventoryCount: number }>}
  */
 export async function run(ctx) {
+  await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
 
   /** @type {Map<string, any>} */
@@ -219,6 +220,7 @@ export async function run(ctx) {
 
 // SECTION: Standalone runner — backward compat for `node src/commands/discover.mjs`
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const ctx = await buildContext();
+  // discover launches Playwright via Crawlee — require the browser preflight.
+  const ctx = await buildContext({ requirePlaywright: true });
   await run(ctx);
 }

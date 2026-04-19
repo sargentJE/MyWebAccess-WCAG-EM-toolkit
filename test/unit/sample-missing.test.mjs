@@ -105,6 +105,15 @@ async function buildFakeCtx() {
     args: {},
   };
 
+  // Mark preflight as already done — this test targets the warn path inside
+  // sample.run, not the preflight gate wired in commit 11b.
+  Object.defineProperty(ctx, 'preflightRan', {
+    value: true,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
+
   return { tmpdir, ctx, warnCalls };
 }
 
