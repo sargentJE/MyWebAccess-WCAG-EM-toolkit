@@ -21,6 +21,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { run as sampleRun } from '../../src/commands/sample.mjs';
+import { defineHidden } from '../../src/lib/context.mjs';
 
 // SECTION: Helpers
 
@@ -107,12 +108,7 @@ async function buildFakeCtx() {
 
   // Mark preflight as already done — this test targets the warn path inside
   // sample.run, not the preflight gate wired in commit 11b.
-  Object.defineProperty(ctx, 'preflightRan', {
-    value: true,
-    enumerable: false,
-    configurable: true,
-    writable: false,
-  });
+  defineHidden(ctx, 'preflightRan', true);
 
   return { tmpdir, ctx, warnCalls };
 }

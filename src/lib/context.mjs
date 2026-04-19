@@ -28,6 +28,31 @@ import { runPreflight } from './preflight.mjs';
 // SECTION: Public API
 
 /**
+ * Attach a hidden, read-only, configurable property — the descriptor shape
+ * ADR-0005 relies on for runtime-only fields that must not leak into
+ * JSON-serialised artefacts. `configurable: true` permits future watch-mode
+ * (`delete` + redefine) per ADR-0005's Consequences note; `writable: false`
+ * prevents accidental mutation.
+ *
+ * Used for `config.crawl.excludeUrlPatternsCompiled` (compiled at load) and
+ * `ctx.preflightRan` (set after preflight succeeds). The single source of
+ * truth for the descriptor shape these fields rely on.
+ *
+ * @param {object} obj - Target object the property is attached to.
+ * @param {string} key - Property name.
+ * @param {any} value - Property value.
+ * @returns {void}
+ */
+export function defineHidden(obj, key, value) {
+  Object.defineProperty(obj, key, {
+    value,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
+}
+
+/**
  * @typedef {object} RunContextPaths
  * @property {string} outDir - Root of all outputs (default `output/`).
  * @property {string} inventoryDir - Inventory artefacts (`output/inventory/`).
@@ -82,12 +107,11 @@ export async function buildContext(options = {}) {
   // leaks into JSON-serialised artefacts.
   // LINK: docs/adr/0005-fail-fast-on-config.md
   const excludePatterns = loaded.config.crawl.excludeUrlPatterns ?? [];
-  Object.defineProperty(loaded.config.crawl, 'excludeUrlPatternsCompiled', {
-    value: excludePatterns.map((/** @type {string} */ p) => new RegExp(p)),
-    enumerable: false,
-    configurable: true,
-    writable: false,
-  });
+  defineHidden(
+    loaded.config.crawl,
+    'excludeUrlPatternsCompiled',
+    excludePatterns.map((/** @type {string} */ p) => new RegExp(p)),
+  );
 
   // ANCHOR: StepC — logger
   const logger = createLogger({ level: options.logLevel });
@@ -135,12 +159,7 @@ export async function buildContext(options = {}) {
   // ANCHOR: PreflightFlag — true iff we ran preflight above. Non-enumerable
   //   so it doesn't leak into JSON-serialised artefacts.
   if (!options.skipPreflight) {
-    Object.defineProperty(ctx, 'preflightRan', {
-      value: true,
-      enumerable: false,
-      configurable: true,
-      writable: false,
-    });
+    defineHidden(ctx, 'preflightRan', true);
   }
 
   return ctx;
@@ -168,10 +187,5 @@ export async function ensurePreflight(ctx) {
     err.name = 'PreflightError';
     throw err;
   }
-  Object.defineProperty(ctx, 'preflightRan', {
-    value: true,
-    enumerable: false,
-    configurable: true,
-    writable: false,
-  });
+  defineHidden(ctx, 'preflightRan', true);
 }
