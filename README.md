@@ -1,5 +1,14 @@
 # WCAG-EM Accessibility Toolkit V2 Recommended
 
+> **Status: work in progress.** This toolkit is mid-migration from v0.3 to
+> v1.0.0. Architecture, conventions, and feature set are converging:
+> [`docs/adr/`](./docs/adr/) captures current decisions and
+> [`CHANGELOG.md`](./CHANGELOG.md) tracks deferred work. The README content
+> below still reflects the v0.3 starting point (with references to the old
+> `box/` + `scripts/` directories) and will be rewritten in the final
+> release layer. For the current CLI surface see
+> `node bin/wcag-em.mjs --help`.
+
 This package is the **recommended V2 build** based on the V1 and V2 decision points.
 
 It is designed to help you run the **automated layer** of a WCAG-EM-aligned audit workflow without over-claiming what automation can prove.
