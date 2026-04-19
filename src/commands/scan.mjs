@@ -27,7 +27,26 @@ const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
+import { resolveViewports } from '../lib/viewports.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
+
+// SECTION: Pure helpers (exported for testability)
+
+/**
+ * Build the screenshot filename for a URL × viewport combination.
+ *
+ * The `__${vp.id}` suffix separates scans of the same URL at different
+ * viewports. ADR-0006 documents the low-likelihood collision risk when a
+ * URL path itself contains the substring `__<vp.id>`.
+ *
+ * @param {string} screenshotsDir
+ * @param {string} url
+ * @param {{ id: string }} viewport
+ * @returns {string}
+ */
+export function buildScreenshotPath(screenshotsDir, url, viewport) {
+  return path.join(screenshotsDir, `${fileSafeFromUrl(url)}__${viewport.id}.png`);
+}
 
 // SECTION: Public API
 
@@ -51,6 +70,9 @@ export async function run(ctx) {
     }
   }
 
+  const viewports = resolveViewports(config, logger);
+  logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan viewports');
+
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */
   const allResults = [];
@@ -59,14 +81,15 @@ export async function run(ctx) {
   /**
    * @param {import('playwright').Page} page
    * @param {string} url
+   * @param {{ id: string, width: number, height: number }} viewport
    */
-  async function runForPage(page, url) {
+  async function runForPage(page, url, viewport) {
     await page.goto(url, {
       waitUntil: config.scan.waitUntil,
       timeout: config.scan.timeoutMs,
     });
 
-    const screenshotPath = path.join(paths.screenshotsDir, `${fileSafeFromUrl(url)}.png`);
+    const screenshotPath = buildScreenshotPath(paths.screenshotsDir, url, viewport);
     if (config.scan.fullPageScreenshots !== false) {
       await page.screenshot({ path: screenshotPath, fullPage: true });
     }
@@ -112,41 +135,59 @@ export async function run(ctx) {
     };
   }
 
-  // ANCHOR: ScanLoop — per-URL try/catch so one bad page doesn't kill the scan
-  for (const url of sampleUrls) {
-    let attempt = 0;
-    let success = false;
-    /** @type {Error | null} */
-    let lastError = null;
+  // ANCHOR: ScanLoop — outer viewport × inner URL. Sequential viewports per
+  // ADR-0006. Each URL is scanned N times (N = viewport count); findings
+  // are tagged with `viewport: vp.id` and screenshots use a `__${vp.id}`
+  // filename suffix so desktop/reflow artefacts do not collide. Per-URL
+  // try/catch is preserved so one bad page can't kill the scan for
+  // subsequent URLs or subsequent viewports.
+  for (const vp of viewports) {
+    logger.info({ viewport: vp.id }, 'viewport start');
+    for (const url of sampleUrls) {
+      let attempt = 0;
+      let success = false;
+      /** @type {Error | null} */
+      let lastError = null;
 
-    while (attempt <= config.scan.retries && !success) {
-      const context = await browser.newContext({ viewport: config.scan.viewport });
-      const page = await context.newPage();
-      try {
-        attempt += 1;
-        logger.info({ url, attempt }, 'scanning');
-        const result = await runForPage(page, url);
-        allResults.push({ url, attempts: attempt, ...result });
-        logger.info({ url, violations: result.violations.length }, 'scanned');
-        success = true;
-      } catch (error) {
-        lastError = /** @type {Error} */ (error);
-        logger.warn({ url, attempt, err: lastError.message }, 'scan attempt failed');
-      } finally {
-        await context.close();
+      while (attempt <= config.scan.retries && !success) {
+        const context = await browser.newContext({
+          viewport: { width: vp.width, height: vp.height },
+        });
+        const page = await context.newPage();
+        try {
+          attempt += 1;
+          logger.info({ url, viewport: vp.id, attempt }, 'scanning');
+          const result = await runForPage(page, url, vp);
+          allResults.push({ url, viewport: vp.id, attempts: attempt, ...result });
+          logger.info(
+            { url, viewport: vp.id, violations: result.violations.length },
+            'scanned',
+          );
+          success = true;
+        } catch (error) {
+          lastError = /** @type {Error} */ (error);
+          logger.warn(
+            { url, viewport: vp.id, attempt, err: lastError.message },
+            'scan attempt failed',
+          );
+        } finally {
+          await context.close();
+        }
+      }
+
+      if (!success) {
+        pagesFailed += 1;
+        allResults.push({
+          url,
+          viewport: vp.id,
+          attempts: attempt,
+          error: lastError?.message ?? 'Unknown error',
+          violations: [],
+        });
+        logger.error({ url, viewport: vp.id, attempts: attempt }, 'scan failed after retries');
       }
     }
-
-    if (!success) {
-      pagesFailed += 1;
-      allResults.push({
-        url,
-        attempts: attempt,
-        error: lastError?.message ?? 'Unknown error',
-        violations: [],
-      });
-      logger.error({ url, attempts: attempt }, 'scan failed after retries');
-    }
+    logger.info({ viewport: vp.id }, 'viewport done');
   }
 
   await browser.close();
