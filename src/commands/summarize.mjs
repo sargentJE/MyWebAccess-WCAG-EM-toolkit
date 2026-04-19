@@ -12,9 +12,6 @@
  * manual backlog + tool-identity stamp.
  * Layer 4 replaces the inline Markdown emission with pluggable reporters.
  *
- * Layer 2 removes the dead `randomOnlyRuleIds` set populated but never read
- * in v0.3 (see the FIXME tagged in this file).
- *
  * @see docs/adr/0007-wcag-em-summary-shape.md
  * @see docs/adr/0008-pluggable-reporters.md
  */
@@ -69,9 +66,6 @@ export async function run(ctx) {
   const groupedByRule = new Map();
   /** @type {Map<string, any>} */
   const groupedByComponent = new Map();
-  // FIXME(Layer 2): `randomOnlyRuleIds` below is dead code in v0.3; removed
-  // after Layer 2 lands its test. Keeping for now so this transition commit
-  // doesn't also change summary.json shape.
   /** @type {Set<string>} */
   const structuredRuleIds = new Set();
   /** @type {Set<string>} */
