@@ -32,6 +32,21 @@ import { fileSafeFromUrl } from './urls.mjs';
 // ANCHOR: DEFAULT_STEP_TIMEOUT_MS — used when config.scan.timeoutMs is unset.
 const DEFAULT_STEP_TIMEOUT_MS = 60000;
 
+// ANCHOR: DISPATCH_ACTIONS — authoritative list of actions `runStep` handles.
+// The schema's `$defs.action.properties.action.enum` in
+// `schemas/config.schema.json` MUST equal this set. The invariant is locked
+// by `test/unit/process-runner-invariant.test.mjs`. Aliases are not permitted.
+// LINK: docs/adr/0005-fail-fast-on-config.md
+export const DISPATCH_ACTIONS = Object.freeze([
+  'goto',
+  'click',
+  'fill',
+  'press',
+  'waitFor',
+  'screenshot',
+  'axe',
+]);
+
 // SECTION: Public API
 
 /**
