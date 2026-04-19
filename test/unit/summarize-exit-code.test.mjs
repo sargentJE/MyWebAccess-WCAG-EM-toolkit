@@ -148,3 +148,30 @@ test('findings without impact or classification properties are skipped', () => {
     0,
   );
 });
+
+test('findings with impact:null are skipped (schema permits null; guard must hold)', () => {
+  // Regression guard for the `typeof f.impact === 'string'` predicate in
+  // computeExitCode. A grouped finding whose axe rule has no impact tag
+  // surfaces as `impact: null` in the summary — the exit-code helper must
+  // treat it the same as a missing impact key, not trip the threshold.
+  assert.equal(
+    computeExitCode(
+      /** @type {any} */ ({ findings: [{ impact: null, classification: null }] }),
+      defaultPolicy,
+    ),
+    0,
+  );
+  // Mixed: one null-impact finding (skipped) + one critical (counts) → exit 2.
+  assert.equal(
+    computeExitCode(
+      {
+        findings: [
+          /** @type {any} */ ({ impact: null, classification: null }),
+          { impact: 'critical', classification: 'primary-automated-finding' },
+        ],
+      },
+      defaultPolicy,
+    ),
+    2,
+  );
+});
