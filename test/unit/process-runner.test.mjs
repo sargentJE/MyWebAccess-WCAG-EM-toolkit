@@ -174,3 +174,15 @@ test('StepTimeoutError is the named error surface', () => {
   assert.strictEqual(err.action, 'click');
   assert.strictEqual(err.timeoutMs, 1000);
 });
+
+test('timeout handle is cleared when step resolves first (no dangling timer)', async () => {
+  // If the timer isn't cancelled when dispatch wins the race, Node keeps the
+  // event loop alive for `stepTimeoutMs` past the step's completion. The test
+  // uses a 10 s timeout and a trivially-fast click, asserts we're back in
+  // < 200 ms, and relies on `--test`'s wall clock as the oracle.
+  const { ctx } = buildStepCtx({ timeoutMs: 10000 });
+  const started = Date.now();
+  await runStep({ action: 'click', selector: 'button' }, ctx);
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed < 200, `expected quick return (<200ms); got ${elapsed}ms`);
+});

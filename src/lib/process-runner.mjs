@@ -125,8 +125,9 @@ export async function runProcessSteps(processDef, steps, ctx) {
  */
 export async function runStep(step, ctx) {
   const stepTimeoutMs = Number(ctx.config?.scan?.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS);
+  const timeout = rejectAfter(step.action, stepTimeoutMs);
   try {
-    return await Promise.race([dispatch(step, ctx), rejectAfter(step.action, stepTimeoutMs)]);
+    return await Promise.race([dispatch(step, ctx), timeout.promise]);
   } catch (err) {
     if (err instanceof StepTimeoutError) {
       ctx.logger.warn({ action: err.action, timeoutMs: err.timeoutMs }, 'process step timed out');
@@ -135,22 +136,40 @@ export async function runStep(step, ctx) {
     const message = err instanceof Error ? err.message : String(err);
     ctx.logger.error({ action: step.action, err: message }, 'process step failed');
     return { state: 'error', name: step.action, error: message };
+  } finally {
+    timeout.cancel();
   }
 }
 
 // SECTION: Internal helpers
 
 /**
- * Reject with `StepTimeoutError` after `timeoutMs` ms.
+ * Schedule a timer that rejects with `StepTimeoutError` after `timeoutMs` ms,
+ * returning the promise together with a `cancel()` that clears the handle.
+ *
+ * Callers MUST invoke `cancel()` in a `finally` around `Promise.race` so the
+ * timer doesn't linger on the event loop once the race is settled — otherwise
+ * a fast-resolving step with a 60 s default timeout keeps Node alive for up
+ * to 60 s after the step finished.
  *
  * @param {string} action
  * @param {number} timeoutMs
- * @returns {Promise<never>}
+ * @returns {{ promise: Promise<never>, cancel: () => void }}
  */
 function rejectAfter(action, timeoutMs) {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new StepTimeoutError(action, timeoutMs)), timeoutMs);
-  });
+  /** @type {NodeJS.Timeout | undefined} */
+  let handle;
+  const promise = /** @type {Promise<never>} */ (
+    new Promise((_, reject) => {
+      handle = setTimeout(() => reject(new StepTimeoutError(action, timeoutMs)), timeoutMs);
+    })
+  );
+  return {
+    promise,
+    cancel: () => {
+      if (handle !== undefined) clearTimeout(handle);
+    },
+  };
 }
 
 /**
