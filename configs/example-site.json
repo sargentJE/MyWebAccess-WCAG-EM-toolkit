@@ -9,6 +9,7 @@
     "maxPages": 80,
     "maxConcurrency": 5,
     "requestTimeoutSecs": 90,
+    "requestDelayMs": 0,
     "excludeUrlPatterns": ["/wp-admin", "\\?replytocom=", "/feed/?$"],
     "sitemapSeeding": {
       "enabled": true,
@@ -37,8 +38,11 @@
     "smallSiteSupplementaryScanThreshold": 50
   },
   "scan": {
-    "viewport": { "width": 1440, "height": 900 },
-    "waitUntil": "load",
+    "viewports": [
+      { "id": "desktop", "width": 1280, "height": 800 },
+      { "id": "reflow", "width": 320, "height": 800 }
+    ],
+    "waitUntil": "domcontentloaded",
     "timeoutMs": 60000,
     "retries": 1,
     "fullPageScreenshots": true,
@@ -46,7 +50,7 @@
       "include": [],
       "exclude": [],
       "withRules": [],
-      "withTags": [],
+      "withTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
       "runOnly": null
     }
   },

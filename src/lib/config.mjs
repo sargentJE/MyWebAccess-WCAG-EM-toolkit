@@ -27,8 +27,11 @@ import { parseArgs } from './args.mjs';
 // SECTION: Constants
 
 // ANCHOR: DEFAULTS — every key the toolkit understands, with a shippable default.
-// Layer 3a adds `scan.viewports`, `crawl.requestDelayMs`, and default axe tag
-// profile. Layer 3b adds `auth`, `wcagEm`. Layer 4 adds `reporting.reporters`.
+// Layer 3a landed `scan.viewports` (sentinel), `crawl.requestDelayMs`, the
+// default axe tag profile, `reporting.failOnFindings`, and deleted the legacy
+// `scan.viewport` singleton so DEFAULT_VIEWPORTS becomes reachable via
+// `resolveViewports`. Layer 3b adds `auth`, `wcagEm`. Layer 4 adds
+// `reporting.reporters`.
 const DEFAULTS = {
   scope: {
     mode: 'same-hostname',
@@ -38,6 +41,9 @@ const DEFAULTS = {
     maxPages: 80,
     maxConcurrency: 5,
     requestTimeoutSecs: 90,
+    // Crawl throttle in ms; wired into the Crawlee crawler's
+    // `preNavigationHooks` in `src/commands/discover.mjs` (R7). 0 = no delay.
+    requestDelayMs: 0,
     sitemapSeeding: {
       enabled: true,
       urls: [],
@@ -66,8 +72,12 @@ const DEFAULTS = {
     smallSiteSupplementaryScanThreshold: 50,
   },
   scan: {
-    viewport: { width: 1440, height: 900 },
-    waitUntil: 'load',
+    // Neither `viewports` nor `viewport` is shipped in DEFAULTS. Users who
+    // want multi-viewport scans set `scan.viewports: [...]` explicitly; the
+    // schema's `minItems: 1` rejects an empty-array opt-in, so there is no
+    // meaningful sentinel to ship. When both are absent, `resolveViewports`
+    // falls through to `DEFAULT_VIEWPORTS` (desktop + reflow).
+    waitUntil: 'domcontentloaded',
     timeoutMs: 60000,
     retries: 1,
     fullPageScreenshots: true,
@@ -75,13 +85,23 @@ const DEFAULTS = {
       include: [],
       exclude: [],
       withRules: [],
-      withTags: [],
+      // Layer 3a default tag profile — WCAG 2.0/2.1/2.2 A + AA. ACT tag
+      // lands in Layer 3b alongside the ACT rule map.
+      withTags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
       runOnly: null,
     },
   },
   reporting: {
     groupBestPracticeSeparately: true,
     markdownReport: true,
+    // Threshold-based exit code 2 wiring lives in summarize.mjs (R8).
+    // `impacts` matches any axe impact; `classifications` matches the
+    // classifyRule buckets; count ≥ threshold → exit 2.
+    failOnFindings: {
+      impacts: ['critical', 'serious'],
+      classifications: [],
+      threshold: 1,
+    },
   },
   processes: [],
 };
