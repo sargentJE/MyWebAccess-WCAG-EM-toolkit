@@ -44,6 +44,10 @@ import { runPreflight } from './preflight.mjs';
  * @property {import('pino').Logger} logger - Shared logger.
  * @property {RunContextPaths} paths - Pre-resolved output subdirectories.
  * @property {Record<string, string | boolean>} args - Raw CLI args (legacy surface).
+ * @property {boolean} [preflightRan] - True once preflight has succeeded.
+ *   Set non-enumerably by `buildContext` and `ensurePreflight` so it never
+ *   leaks into JSON-serialised artefacts. Defined on the ctx object, not
+ *   the config.
  */
 
 /**
@@ -119,11 +123,55 @@ export async function buildContext(options = {}) {
   await fs.mkdir(paths.reportsDir, { recursive: true });
   await fs.mkdir(paths.screenshotsDir, { recursive: true });
 
-  return {
+  /** @type {RunContext} */
+  const ctx = {
     config: loaded.config,
     configPath,
     logger,
     paths,
     args: loaded.args,
   };
+
+  // ANCHOR: PreflightFlag — true iff we ran preflight above. Non-enumerable
+  //   so it doesn't leak into JSON-serialised artefacts.
+  if (!options.skipPreflight) {
+    Object.defineProperty(ctx, 'preflightRan', {
+      value: true,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  }
+
+  return ctx;
+}
+
+/**
+ * Run preflight if `buildContext` was skipped — defence-in-depth for
+ * programmatic API callers who construct `RunContext` by hand. Idempotent:
+ * `ctx.preflightRan` guards against double-running.
+ *
+ * Co-located with `context.mjs` rather than promoted to its own module —
+ * one small helper doesn't justify a file.
+ *
+ * @param {RunContext} ctx
+ * @returns {Promise<void>}
+ */
+export async function ensurePreflight(ctx) {
+  if (ctx.preflightRan) return;
+  const pf = await runPreflight({
+    configPath: ctx.configPath,
+    outDir: ctx.paths.outDir,
+  });
+  if (!pf.ok) {
+    const err = new Error(`Preflight failed:\n  - ${pf.failures.join('\n  - ')}`);
+    err.name = 'PreflightError';
+    throw err;
+  }
+  Object.defineProperty(ctx, 'preflightRan', {
+    value: true,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
 }

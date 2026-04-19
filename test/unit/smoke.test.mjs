@@ -43,3 +43,23 @@ test('urls.normalizeUrl strips hash and trims trailing slash', async () => {
   assert.equal(normalizeUrl('https://example.com/path/#frag'), 'https://example.com/path');
   assert.equal(normalizeUrl('https://example.com/'), 'https://example.com/');
 });
+
+// ANCHOR: PreflightRanFlag — the guard ensurePreflight checks
+test('buildContext with skipPreflight leaves ctx.preflightRan undefined', async () => {
+  const { buildContext } = await import('../../src/lib/context.mjs');
+  const ctx = await buildContext({ skipPreflight: true });
+  assert.strictEqual(ctx.preflightRan, undefined);
+});
+
+test('ensurePreflight sets ctx.preflightRan non-enumerably on success', async () => {
+  const { buildContext, ensurePreflight } = await import('../../src/lib/context.mjs');
+  const ctx = await buildContext({ skipPreflight: true });
+  // requirePlaywright defaults to false — preflight only checks config
+  // readability + output dir writability, both satisfied by buildContext.
+  await ensurePreflight(ctx);
+  assert.strictEqual(ctx.preflightRan, true, 'flag set after ensurePreflight');
+  assert.ok(
+    !Object.keys(ctx).includes('preflightRan'),
+    'preflightRan must be non-enumerable on ctx',
+  );
+});
