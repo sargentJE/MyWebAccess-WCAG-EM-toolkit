@@ -24,6 +24,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { writeJson } from '../lib/fs-utils.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
+import { resolveViewports } from '../lib/viewports.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Internal helpers
@@ -88,15 +89,20 @@ function expandPattern(processDef) {
  * @param {import('playwright').Browser} browser - Shared browser instance.
  * @param {any} processDef - Entry from `config.processes[]`.
  * @param {import('../lib/context.mjs').RunContext} ctx
+ * @param {{ id: string, width: number, height: number }} viewport
+ *   - Viewport this invocation runs under. Threaded from the outer loop in
+ *     `run()` so each process is executed once per resolved viewport.
  * @returns {Promise<any>} The process result (pushed into processResults).
  */
-export async function runOneProcess(browser, processDef, ctx) {
+export async function runOneProcess(browser, processDef, ctx, viewport) {
   /** @type {import('playwright').BrowserContext | undefined} */
   let context;
   /** @type {any[]} */
   const states = [];
   try {
-    context = await browser.newContext({ viewport: ctx.config.scan.viewport });
+    context = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
     const page = await context.newPage();
     const steps = expandPattern(processDef);
 
@@ -105,17 +111,19 @@ export async function runOneProcess(browser, processDef, ctx) {
         name: processDef.name,
         startUrl: processDef.startUrl,
         pattern: processDef.pattern ?? null,
+        viewport: viewport.id,
         states: [{ state: 'not-run', note: 'No steps or supported pattern defined.' }],
       };
     }
 
-    ctx.logger.info({ name: processDef.name }, 'process start');
+    ctx.logger.info({ name: processDef.name, viewport: viewport.id }, 'process start');
     const stepResults = await runProcessSteps(processDef, steps, {
       page,
       config: ctx.config,
       logger: ctx.logger,
       paths: ctx.paths,
       processDef,
+      viewport,
     });
     states.push(...stepResults);
 
@@ -123,15 +131,20 @@ export async function runOneProcess(browser, processDef, ctx) {
       name: processDef.name,
       startUrl: processDef.startUrl,
       pattern: processDef.pattern ?? null,
+      viewport: viewport.id,
       states,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    ctx.logger.error({ name: processDef.name, err: message }, 'process failed');
+    ctx.logger.error(
+      { name: processDef.name, viewport: viewport.id, err: message },
+      'process failed',
+    );
     return {
       name: processDef.name,
       startUrl: processDef.startUrl,
       pattern: processDef.pattern ?? null,
+      viewport: viewport.id,
       error: message,
       states,
     };
@@ -141,7 +154,10 @@ export async function runOneProcess(browser, processDef, ctx) {
         await context.close();
       } catch (closeErr) {
         const msg = closeErr instanceof Error ? closeErr.message : String(closeErr);
-        ctx.logger.warn({ err: msg }, 'process context close failed');
+        ctx.logger.warn(
+          { viewport: viewport.id, err: msg },
+          'process context close failed',
+        );
       }
     }
   }
@@ -154,12 +170,23 @@ export async function runOneProcess(browser, processDef, ctx) {
 export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
+  const viewports = resolveViewports(config, logger);
+  logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan-processes viewports');
+
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */
   const processResults = [];
 
-  for (const processDef of config.processes ?? []) {
-    processResults.push(await runOneProcess(browser, processDef, ctx));
+  // ANCHOR: ProcessLoop — outer viewport × inner process. Mirrors scan.mjs's
+  // ScanLoop ordering (ADR-0006). Each process runs once per viewport; the
+  // viewport id flows into both the result object and process-runner's
+  // screenshot filename via the StepContext.viewport field.
+  for (const vp of viewports) {
+    logger.info({ viewport: vp.id }, 'viewport start');
+    for (const processDef of config.processes ?? []) {
+      processResults.push(await runOneProcess(browser, processDef, ctx, vp));
+    }
+    logger.info({ viewport: vp.id }, 'viewport done');
   }
 
   await browser.close();

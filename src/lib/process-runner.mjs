@@ -56,6 +56,10 @@ export const DISPATCH_ACTIONS = Object.freeze([
  * @property {import('pino').Logger} logger - Run logger for step-level events.
  * @property {import('./context.mjs').RunContextPaths} paths - Output dir layout.
  * @property {any} processDef - The process definition the step belongs to.
+ * @property {{ id: string, width: number, height: number }} viewport
+ *   - Viewport the process is being executed under. Threaded from
+ *     `scan-processes.mjs`'s outer viewport loop so screenshot filenames
+ *     can disambiguate desktop vs reflow captures of the same state.
  */
 
 /**
@@ -181,7 +185,7 @@ function rejectAfter(action, timeoutMs) {
  * @returns {Promise<StepResult | null>}
  */
 async function dispatch(step, ctx) {
-  const { page, config, paths, processDef } = ctx;
+  const { page, config, paths, processDef, viewport } = ctx;
   switch (step.action) {
     case 'goto':
       await page.goto(step.url, {
@@ -212,7 +216,7 @@ async function dispatch(step, ctx) {
     case 'screenshot': {
       const screenshotPath = path.join(
         paths.screenshotsDir,
-        `${fileSafeFromUrl(processDef.startUrl)}__${processDef.name}__${step.name ?? 'state'}.png`,
+        `${fileSafeFromUrl(processDef.startUrl)}__${processDef.name}__${step.name ?? 'state'}__${viewport.id}.png`,
       );
       await page.screenshot({
         path: screenshotPath,

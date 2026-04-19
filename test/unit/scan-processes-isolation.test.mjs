@@ -114,6 +114,7 @@ test('runOneProcess returns error-result when newContext throws (loop continues)
     browser,
     { name: 'broken', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
     ctx,
+    { id: 'desktop', width: 1440, height: 900 },
   );
 
   assert.strictEqual(result.name, 'broken');
@@ -133,6 +134,7 @@ test('runOneProcess succeeds when newContext succeeds', async () => {
       steps: [{ action: 'goto', url: 'https://example.com/' }],
     },
     ctx,
+    { id: 'desktop', width: 1440, height: 900 },
   );
 
   assert.strictEqual(result.name, 'happy');
@@ -153,7 +155,9 @@ test('three processes with the second throwing — all three get results, loop d
   /** @type {any[]} */
   const results = [];
   for (const def of defs) {
-    results.push(await runOneProcess(browser, def, ctx));
+    results.push(
+      await runOneProcess(browser, def, ctx, { id: 'desktop', width: 1440, height: 900 }),
+    );
   }
 
   assert.strictEqual(results.length, 3, 'loop ran all three processes');
@@ -173,6 +177,7 @@ test('empty pattern returns state:not-run without invoking the dispatch', async 
     browser,
     { name: 'empty', startUrl: 'https://x/', pattern: null, steps: [] },
     ctx,
+    { id: 'desktop', width: 1440, height: 900 },
   );
 
   assert.strictEqual(result.states.length, 1);

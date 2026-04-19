@@ -85,6 +85,7 @@ function buildStepCtx(overrides = {}) {
       sampleJsonPath: '/tmp/out/sample.json',
     },
     processDef: { name: 'signup', startUrl: 'https://example.com/join' },
+    viewport: { id: 'desktop', width: 1280, height: 800 },
   });
 
   return { ctx, mocks: { goto, click, fill, press, waitForTimeout, screenshot } };
@@ -143,6 +144,18 @@ test('screenshot defaults to fullPage=true when flag is undefined', async () => 
   const { ctx, mocks } = buildStepCtx({ fullPageScreenshots: undefined });
   await runStep({ action: 'screenshot', name: 'blank' }, ctx);
   assert.strictEqual(mocks.screenshot.mock.calls[0].arguments[0].fullPage, true);
+});
+
+test('screenshot filename includes the viewport id suffix', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  // buildStepCtx defaults viewport.id to "desktop".
+  await runStep({ action: 'screenshot', name: 'confirmation' }, ctx);
+  const pathArg = mocks.screenshot.mock.calls[0].arguments[0].path;
+  assert.match(
+    pathArg,
+    /__confirmation__desktop\.png$/,
+    `expected __confirmation__desktop.png suffix; got ${pathArg}`,
+  );
 });
 
 // SECTION: Timeout + error paths
