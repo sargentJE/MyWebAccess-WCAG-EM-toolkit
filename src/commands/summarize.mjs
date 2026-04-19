@@ -34,6 +34,17 @@ export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
 
+  // ANCHOR: ReportersWarn — matches override.actions discipline in scan.mjs.
+  // The schema accepts `reporting.reporters` (Layer 4's pluggable-reporter
+  // surface) but the runtime only emits JSON + Markdown today. Warn once so
+  // users with `reporters: ["earl-jsonld"]` don't silently get no effect.
+  if (Array.isArray(config.reporting?.reporters) && config.reporting.reporters.length > 0) {
+    logger.warn(
+      { reporters: config.reporting.reporters },
+      'reporting.reporters is schema-accepted but runtime-ignored until Layer 4',
+    );
+  }
+
   /** @type {[any[], Record<string, any>, any[], any[]]} */
   const [inventory, sampleMetadata, axeResults, processResults] = await Promise.all([
     readJsonMaybe(path.join(paths.inventoryDir, 'inventory.json'), /** @type {any[]} */ ([])),

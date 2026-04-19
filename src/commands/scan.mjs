@@ -26,7 +26,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
-import { isValidRunOnly } from '../lib/axe-utils.mjs';
+import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Public API
@@ -39,6 +39,17 @@ export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
   const sampleUrls = JSON.parse(await fs.readFile(paths.sampleJsonPath, 'utf8'));
+
+  // ANCHOR: OverrideActionsWarn — per-pattern once; Layer 3b will wire actions.
+  // Consistency precedent for the `reporters` warn emitted by summarize.mjs.
+  for (const override of config.scan?.axe?.overridesCompiled ?? []) {
+    if (Array.isArray(override.actions) && override.actions.length > 0) {
+      logger.warn(
+        { urlPattern: override.urlPattern },
+        'override.actions is schema-accepted but runtime-ignored in Layer 3a; wires in Layer 3b',
+      );
+    }
+  }
 
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */
@@ -61,9 +72,20 @@ export async function run(ctx) {
     }
 
     // ANCHOR: AxeBuilderChain — apply config.scan.axe settings.
-    // Layer 3a will add per-URL overrides before this chain is built.
+    // Per-URL overrides land here: find the first matching override by
+    // compiled regex (first-match-wins per Pa11y precedent), then merge
+    // with replace-if-defined semantics (hasOwnProperty predicate, so
+    // `runOnly: null` clears rather than inheriting).
+    // NOTE: Overrides affect AxeBuilder chain construction only — viewport
+    // concurrency is orthogonal (ADR-0006 keeps the two concerns separate).
+    const baseAxeConfig = config.scan.axe ?? {};
+    const matchedOverride = findMatchingOverride(
+      url,
+      baseAxeConfig.overridesCompiled ?? [],
+    );
+    const axeConfig = applyAxeOverride(baseAxeConfig, matchedOverride);
+
     let builder = new AxeBuilder({ page });
-    const axeConfig = config.scan.axe ?? {};
 
     for (const selector of axeConfig.exclude || []) builder = builder.exclude(selector);
     for (const selector of axeConfig.include || []) builder = builder.include(selector);
@@ -72,8 +94,9 @@ export async function run(ctx) {
     if (Array.isArray(axeConfig.withTags) && axeConfig.withTags.length > 0)
       builder = builder.withTags(axeConfig.withTags);
     if (isValidRunOnly(axeConfig.runOnly)) {
-      // NOTE: schema now enforces the { type, values } shape; this runtime
-      // guard protects against stale configs produced before Layer 1.
+      // NOTE: schema enforces the { type, values } shape; this runtime guard
+      // protects against stale configs produced before Layer 1 AND against
+      // an override whose runOnly is malformed.
       // LINK: src/lib/axe-utils.mjs → isValidRunOnly
       builder = builder.options({ runOnly: axeConfig.runOnly });
     }

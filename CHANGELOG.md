@@ -25,7 +25,10 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 - Implement the `reporting.reporters` enum values (`json`, `markdown`,
   `html`, `earl-jsonld`, `junit`). The schema already promises pluggable
-  reporters but the Layer 2 runtime hard-codes two output formats, so a
-  user writing `reporters: ["earl-jsonld"]` today silently gets no
-  effect. ADR-0008 (forthcoming) will record the pluggable-reporter
-  decision.
+  reporters but the Layer 2 runtime hard-codes two output formats, so
+  a user writing `reporters: ["earl-jsonld"]` today still gets the
+  hard-coded JSON + Markdown set. As of Layer 3a the runtime emits a
+  one-shot `logger.warn` when the field is configured (matches the
+  same discipline as `scan.axe.overrides[].actions` — schema accepts,
+  runtime warns, full implementation lands in the next layer).
+  ADR-0008 (forthcoming) will record the pluggable-reporter decision.
