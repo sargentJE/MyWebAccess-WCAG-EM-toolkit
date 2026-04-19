@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Regenerate src/types/config.d.ts from the JSON schema + re-stage.
+# See docs/adr/0005-fail-fast-on-config.md for why this hook exists.
+node scripts/gen-types.mjs && git add src/types/config.d.ts
