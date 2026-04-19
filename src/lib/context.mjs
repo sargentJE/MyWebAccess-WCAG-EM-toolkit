@@ -68,8 +68,7 @@ export async function buildContext(options = {}) {
   const loaded = await loadConfig(options.configPath);
   const configPath = loaded.configPath;
 
-  // ANCHOR: StepB — Ajv validation (supersedes the imperative validator
-  // retained inside loadConfig() for backcompat during Layer 0/1 transition).
+  // ANCHOR: StepB — Ajv validation against schemas/config.schema.json.
   await assertValidConfig(loaded.config, configPath);
 
   // ANCHOR: CompileRuntimeFields — regex strings become RegExp[] once, at load.

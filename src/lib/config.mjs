@@ -4,15 +4,15 @@
  * @module lib/config
  *
  * @description
- * v0.3 `loadConfig()` — reads the config JSON from disk, deep-merges against
- * `DEFAULTS`, and runs an imperative validator. Layer 1 replaces the
- * imperative checks with Ajv + `better-ajv-errors` against the JSON schema,
- * while preserving `DEFAULTS` and `deepMerge()` (private helper retained per
- * the reuse-over-rewrite clause of ADR-0001).
+ * Reads the config JSON from disk and deep-merges it against `DEFAULTS`.
+ * Validation lives in `lib/validate-config.mjs` (Ajv 2020 +
+ * better-ajv-errors against `schemas/config.schema.json`) and runs in
+ * `context.mjs` during `buildContext()`. This module has no opinion on
+ * validity beyond what JSON.parse enforces.
  *
- * Layer 2 extends the loader to compile `crawl.excludeUrlPatterns` into
- * `RegExp[]` once at load, so bad patterns fail fast instead of at crawl time
- * (see `sitemap.mjs` / `urls.mjs` FIXMEs).
+ * The compile-at-load step that attaches `crawl.excludeUrlPatternsCompiled`
+ * also lives in `context.mjs` because it must run AFTER Ajv has confirmed
+ * each pattern compiles.
  *
  * @see docs/adr/0001-project-conventions.md
  * @see docs/adr/0002-config-is-ajv-validated.md
@@ -114,7 +114,6 @@ export async function loadConfig(overridePath) {
   const resolved = path.resolve(configPath);
   const raw = await fs.readFile(resolved, 'utf8');
   const config = deepMerge(DEFAULTS, JSON.parse(raw));
-  validateConfig(config, resolved);
   return { config, configPath: resolved, args };
 }
 
@@ -139,38 +138,4 @@ function deepMerge(base, override) {
     out[key] = key in base ? deepMerge(base[key], value) : value;
   }
   return out;
-}
-
-/**
- * Imperative validator — superseded by Ajv in Layer 1. Keeps behaviour
- * identical during Layer 0 so the tree stays green during the transition.
- *
- * @param {Record<string, any>} config
- * @param {string} configPath
- * @returns {void}
- */
-function validateConfig(config, configPath) {
-  const requiredTopLevel = ['name', 'rootUrl', 'scope', 'crawl', 'sample', 'scan'];
-  for (const key of requiredTopLevel) {
-    if (!(key in config)) throw new Error(`Missing required config key "${key}" in ${configPath}`);
-  }
-  if (typeof config.name !== 'string' || config.name.trim() === '') {
-    throw new Error(`name must be a non-empty string in ${configPath}`);
-  }
-  if (typeof config.rootUrl !== 'string' || !/^https?:\/\//.test(config.rootUrl)) {
-    throw new Error(`rootUrl must be a full URL in ${configPath}`);
-  }
-  const supportedScopeModes = new Set(['same-hostname', 'same-origin', 'allowed-hosts']);
-  if (!supportedScopeModes.has(config.scope.mode)) {
-    throw new Error(`Unsupported scope.mode "${config.scope.mode}" in ${configPath}`);
-  }
-  if (!Array.isArray(config.sample.structuredManual)) {
-    throw new Error(`sample.structuredManual must be an array in ${configPath}`);
-  }
-  if (typeof config.sample.randomSeed !== 'number') {
-    throw new Error(`sample.randomSeed must be numeric in ${configPath}`);
-  }
-  if (!Array.isArray(config.processes)) {
-    throw new Error(`processes must be an array in ${configPath}`);
-  }
 }

@@ -91,3 +91,14 @@ test('assertValidConfig throws on invalid input with ConfigValidationError name'
     (err) => err instanceof Error && err.name === 'ConfigValidationError',
   );
 });
+
+test('rejects whitespace-only name (schema pattern "\\S")', async () => {
+  const broken = { ...validConfig, name: '   ' };
+  const result = await validateConfig(broken);
+  assert.equal(result.valid, false);
+  const msg = (result.formatted ?? '').toLowerCase();
+  assert.ok(
+    msg.includes('name') || msg.includes('pattern'),
+    'expected name/pattern error in formatted output',
+  );
+});
