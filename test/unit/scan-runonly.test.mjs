@@ -40,3 +40,7 @@ test('rejects null runOnly', () => {
 test('rejects string runOnly', () => {
   assert.strictEqual(isValidRunOnly('tag'), false);
 });
+
+test("rejects bare array ['wcag2a'] (the v0.3 malformed shape this predicate exists for)", () => {
+  assert.strictEqual(isValidRunOnly(['wcag2a']), false);
+});

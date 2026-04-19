@@ -62,11 +62,18 @@ test('buildContext attaches excludeUrlPatternsCompiled as non-enumerable RegExp[
     skipPreflight: true,
   });
 
-  // Invariant 1 — non-enumerable: never serialises into artefacts.
-  assert.ok(
-    !Object.keys(ctx.config.crawl).includes('excludeUrlPatternsCompiled'),
-    'excludeUrlPatternsCompiled must be non-enumerable on config.crawl',
+  // Invariant 1 — descriptor contract: directly assert what ADR-0005 promises.
+  // The proxy check `!Object.keys().includes()` would pass if the property
+  // were simply absent for unrelated reasons; getOwnPropertyDescriptor tests
+  // the actual invariant that keeps the compiled array out of artefacts.
+  const descriptor = Object.getOwnPropertyDescriptor(
+    ctx.config.crawl,
+    'excludeUrlPatternsCompiled',
   );
+  assert.ok(descriptor, 'descriptor must exist — compile step must have run');
+  assert.strictEqual(descriptor.enumerable, false, 'enumerable must be false');
+  assert.strictEqual(descriptor.configurable, true, 'configurable must be true');
+  assert.strictEqual(descriptor.writable, false, 'writable must be false');
   assert.ok(
     !JSON.stringify(ctx.config.crawl).includes('excludeUrlPatternsCompiled'),
     'JSON.stringify must not emit the compiled array',

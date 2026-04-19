@@ -102,3 +102,9 @@ test('rejects whitespace-only name (schema pattern "\\S")', async () => {
     'expected name/pattern error in formatted output',
   );
 });
+
+test('accepts names with internal whitespace (positive partner for "\\S" rejection)', async () => {
+  const ok = { ...validConfig, name: 'my audit' };
+  const result = await validateConfig(ok);
+  assert.equal(result.valid, true, 'internal whitespace must still validate');
+});

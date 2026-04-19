@@ -13,6 +13,9 @@
 // SECTION: Imports
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isNodeVersionSupported } from '../../src/lib/engine-check.mjs';
 
 // SECTION: Tests
@@ -39,4 +42,16 @@ test('accepts a future major (23.4.0)', () => {
 
 test('accepts leading-v form (v22.11.0)', () => {
   assert.strictEqual(isNodeVersionSupported('v22.11.0'), true);
+});
+
+test("bin/wcag-em.mjs inline guard uses the same 22/11 constants as the helper", async () => {
+  // The bin file keeps its own inline engine check because the guard must
+  // run before any `import` — it cannot import this helper. Source-text
+  // assertion catches the drift class where a future Node LTS bump lands
+  // in one canonical location but not the other.
+  const __filename = fileURLToPath(import.meta.url);
+  const binPath = path.resolve(__filename, '../../..', 'bin', 'wcag-em.mjs');
+  const contents = await fs.readFile(binPath, 'utf8');
+  assert.match(contents, /major\s*<\s*22/, 'bin must check major < 22');
+  assert.match(contents, /minor\s*<\s*11/, 'bin must check minor < 11');
 });

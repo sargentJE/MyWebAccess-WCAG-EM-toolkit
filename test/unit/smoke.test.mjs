@@ -51,15 +51,18 @@ test('buildContext with skipPreflight leaves ctx.preflightRan undefined', async 
   assert.strictEqual(ctx.preflightRan, undefined);
 });
 
-test('ensurePreflight sets ctx.preflightRan non-enumerably on success', async () => {
+test('ensurePreflight sets ctx.preflightRan with the correct descriptor shape', async () => {
   const { buildContext, ensurePreflight } = await import('../../src/lib/context.mjs');
   const ctx = await buildContext({ skipPreflight: true });
   // requirePlaywright defaults to false — preflight only checks config
   // readability + output dir writability, both satisfied by buildContext.
   await ensurePreflight(ctx);
   assert.strictEqual(ctx.preflightRan, true, 'flag set after ensurePreflight');
-  assert.ok(
-    !Object.keys(ctx).includes('preflightRan'),
-    'preflightRan must be non-enumerable on ctx',
-  );
+
+  // Descriptor contract (from defineHidden helper in context.mjs).
+  const descriptor = Object.getOwnPropertyDescriptor(ctx, 'preflightRan');
+  assert.ok(descriptor, 'descriptor must exist after ensurePreflight set the flag');
+  assert.strictEqual(descriptor.enumerable, false, 'enumerable must be false');
+  assert.strictEqual(descriptor.configurable, true, 'configurable must be true');
+  assert.strictEqual(descriptor.writable, false, 'writable must be false');
 });
