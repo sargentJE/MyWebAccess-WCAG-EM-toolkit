@@ -34,6 +34,29 @@ import {
 import { getSitemapSeeds } from '../lib/sitemap.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
+// SECTION: Pure helpers (exported for testability)
+
+/**
+ * Build a Crawlee-compatible `preNavigationHooks` entry that sleeps for
+ * `requestDelayMs` before each navigation. Extracted as a pure async
+ * function so tests exercise the timing contract without spinning up
+ * Crawlee + Playwright.
+ *
+ * Treats any non-positive, NaN, or missing value as 0 (no delay) — this
+ * matches the DEFAULTS and keeps bad configs inert rather than crashing.
+ *
+ * @param {number | undefined} requestDelayMs
+ * @returns {() => Promise<void>}
+ */
+export function buildRequestDelayHook(requestDelayMs) {
+  const ms = Number(requestDelayMs);
+  return async () => {
+    if (Number.isFinite(ms) && ms > 0) {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    }
+  };
+}
+
 // SECTION: Public API
 
 /**
@@ -73,6 +96,9 @@ export async function run(ctx) {
     maxRequestsPerCrawl: config.crawl.maxPages,
     maxConcurrency: config.crawl.maxConcurrency,
     requestHandlerTimeoutSecs: config.crawl.requestTimeoutSecs,
+    // ANCHOR: RequestDelayHook — per-navigation throttle honouring
+    // `config.crawl.requestDelayMs`. Zero (the DEFAULT) is a no-op.
+    preNavigationHooks: [buildRequestDelayHook(config.crawl.requestDelayMs)],
 
     async requestHandler({ page, request, enqueueLinks }) {
       // NOTE: Crawlee's requestHandlerTimeoutSecs bounds the whole handler;
