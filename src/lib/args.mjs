@@ -12,7 +12,7 @@
  * change any user-visible behaviour. Lint/type warnings are acceptable here
  * because the file is slated for removal.
  *
- * @see docs/adr/0003-commander-cli.md (forthcoming)
+ * @see docs/adr/0003-commander-cli.md
  */
 
 // SECTION: Public API

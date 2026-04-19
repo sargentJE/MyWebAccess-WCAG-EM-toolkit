@@ -96,6 +96,12 @@ should cite it.
 - MADR 4.0 in `docs/adr/` — see [ADR-0000](./0000-record-architecture-decisions.md).
 - One ADR per architectural decision; PRs that make such changes add or reference an ADR
   in the same commit.
+- ADRs cite **symbol names, jsonpath locations, or schema property paths** —
+  never raw line numbers — so the record stays accurate under refactoring.
+  When a line number is helpful as supplementary navigation, it MAY appear
+  alongside the symbol/jsonpath (e.g. "the `validRegex` keyword on
+  `crawl.excludeUrlPatterns[]` — schema line 59") but the symbol form is
+  authoritative.
 
 ### Commits
 
