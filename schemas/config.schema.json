@@ -359,7 +359,7 @@
       "required": ["action"],
       "properties": {
         "action": {
-          "enum": ["goto", "click", "fill", "press", "waitFor", "screenshot", "axe", "evaluate"]
+          "enum": ["goto", "click", "fill", "press", "waitFor", "screenshot", "axe"]
         },
         "url": { "type": "string" },
         "selector": { "type": "string" },

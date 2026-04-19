@@ -210,7 +210,7 @@ export interface WCAGEMAccessibilityToolkitConfig {
   };
 }
 export interface Action {
-  action: "goto" | "click" | "fill" | "press" | "waitFor" | "screenshot" | "axe" | "evaluate";
+  action: "goto" | "click" | "fill" | "press" | "waitFor" | "screenshot" | "axe";
   url?: string;
   selector?: string;
   value?: string;
