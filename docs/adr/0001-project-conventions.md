@@ -201,5 +201,6 @@ function and reduces regression risk.
 ## More Information
 
 - [ADR-0000](./0000-record-architecture-decisions.md) — why we use ADRs.
-- Plan: `/Users/jamiesargent/.claude/plans/okay-i-d-like-you-crystalline-beaver.md`
-  (the v0.3 → v1.0 promotion roadmap).
+- The v0.3 → v1.0 promotion roadmap is tracked in a working plan outside this
+  repository; progress is recorded in `CHANGELOG.md` and in each layer's
+  commit trail.
