@@ -21,8 +21,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { selectorComponentHint } from '../lib/urls.mjs';
-import { classifyRule } from '../lib/axe-utils.mjs';
+import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { warnSchemaAcceptedRuntimeIgnored } from '../lib/auth.mjs';
+import { buildManualBacklog } from '../lib/manual-backlog.mjs';
+import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -91,8 +93,8 @@ export async function run(ctx) {
     });
   }
 
-  /** @type {[any[], Record<string, any>, any[], any[]]} */
-  const [inventory, sampleMetadata, axeResults, processResults] = await Promise.all([
+  /** @type {[any[], Record<string, any>, any[], any[], Record<string, string[]>]} */
+  const [inventory, sampleMetadata, axeResults, processResults, actMap] = await Promise.all([
     readJsonMaybe(path.join(paths.inventoryDir, 'inventory.json'), /** @type {any[]} */ ([])),
     readJsonMaybe(
       path.join(paths.inventoryDir, 'sample-metadata.json'),
@@ -100,7 +102,23 @@ export async function run(ctx) {
     ),
     readJsonMaybe(path.join(paths.resultsDir, 'axe-results.json'), /** @type {any[]} */ ([])),
     readJsonMaybe(path.join(paths.resultsDir, 'process-results.json'), /** @type {any[]} */ ([])),
+    readJsonMaybe(
+      new URL('../data/act-rule-map.json', import.meta.url).pathname,
+      /** @type {Record<string, string[]>} */ ({}),
+    ),
   ]);
+
+  // ANCHOR: ActMapFallback — announce degraded enrichment once if map is empty.
+  // R12 wires R2's withActAndWcagMetadata at every classifyRule call site; if
+  // the map is missing/empty, findings carry `actRuleIds: []`. Debug-only —
+  // not an error, since the scan is still useful without ACT enrichment.
+  const actMapKeys = Object.keys(actMap);
+  if (actMapKeys.length === 0) {
+    logger.debug(
+      { source: 'src/data/act-rule-map.json' },
+      'act-rule-map.json missing or empty; actRuleIds will be [] on all findings',
+    );
+  }
 
   /** @type {Map<string, any>} */
   const inventoryByUrl = new Map(inventory.map((item) => [item.url, item]));
@@ -137,13 +155,16 @@ export async function run(ctx) {
   function addRuleFinding({ sourceType, pageUrl, rule, target, html }) {
     const key = rule.id;
     if (!groupedByRule.has(key)) {
+      const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig: config.reporting });
       groupedByRule.set(key, {
         id: rule.id,
         impact: rule.impact ?? null,
         help: rule.help ?? null,
         helpUrl: rule.helpUrl ?? null,
         tags: rule.tags ?? [],
-        classification: classifyRule(rule, config.reporting).classification,
+        classification: meta.classification,
+        actRuleIds: meta.actRuleIds,
+        wcagCriteria: meta.wcagCriteria,
         occurrences: 0,
         pages: new Set(),
         targets: new Set(),
@@ -175,8 +196,11 @@ export async function run(ctx) {
     const componentHint = selectorComponentHint(target ?? '');
     const key = `${rule.id}::${componentHint}`;
     if (!groupedByComponent.has(key)) {
+      const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig: config.reporting });
       groupedByComponent.set(key, {
         key,
+        actRuleIds: meta.actRuleIds,
+        wcagCriteria: meta.wcagCriteria,
         ruleId: rule.id,
         componentHint,
         impact: rule.impact ?? null,
@@ -271,6 +295,12 @@ export async function run(ctx) {
       newRuleIdsOnlyInRandom.length > 0 || newClustersOnlyInRandom.length > 0,
   };
 
+  // ANCHOR: WcagEmSummary — Layer 3b R12 per-SC inversion.
+  // toWcagEmSummary ingests the widened axe artefact (passesDetail etc from R6)
+  // and emits EARL-aligned criteriaOutcomes. scanWarnings surfaces infra
+  // failures (F8) that did not elevate to SC verdicts.
+  const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults });
+
   const summary = {
     site: config.name,
     generatedAt: new Date().toISOString(),
@@ -282,6 +312,9 @@ export async function run(ctx) {
     groupedComponentCount: groupedComponents.length,
     comparison,
     findings: groupedFindings,
+    // Layer 3b R12: surface infra-failure incompletes in the top-level
+    // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
+    scanWarnings: wcagEmSummary.scanWarnings,
   };
 
   // SECTION: Persist artefacts
@@ -289,27 +322,18 @@ export async function run(ctx) {
   await writeJson(path.join(paths.reportsDir, 'grouped-by-rule.json'), groupedFindings);
   await writeJson(path.join(paths.reportsDir, 'grouped-by-component.json'), groupedComponents);
   await writeJson(path.join(paths.reportsDir, 'random-vs-structured-comparison.json'), comparison);
+  // Layer 3b R12 — new WCAG-EM Step 5 artefact.
+  await writeJson(path.join(paths.reportsDir, 'wcag-em-summary.json'), wcagEmSummary);
 
-  // ANCHOR: ManualBacklog — static template in Layer 1; findings-aware in Layer 3b
-  const manualBacklog = [
-    '# Manual testing backlog',
-    '',
-    'Use this after the automated run. Add notes and outcomes per item.',
-    '',
-    '- [ ] Keyboard-only path through homepage and main navigation',
-    '- [ ] Skip link behaviour and focus destination',
-    '- [ ] Landmark navigation with screen reader',
-    '- [ ] Heading structure and page outline review',
-    '- [ ] Forms: visible labels, instructions, error handling, focus return, announcements',
-    '- [ ] Zoom/reflow at 320 CSS px equivalent',
-    '- [ ] Text spacing and clipping checks',
-    '- [ ] Name/role/value review for custom controls',
-    '- [ ] Complete-process walkthroughs for all configured processes',
-    '',
-    '## Notes',
-    '',
-  ];
-  await writeText(path.join(paths.reportsDir, 'manual-backlog.md'), manualBacklog.join('\n'));
+  // ANCHOR: ManualBacklog — findings-aware (R9). Replaces the Layer 1 static template.
+  await writeText(
+    path.join(paths.reportsDir, 'manual-backlog.md'),
+    buildManualBacklog({
+      findings: groupedFindings,
+      inventory,
+      processes: config.processes ?? [],
+    }),
+  );
 
   // ANCHOR: MarkdownReport — replaced by pluggable reporter in Layer 4
   const md = [
