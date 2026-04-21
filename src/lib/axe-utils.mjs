@@ -4,10 +4,15 @@
  * @module lib/axe-utils
  *
  * @description
- * Shared logic for interpreting axe-core rule metadata. v1.0 only exports
- * `classifyRule`; Layer 3b extends this module with `withActAndWcagMetadata`
- * (enriches a rule with ACT rule IDs and WCAG SC numbers from the static
- * maps under `src/data/`).
+ * Shared logic for interpreting axe-core rule metadata. Exports:
+ *   - `classifyRule` — bucket a rule into "primary-automated-finding" vs
+ *     "best-practice-or-manual-review" (Layer 1).
+ *   - `isValidRunOnly` — defence-in-depth shape guard (Layer 1).
+ *   - `findMatchingOverride` + `applyAxeOverride` — per-URL axe override
+ *     lookup and replace-if-defined merge (Layer 3a).
+ *   - `withActAndWcagMetadata` — enrich a rule with ACT IDs (from the
+ *     static map at `src/data/act-rule-map.json`) and WCAG SC numbers
+ *     (parsed at runtime from `violation.tags`) (Layer 3b).
  *
  * @see docs/adr/0007-wcag-em-summary-shape.md
  * @see https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md
@@ -25,6 +30,18 @@ const REPLACEABLE_KEYS = /** @type {const} */ ([
   'withTags',
   'runOnly',
 ]);
+
+// ANCHOR: WCAG_SC_TAG_REGEX — extract SC number from axe-core's tag encoding.
+// axe-core 4.11.x encodes WCAG SCs in `violation.tags` as `wcag<version><sc>`
+// where `<version>` is one digit (principle) and `<sc>` is two+ digits
+// (guideline + criterion). Examples:
+//   `wcag111` → SC 1.1.1    `wcag143` → SC 1.4.3    `wcag412` → SC 4.1.2
+// The 3+-digit tail guards against conformance-level tags that share the
+// prefix but are NOT SC identifiers:
+//   `wcag2aa`, `wcag21aa`, `wcag22aa` — level tags; match fails (non-digit tail).
+//   `wcag2a`, `wcag21a` — same.
+// Also skips any `wcag-*` tags (hyphen breaks the pattern).
+const WCAG_SC_TAG_REGEX = /^wcag(\d)(\d)(\d+)$/;
 
 // SECTION: Public API
 
@@ -103,6 +120,44 @@ export function findMatchingOverride(url, overridesCompiled) {
     if (entry && entry.regex instanceof RegExp && entry.regex.test(url)) return entry;
   }
   return null;
+}
+
+// ANCHOR: withActAndWcagMetadata — enrich a rule with ACT IDs + WCAG SC numbers.
+/**
+ * Extend `classifyRule`'s output with the two richer metadata fields Layer 3b
+ * needs for the WCAG-EM Step 5 shape:
+ *
+ * - `actRuleIds`: looked up in the caller-supplied `actMap` (the JSON loaded
+ *   from `src/data/act-rule-map.json`). Empty array when the rule is absent
+ *   from the map — gracefully degraded, not an error.
+ * - `wcagCriteria`: parsed at runtime from `rule.tags` via `WCAG_SC_TAG_REGEX`.
+ *   axe-core is the source of truth; no static SC map needed.
+ *
+ * Pure function. Caller loads the ACT map once and passes it in.
+ *
+ * @param {{ id?: string, tags?: string[] }} rule - axe-core rule/violation object.
+ * @param {{ actMap?: Record<string, string[]>, reportingConfig?: { groupBestPracticeSeparately?: boolean } }} [options]
+ * @returns {ClassifyResult & { actRuleIds: string[], wcagCriteria: string[] }}
+ */
+export function withActAndWcagMetadata(rule, options = {}) {
+  const { actMap = {}, reportingConfig = {} } = options;
+  const base = classifyRule(rule, reportingConfig);
+
+  /** @type {string[]} */
+  const actRuleIds = rule.id && Array.isArray(actMap[rule.id]) ? [...actMap[rule.id]] : [];
+
+  const tags = Array.isArray(rule.tags) ? rule.tags : [];
+  /** @type {Set<string>} */
+  const scSet = new Set();
+  for (const tag of tags) {
+    if (typeof tag !== 'string') continue;
+    const match = WCAG_SC_TAG_REGEX.exec(tag);
+    if (!match) continue;
+    scSet.add(`${match[1]}.${match[2]}.${match[3]}`);
+  }
+  const wcagCriteria = [...scSet].sort();
+
+  return { ...base, actRuleIds, wcagCriteria };
 }
 
 // ANCHOR: applyAxeOverride — replace-if-defined merge for per-URL overrides.

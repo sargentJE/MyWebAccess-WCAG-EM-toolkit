@@ -1,7 +1,8 @@
 // @ts-check
 /**
- * @file Tests for `findMatchingOverride` and `applyAxeOverride` — Layer 3a's
- *   per-URL axe override runtime.
+ * @file Tests for axe-utils helpers — Layer 1's `classifyRule` / `isValidRunOnly`,
+ *   Layer 3a's `findMatchingOverride` / `applyAxeOverride`, and Layer 3b's
+ *   `withActAndWcagMetadata`.
  * @module test/unit/axe-utils
  */
 
@@ -12,6 +13,7 @@ import {
   findMatchingOverride,
   applyAxeOverride,
   isValidRunOnly,
+  withActAndWcagMetadata,
 } from '../../src/lib/axe-utils.mjs';
 
 // SECTION: Fixtures
@@ -142,4 +144,101 @@ test('isValidRunOnly still functions after R3 additions', () => {
   assert.equal(isValidRunOnly({ type: 'tag', values: ['wcag2aa'] }), true);
   assert.equal(isValidRunOnly(null), false);
   assert.equal(isValidRunOnly({ type: 'tag' }), false);
+});
+
+// SECTION: withActAndWcagMetadata tests (Layer 3b R2)
+
+test('withActAndWcagMetadata: wcag111 tag parses to 1.1.1', () => {
+  const result = withActAndWcagMetadata({ id: 'image-alt', tags: ['wcag111'] });
+  assert.deepEqual(result.wcagCriteria, ['1.1.1']);
+});
+
+test('withActAndWcagMetadata: wcag143 tag parses to 1.4.3', () => {
+  const result = withActAndWcagMetadata({ id: 'color-contrast', tags: ['wcag143'] });
+  assert.deepEqual(result.wcagCriteria, ['1.4.3']);
+});
+
+test('withActAndWcagMetadata: conformance-level tags are skipped (wcag2aa, wcag21aa, wcag22aa)', () => {
+  const result = withActAndWcagMetadata({
+    id: 'color-contrast',
+    tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
+  });
+  assert.deepEqual(result.wcagCriteria, []);
+});
+
+test('withActAndWcagMetadata BP1 contract: axe-core real-world tag mix produces exactly the SC tags', () => {
+  // This is the regression guard against axe-core tag-format drift across
+  // upgrades. The fixture below matches axe-core 4.11.x's actual tag shape
+  // for color-contrast; the parser must produce exactly ['1.4.3'] — not the
+  // conformance-level tags, not the category tag.
+  const result = withActAndWcagMetadata({
+    id: 'color-contrast',
+    tags: ['cat.color', 'wcag143', 'wcag2aa', 'wcag21aa'],
+  });
+  assert.deepEqual(result.wcagCriteria, ['1.4.3']);
+});
+
+test('withActAndWcagMetadata: multiple SC tags → multiple entries, sorted', () => {
+  const result = withActAndWcagMetadata({
+    id: 'area-alt',
+    tags: ['wcag244', 'wcag111', 'wcag412'],
+  });
+  assert.deepEqual(result.wcagCriteria, ['1.1.1', '2.4.4', '4.1.2']);
+});
+
+test('withActAndWcagMetadata: duplicate SC tags dedup (Set-backed)', () => {
+  const result = withActAndWcagMetadata({
+    id: 'image-alt',
+    tags: ['wcag111', 'wcag111', 'wcag111'],
+  });
+  assert.deepEqual(result.wcagCriteria, ['1.1.1']);
+});
+
+test('withActAndWcagMetadata: unknown wcag-* format is silently skipped', () => {
+  const result = withActAndWcagMetadata({
+    id: 'some-rule',
+    tags: ['wcag-unspecified-tag', 'wcag-future', 'wcag'],
+  });
+  assert.deepEqual(result.wcagCriteria, []);
+});
+
+test('withActAndWcagMetadata: actMap lookup returns the mapped ACT IDs', () => {
+  const actMap = {
+    'image-alt': ['23a2a8'],
+    'color-contrast': ['afw4f7', '09o5cg'],
+  };
+  const imgResult = withActAndWcagMetadata({ id: 'image-alt', tags: [] }, { actMap });
+  const ccResult = withActAndWcagMetadata({ id: 'color-contrast', tags: [] }, { actMap });
+  assert.deepEqual(imgResult.actRuleIds, ['23a2a8']);
+  assert.deepEqual(ccResult.actRuleIds, ['afw4f7', '09o5cg']);
+});
+
+test('withActAndWcagMetadata: rule absent from actMap → actRuleIds: []', () => {
+  const actMap = { 'image-alt': ['23a2a8'] };
+  const result = withActAndWcagMetadata({ id: 'unknown-rule', tags: [] }, { actMap });
+  assert.deepEqual(result.actRuleIds, []);
+});
+
+test('withActAndWcagMetadata: empty/missing actMap → actRuleIds: [] on every call', () => {
+  const a = withActAndWcagMetadata({ id: 'image-alt', tags: [] });
+  const b = withActAndWcagMetadata({ id: 'image-alt', tags: [] }, { actMap: {} });
+  assert.deepEqual(a.actRuleIds, []);
+  assert.deepEqual(b.actRuleIds, []);
+});
+
+test('withActAndWcagMetadata: preserves classifyRule fields (bestPractice + classification)', () => {
+  const result = withActAndWcagMetadata({
+    id: 'region',
+    tags: ['best-practice', 'wcag131'],
+  });
+  assert.equal(result.bestPractice, true);
+  assert.equal(result.classification, 'best-practice-or-manual-review');
+  assert.deepEqual(result.wcagCriteria, ['1.3.1']);
+});
+
+test('withActAndWcagMetadata: returns fresh actRuleIds array (does not leak actMap reference)', () => {
+  const actMap = { 'image-alt': ['23a2a8'] };
+  const result = withActAndWcagMetadata({ id: 'image-alt', tags: [] }, { actMap });
+  result.actRuleIds.push('leaked');
+  assert.deepEqual(actMap['image-alt'], ['23a2a8'], 'caller actMap must not mutate');
 });
