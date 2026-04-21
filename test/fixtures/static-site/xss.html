@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>XSS payload fixture</title>
+</head>
+<body>
+  <main>
+    <h1>XSS payload page</h1>
+    <p>
+      This page carries HTML content that, if ever embedded unescaped into a
+      report, would demonstrate an XSS bug in the reporter. The HTML reporter
+      unit tests use synthetic findings to assert the full escape matrix;
+      this page is an end-to-end sanity check that the pipeline
+      (scan &rarr; summarize &rarr; html reporter) never surfaces
+      executable markup.
+    </p>
+    <img src="x" alt='"&gt;&lt;script&gt;alert(1)&lt;/script&gt;'>
+    <a href="javascript:alert(1)">Dangerous link (href)</a>
+    <p>Return to <a href="index.html">home</a>.</p>
+  </main>
+</body>
+</html>

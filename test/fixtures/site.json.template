@@ -1,0 +1,63 @@
+{
+  "name": "e2e-fixture-site",
+  "rootUrl": "__BASE_URL__/",
+  "scope": {
+    "mode": "same-origin",
+    "allowedHosts": []
+  },
+  "crawl": {
+    "maxPages": 10,
+    "maxConcurrency": 2,
+    "requestTimeoutSecs": 30,
+    "requestDelayMs": 0,
+    "excludeUrlPatterns": [],
+    "sitemapSeeding": {
+      "enabled": true,
+      "urls": [],
+      "commonPaths": ["/sitemap.xml"],
+      "maxUrls": 50
+    }
+  },
+  "discovery": {
+    "captureH1": true,
+    "captureCanonical": true,
+    "captureForms": true,
+    "captureLandmarks": true,
+    "captureSearchInputs": true
+  },
+  "sample": {
+    "structuredManual": ["__BASE_URL__/index.html", "__BASE_URL__/about.html"],
+    "autoSuggest": {
+      "enabled": true,
+      "perCluster": 1,
+      "preferTypes": ["homepage", "form-or-contact", "policy", "content"]
+    },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 1,
+    "randomSeed": 42,
+    "smallSiteSupplementaryScanThreshold": 0
+  },
+  "scan": {
+    "viewports": [{ "id": "desktop", "width": 1280, "height": 800 }],
+    "waitUntil": "domcontentloaded",
+    "timeoutMs": 30000,
+    "retries": 0,
+    "fullPageScreenshots": true,
+    "axe": {
+      "include": [],
+      "exclude": [],
+      "withRules": [],
+      "withTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+      "runOnly": null
+    }
+  },
+  "processes": [],
+  "reporting": {
+    "groupBestPracticeSeparately": true,
+    "failOnFindings": {
+      "impacts": ["critical", "serious"],
+      "classifications": [],
+      "threshold": 1
+    }
+  }
+}
