@@ -242,6 +242,9 @@ async function dispatch(step, ctx) {
  *   passes: number,
  *   incomplete: number,
  *   inapplicable: number,
+ *   passesDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
+ *   incompleteDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
+ *   inapplicableDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
  * }>}
  */
 async function runAxe(page) {
@@ -251,5 +254,28 @@ async function runAxe(page) {
     passes: result.passes.length,
     incomplete: result.incomplete.length,
     inapplicable: result.inapplicable.length,
+    passesDetail: liftRuleSummaries(result.passes),
+    incompleteDetail: liftRuleSummaries(result.incomplete),
+    inapplicableDetail: liftRuleSummaries(result.inapplicable),
   };
+}
+
+/**
+ * Project an axe rule result array into a light summary shape for the
+ * widened artefact contract (Layer 3b R6). Mirrors the helper in
+ * `src/commands/scan.mjs` — duplicated here rather than imported to avoid
+ * a cross-command coupling. Both helpers share the same contract
+ * documented in the R6 commit body.
+ *
+ * @param {Array<{ id?: string, tags?: string[], impact?: string|null, nodes?: any[] }>} rules
+ * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>}
+ */
+function liftRuleSummaries(rules) {
+  if (!Array.isArray(rules)) return [];
+  return rules.map((r) => ({
+    id: String(r.id ?? ''),
+    tags: Array.isArray(r.tags) ? [...r.tags] : [],
+    impact: typeof r.impact === 'string' ? r.impact : null,
+    nodesCount: Array.isArray(r.nodes) ? r.nodes.length : 0,
+  }));
 }

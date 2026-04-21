@@ -49,6 +49,26 @@ export function buildScreenshotPath(screenshotsDir, url, viewport) {
   return path.join(screenshotsDir, `${fileSafeFromUrl(url)}__${viewport.id}.png`);
 }
 
+/**
+ * Project an axe rule result array into a light summary shape for the
+ * widened artefact contract introduced in Layer 3b R6. Keeps only the
+ * fields `toWcagEmSummary` (R10) needs — id, tags, impact, nodesCount —
+ * and drops the `nodes` bulk that would blow up `axe-results.json` on
+ * large sites. Pure function.
+ *
+ * @param {Array<{ id?: string, tags?: string[], impact?: string|null, nodes?: any[] }>} rules
+ * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>}
+ */
+export function liftRuleSummaries(rules) {
+  if (!Array.isArray(rules)) return [];
+  return rules.map((r) => ({
+    id: String(r.id ?? ''),
+    tags: Array.isArray(r.tags) ? [...r.tags] : [],
+    impact: typeof r.impact === 'string' ? r.impact : null,
+    nodesCount: Array.isArray(r.nodes) ? r.nodes.length : 0,
+  }));
+}
+
 // SECTION: Public API
 
 /**
@@ -136,9 +156,16 @@ export async function run(ctx) {
       title: await page.title().catch(() => ''),
       screenshot: config.scan.fullPageScreenshots !== false ? screenshotPath : null,
       violations: axeResults.violations,
+      // Count keys preserved for backward compatibility with v0.3 consumers.
       passes: axeResults.passes.length,
       incomplete: axeResults.incomplete.length,
       inapplicable: axeResults.inapplicable.length,
+      // Detail arrays (Layer 3b R6): light shape for Layer 3b R10's per-SC
+      // inversion. Omits `nodes` bulk to keep artefact size bounded —
+      // nodesCount retains the reviewable-vs-infra-failure signal R10 needs.
+      passesDetail: liftRuleSummaries(axeResults.passes),
+      incompleteDetail: liftRuleSummaries(axeResults.incomplete),
+      inapplicableDetail: liftRuleSummaries(axeResults.inapplicable),
     };
   }
 
