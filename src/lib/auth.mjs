@@ -138,6 +138,24 @@ export function warnSchemaAcceptedRuntimeIgnored(logger, { feature, deferralLaye
   logger.warn({ feature }, buildWarnSchemaAcceptedMessage(feature, deferralLayer));
 }
 
+/**
+ * Uniform warn message for "legacy config alias; the runtime resolved it to
+ * the modern field". Colocated with `warnSchemaAcceptedRuntimeIgnored` so
+ * every config-deprecation helper lives in one place. Used by `summarize.mjs`
+ * to surface `reporting.markdownReport` deprecation once per run.
+ *
+ * @param {import('pino').Logger} logger
+ * @param {{ oldField: string, newField: string, guidance?: string }} args
+ * @returns {void}
+ */
+export function warnLegacyAliasResolved(logger, { oldField, newField, guidance }) {
+  const tail = guidance ? ` ${guidance}` : '';
+  logger.warn(
+    { oldField, newField },
+    `${oldField} is deprecated and ignored; use ${newField} instead.${tail}`,
+  );
+}
+
 // SECTION: Internal helpers
 
 /**

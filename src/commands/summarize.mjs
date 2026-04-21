@@ -22,7 +22,7 @@ import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
-import { warnSchemaAcceptedRuntimeIgnored } from '../lib/auth.mjs';
+import { warnSchemaAcceptedRuntimeIgnored, warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
 import { TOOL_IDENTITY, toolIdentityMarkdownHeader } from '../lib/version.mjs';
@@ -91,6 +91,19 @@ export async function run(ctx) {
     warnSchemaAcceptedRuntimeIgnored(logger, {
       feature: 'reporting.reporters',
       deferralLayer: 'Layer 4',
+    });
+  }
+
+  // ANCHOR: MarkdownReportDeprecated — Layer 4 R2. DEFAULTS no longer injects
+  // `reporting.markdownReport`, so the only way this field is truthy post-
+  // merge is if the user explicitly set it in their config. Fire once per
+  // run; the field is silently ignored either way (it never gated anything
+  // at runtime — see Layer 4 plan adversarial finding #1 + Layer 4 R2 body).
+  if (config.reporting?.markdownReport !== undefined) {
+    warnLegacyAliasResolved(logger, {
+      oldField: 'reporting.markdownReport',
+      newField: 'reporting.reporters',
+      guidance: "Omit the field to keep the default ['json','markdown'] set.",
     });
   }
 

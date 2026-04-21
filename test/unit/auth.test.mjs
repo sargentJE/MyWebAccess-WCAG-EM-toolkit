@@ -11,7 +11,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { applyAuth, warnSchemaAcceptedRuntimeIgnored } from '../../src/lib/auth.mjs';
+import {
+  applyAuth,
+  warnSchemaAcceptedRuntimeIgnored,
+  warnLegacyAliasResolved,
+} from '../../src/lib/auth.mjs';
 
 // SECTION: Helpers
 
@@ -189,4 +193,36 @@ test('warnSchemaAcceptedRuntimeIgnored: emits a uniform message format', () => {
   // Uniform structural shape: both pass {feature} as the obj.
   assert.equal(logger.calls[0].obj.feature, 'auth.setupScript');
   assert.equal(logger.calls[1].obj.feature, 'reporting.reporters');
+});
+
+// SECTION: warnLegacyAliasResolved helper (Layer 4 R2)
+
+test('warnLegacyAliasResolved: emits oldField → newField pointer with deprecation phrasing', () => {
+  const logger = mockLogger();
+  warnLegacyAliasResolved(/** @type {any} */ (logger), {
+    oldField: 'reporting.markdownReport',
+    newField: 'reporting.reporters',
+    guidance: "Omit the field to keep the default ['json','markdown'] set.",
+  });
+  assert.equal(logger.calls.length, 1);
+  assert.match(
+    logger.calls[0].msg ?? '',
+    /reporting\.markdownReport is deprecated and ignored; use reporting\.reporters instead/,
+  );
+  assert.match(logger.calls[0].msg ?? '', /Omit the field/);
+  assert.equal(logger.calls[0].obj.oldField, 'reporting.markdownReport');
+  assert.equal(logger.calls[0].obj.newField, 'reporting.reporters');
+});
+
+test('warnLegacyAliasResolved: guidance is optional', () => {
+  const logger = mockLogger();
+  warnLegacyAliasResolved(/** @type {any} */ (logger), {
+    oldField: 'legacy.foo',
+    newField: 'modern.foo',
+  });
+  assert.equal(logger.calls.length, 1);
+  assert.equal(
+    logger.calls[0].msg,
+    'legacy.foo is deprecated and ignored; use modern.foo instead.',
+  );
 });

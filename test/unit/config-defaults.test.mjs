@@ -152,6 +152,27 @@ test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technolog
   assert.deepEqual(config.wcagEm.evaluator, { name: '', contact: '' });
 });
 
+test('DEFAULTS do NOT ship reporting.markdownReport (Layer 4 R2 dropped the dead field)', async (t) => {
+  // Before Layer 4, DEFAULTS shipped `markdownReport: true` even though no
+  // runtime consumer read it. Layer 4 dropped it so the post-merge detection
+  // in summarize.mjs can cleanly distinguish "user explicitly set it" from
+  // "DEFAULTS injected it" — the former triggers the deprecation warn, the
+  // latter stays silent.
+  const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
+  t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
+  const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
+  assert.equal(
+    config.reporting.markdownReport,
+    undefined,
+    'reporting.markdownReport must be absent from DEFAULTS',
+  );
+  assert.equal(
+    config.reporting.reporters,
+    undefined,
+    'reporting.reporters also absent — summarize applies default inline',
+  );
+});
+
 test('DEFAULTS do NOT ship config.auth (no-auth means absent field)', async (t) => {
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
   t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));

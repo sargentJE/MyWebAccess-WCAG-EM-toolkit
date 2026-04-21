@@ -93,7 +93,12 @@ const DEFAULTS = {
   },
   reporting: {
     groupBestPracticeSeparately: true,
-    markdownReport: true,
+    // Layer 4 R2: `markdownReport` dropped from DEFAULTS (it was schema-
+    // accepted but never read at runtime). `reporters` intentionally absent
+    // from DEFAULTS too — summarize.mjs applies `?? ['json','markdown']`
+    // inline so that absence in user config means "default set," while
+    // presence of `markdownReport` in user config triggers a one-shot
+    // deprecation warning via `warnLegacyAliasResolved`.
     // Threshold-based exit code 2 wiring lives in summarize.mjs (R8).
     // `impacts` matches any axe impact; `classifications` matches the
     // classifyRule buckets; count ≥ threshold → exit 2.

@@ -56,7 +56,6 @@
   },
   "processes": [],
   "reporting": {
-    "groupBestPracticeSeparately": true,
-    "markdownReport": true
+    "groupBestPracticeSeparately": true
   }
 }
