@@ -28,6 +28,7 @@ import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
+import { applyAuth } from '../lib/auth.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -72,6 +73,12 @@ export async function run(ctx) {
 
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan viewports');
+
+  // ANCHOR: AuthContextOptions — Playwright newContext options derived from
+  // config.auth (storageState, httpCredentials, extraHTTPHeaders). Synchronous
+  // one-shot call at run-entry; warnings emitted immediately, not per URL.
+  const { contextOptions: authContextOptions, warnings: authWarnings } = applyAuth(config);
+  for (const w of authWarnings) logger.warn(w);
 
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */
@@ -150,9 +157,16 @@ export async function run(ctx) {
       let lastError = null;
 
       while (attempt <= config.scan.retries && !success) {
-        const context = await browser.newContext({
-          viewport: { width: vp.width, height: vp.height },
-        });
+        // NOTE: applyAuth's ContextOptions type is intentionally looser than
+        // Playwright's BrowserContextOptions (storageState accepts `object`
+        // for the inline form). Cast to any at the spread site so checkJs
+        // accepts the union without narrowing every field.
+        const context = await browser.newContext(
+          /** @type {any} */ ({
+            viewport: { width: vp.width, height: vp.height },
+            ...authContextOptions,
+          }),
+        );
         const page = await context.newPage();
         try {
           attempt += 1;
