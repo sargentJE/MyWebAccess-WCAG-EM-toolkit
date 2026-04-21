@@ -22,6 +22,7 @@ import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule } from '../lib/axe-utils.mjs';
+import { warnSchemaAcceptedRuntimeIgnored } from '../lib/auth.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -79,15 +80,15 @@ export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
 
-  // ANCHOR: ReportersWarn — matches override.actions discipline in scan.mjs.
-  // The schema accepts `reporting.reporters` (Layer 4's pluggable-reporter
-  // surface) but the runtime only emits JSON + Markdown today. Warn once so
-  // users with `reporters: ["earl-jsonld"]` don't silently get no effect.
+  // ANCHOR: ReportersWarn — uses the shared warnSchemaAcceptedRuntimeIgnored
+  // helper (Layer 3b R3) for discipline symmetry with auth.setupScript. The
+  // schema accepts `reporting.reporters` (Layer 4's pluggable-reporter
+  // surface) but the runtime hard-codes JSON + Markdown today.
   if (Array.isArray(config.reporting?.reporters) && config.reporting.reporters.length > 0) {
-    logger.warn(
-      { reporters: config.reporting.reporters },
-      'reporting.reporters is schema-accepted but runtime-ignored until Layer 4',
-    );
+    warnSchemaAcceptedRuntimeIgnored(logger, {
+      feature: 'reporting.reporters',
+      deferralLayer: 'Layer 4',
+    });
   }
 
   /** @type {[any[], Record<string, any>, any[], any[]]} */

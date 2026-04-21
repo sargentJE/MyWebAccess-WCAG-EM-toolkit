@@ -29,6 +29,7 @@ import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
 import { applyAuth } from '../lib/auth.mjs';
+import { runProcessSteps } from '../lib/process-runner.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -69,6 +70,76 @@ export function liftRuleSummaries(rules) {
   }));
 }
 
+/**
+ * Filter action objects by their compiled `regex` against a URL. Actions
+ * with no `regex` attached (i.e. no `urlPattern` in schema) run
+ * unconditionally; actions with `regex` only run when the URL matches.
+ *
+ * Pure; exported for testability.
+ *
+ * @param {string} url
+ * @param {any[]} actions - Each entry is an action object from the schema-validated config.
+ * @returns {any[]}
+ */
+export function filterActionsForUrl(url, actions) {
+  if (!Array.isArray(actions)) return [];
+  return actions.filter((action) => {
+    if (!action || typeof action !== 'object') return false;
+    // Non-enumerable `regex` attached by R7's compileActionUrlPatterns.
+    if (action.regex instanceof RegExp) return action.regex.test(url);
+    return true;
+  });
+}
+
+/**
+ * Run the global + per-URL pre-scan actions for a single (URL × viewport)
+ * pair. Filters actions by compiled URL pattern, synthesizes a processDef
+ * (`{ name: 'before-scan' }`), and delegates to `runProcessSteps`'s existing
+ * per-step timeout + error-capture infrastructure. No new dispatcher.
+ *
+ * Pre-scan step errors do NOT abort the scan — they surface as
+ * `state: 'error'` / `state: 'step-timeout'` entries in the returned array,
+ * which is then stored as `_preScanStates` on the scan result (debug-only,
+ * underscore-prefix signals not part of stable artefact contract).
+ *
+ * @param {object} args
+ * @param {import('playwright').Page} args.page
+ * @param {string} args.url
+ * @param {{ id: string, width: number, height: number }} args.viewport
+ * @param {Record<string, any>} args.config
+ * @param {import('pino').Logger} args.logger
+ * @param {import('../lib/context.mjs').RunContextPaths} args.paths
+ * @param {Array<{ regex?: RegExp, action: string }>} args.globalActions
+ * @param {Array<{ regex?: RegExp, action: string }>} args.overrideActions
+ * @returns {Promise<import('../lib/process-runner.mjs').StepResult[]>}
+ */
+async function runPreScanActions({
+  page,
+  url,
+  viewport,
+  config,
+  logger,
+  paths,
+  globalActions,
+  overrideActions,
+}) {
+  const filtered = [
+    ...filterActionsForUrl(url, globalActions),
+    ...filterActionsForUrl(url, overrideActions),
+  ];
+  if (filtered.length === 0) return [];
+
+  const synthProcessDef = { name: 'before-scan', startUrl: url };
+  return runProcessSteps(synthProcessDef, filtered, {
+    page,
+    config,
+    logger,
+    paths,
+    processDef: synthProcessDef,
+    viewport,
+  });
+}
+
 // SECTION: Public API
 
 /**
@@ -80,16 +151,11 @@ export async function run(ctx) {
   const { config, logger, paths } = ctx;
   const sampleUrls = JSON.parse(await fs.readFile(paths.sampleJsonPath, 'utf8'));
 
-  // ANCHOR: OverrideActionsWarn — per-pattern once; Layer 3b will wire actions.
-  // Consistency precedent for the `reporters` warn emitted by summarize.mjs.
-  for (const override of config.scan?.axe?.overridesCompiled ?? []) {
-    if (Array.isArray(override.actions) && override.actions.length > 0) {
-      logger.warn(
-        { urlPattern: override.urlPattern },
-        'override.actions is schema-accepted but runtime-ignored in Layer 3a; wires in Layer 3b',
-      );
-    }
-  }
+  // ANCHOR: PreScanActionsReady — Layer 3b R8 replaces the Layer 3a
+  // OverrideActionsWarn block. beforeScan.actions[] and override.actions[]
+  // are now executed per-URL (URL-matching via compiled action.regex from R7).
+  // The paired `reporting.reporters` warn in summarize.mjs is swapped to the
+  // shared `warnSchemaAcceptedRuntimeIgnored` helper for discipline symmetry.
 
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan viewports');
@@ -135,6 +201,24 @@ export async function run(ctx) {
     );
     const axeConfig = applyAxeOverride(baseAxeConfig, matchedOverride);
 
+    // ANCHOR: PreScanActions — run beforeScan.actions[] + matched override's
+    // actions[] before axe analyzes the page. Actions are filtered by their
+    // compiled `regex` (from R7): if `action.regex` is present AND does not
+    // match the URL, skip. If `action.regex` is absent, run unconditionally.
+    // Errors during pre-scan steps are absorbed by `runProcessSteps`'s
+    // per-step try/catch (state: 'error' / 'step-timeout') — they do NOT
+    // abort the scan.
+    const preScanStates = await runPreScanActions({
+      page,
+      url,
+      viewport,
+      config,
+      logger,
+      paths,
+      globalActions: config.scan?.beforeScan?.actions ?? [],
+      overrideActions: Array.isArray(matchedOverride?.actions) ? matchedOverride.actions : [],
+    });
+
     let builder = new AxeBuilder({ page });
 
     for (const selector of axeConfig.exclude || []) builder = builder.exclude(selector);
@@ -166,6 +250,10 @@ export async function run(ctx) {
       passesDetail: liftRuleSummaries(axeResults.passes),
       incompleteDetail: liftRuleSummaries(axeResults.incomplete),
       inapplicableDetail: liftRuleSummaries(axeResults.inapplicable),
+      // _preScanStates (Layer 3b R8): underscore-prefix signals debug-only;
+      // not part of the stable artefact contract. Empty array when no pre-scan
+      // actions are configured (or when none match the URL).
+      _preScanStates: preScanStates,
     };
   }
 
