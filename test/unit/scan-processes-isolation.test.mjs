@@ -56,16 +56,21 @@ function fakePage() {
 
 /**
  * Build a fake browser whose `newContext` throws on the Nth call (1-indexed).
+ * Captures the options object passed to each `newContext` call so tests can
+ * assert the auth contextOptions were threaded through.
  *
  * @param {number} throwOnCall - Which call to throw on (1-indexed).
- * @returns {{ browser: any, callCount: () => number }}
+ * @returns {{ browser: any, callCount: () => number, lastOptions: () => any }}
  */
 function fakeBrowserThrowingOn(throwOnCall) {
   let callCount = 0;
+  /** @type {any} */
+  let lastOptions = null;
   const browser = {
     newContext: /** @type {any} */ (
-      async () => {
+      async (/** @type {any} */ options) => {
         callCount++;
+        lastOptions = options;
         if (callCount === throwOnCall) {
           throw new Error('viewport allocation failed');
         }
@@ -76,7 +81,7 @@ function fakeBrowserThrowingOn(throwOnCall) {
       }
     ),
   };
-  return { browser, callCount: () => callCount };
+  return { browser, callCount: () => callCount, lastOptions: () => lastOptions };
 }
 
 /** @returns {any} */
@@ -115,6 +120,7 @@ test('runOneProcess returns error-result when newContext throws (loop continues)
     { name: 'broken', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
+    { httpCredentials: { username: 'u', password: 'p' } },
   );
 
   assert.strictEqual(result.name, 'broken');
@@ -135,6 +141,7 @@ test('runOneProcess succeeds when newContext succeeds', async () => {
     },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
+    { httpCredentials: { username: 'u', password: 'p' } },
   );
 
   assert.strictEqual(result.name, 'happy');
@@ -156,7 +163,13 @@ test('three processes with the second throwing — all three get results, loop d
   const results = [];
   for (const def of defs) {
     results.push(
-      await runOneProcess(browser, def, ctx, { id: 'desktop', width: 1440, height: 900 }),
+      await runOneProcess(
+        browser,
+        def,
+        ctx,
+        { id: 'desktop', width: 1440, height: 900 },
+        { httpCredentials: { username: 'u', password: 'p' } },
+      ),
     );
   }
 
@@ -169,6 +182,45 @@ test('three processes with the second throwing — all three get results, loop d
   assert.strictEqual(results[2].name, 'third');
 });
 
+test('runOneProcess threads contextOptions (httpCredentials) into newContext', async () => {
+  const harness = fakeBrowserThrowingOn(999);
+  const ctx = buildCtx();
+
+  await runOneProcess(
+    harness.browser,
+    { name: 'auth-probe', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
+    ctx,
+    { id: 'desktop', width: 1440, height: 900 },
+    { httpCredentials: { username: 'audit-user', password: 'secret' } },
+  );
+
+  const opts = harness.lastOptions();
+  assert.ok(opts, 'newContext should have been called with options');
+  assert.deepStrictEqual(opts.viewport, { width: 1440, height: 900 });
+  assert.deepStrictEqual(opts.httpCredentials, {
+    username: 'audit-user',
+    password: 'secret',
+  });
+});
+
+test('runOneProcess uses empty contextOptions default when not passed', async () => {
+  const harness = fakeBrowserThrowingOn(999);
+  const ctx = buildCtx();
+
+  await runOneProcess(
+    harness.browser,
+    { name: 'no-auth', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
+    ctx,
+    { id: 'desktop', width: 1440, height: 900 },
+    // 5th param omitted on purpose — default {} kicks in.
+  );
+
+  const opts = harness.lastOptions();
+  assert.ok(opts);
+  assert.strictEqual(opts.httpCredentials, undefined, 'no auth options when not provided');
+  assert.deepStrictEqual(opts.viewport, { width: 1440, height: 900 });
+});
+
 test('empty pattern returns state:not-run without invoking the dispatch', async () => {
   const { browser } = fakeBrowserThrowingOn(999);
   const ctx = buildCtx();
@@ -178,6 +230,7 @@ test('empty pattern returns state:not-run without invoking the dispatch', async 
     { name: 'empty', startUrl: 'https://x/', pattern: null, steps: [] },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
+    { httpCredentials: { username: 'u', password: 'p' } },
   );
 
   assert.strictEqual(result.states.length, 1);

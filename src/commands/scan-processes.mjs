@@ -25,6 +25,7 @@ import { chromium } from 'playwright';
 import { writeJson } from '../lib/fs-utils.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
+import { applyAuth } from '../lib/auth.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Internal helpers
@@ -92,17 +93,28 @@ function expandPattern(processDef) {
  * @param {{ id: string, width: number, height: number }} viewport
  *   - Viewport this invocation runs under. Threaded from the outer loop in
  *     `run()` so each process is executed once per resolved viewport.
+ * @param {Record<string, any>} [contextOptions]
+ *   - Playwright newContext options from `applyAuth(config)`; storageState,
+ *     httpCredentials, extraHTTPHeaders. Hoisted in `run()` so the sync
+ *     `applyAuth` call fires once per scan rather than per-process. Empty
+ *     object (default) means "no auth" — no-op.
  * @returns {Promise<any>} The process result (pushed into processResults).
  */
-export async function runOneProcess(browser, processDef, ctx, viewport) {
+export async function runOneProcess(browser, processDef, ctx, viewport, contextOptions = {}) {
   /** @type {import('playwright').BrowserContext | undefined} */
   let context;
   /** @type {any[]} */
   const states = [];
   try {
-    context = await browser.newContext({
-      viewport: { width: viewport.width, height: viewport.height },
-    });
+    // NOTE: applyAuth's ContextOptions type is intentionally looser than
+    // Playwright's BrowserContextOptions (storageState accepts `object`
+    // for the inline form). Cast at the spread site matches scan.mjs R4.
+    context = await browser.newContext(
+      /** @type {any} */ ({
+        viewport: { width: viewport.width, height: viewport.height },
+        ...contextOptions,
+      }),
+    );
     const page = await context.newPage();
     const steps = expandPattern(processDef);
 
@@ -173,6 +185,12 @@ export async function run(ctx) {
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan-processes viewports');
 
+  // ANCHOR: AuthContextOptions — same sync helper as scan.mjs (R4). One call
+  // at run-entry; warnings emitted immediately; contextOptions threaded as
+  // the 5th arg to runOneProcess.
+  const { contextOptions: authContextOptions, warnings: authWarnings } = applyAuth(config);
+  for (const w of authWarnings) logger.warn(w);
+
   const browser = await chromium.launch({ headless: true });
   /** @type {any[]} */
   const processResults = [];
@@ -184,7 +202,7 @@ export async function run(ctx) {
   for (const vp of viewports) {
     logger.info({ viewport: vp.id }, 'viewport start');
     for (const processDef of config.processes ?? []) {
-      processResults.push(await runOneProcess(browser, processDef, ctx, vp));
+      processResults.push(await runOneProcess(browser, processDef, ctx, vp, authContextOptions));
     }
     logger.info({ viewport: vp.id }, 'viewport done');
   }
