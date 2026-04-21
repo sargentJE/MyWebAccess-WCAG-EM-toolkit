@@ -25,6 +25,7 @@ import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { warnSchemaAcceptedRuntimeIgnored } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
+import { TOOL_IDENTITY, toolIdentityMarkdownHeader } from '../lib/version.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -302,6 +303,7 @@ export async function run(ctx) {
   const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults });
 
   const summary = {
+    tool: TOOL_IDENTITY,
     site: config.name,
     generatedAt: new Date().toISOString(),
     inventoryCount: sampleMetadata.inventoryCount ?? inventory.length,
@@ -321,22 +323,33 @@ export async function run(ctx) {
   await writeJson(path.join(paths.reportsDir, 'summary.json'), summary);
   await writeJson(path.join(paths.reportsDir, 'grouped-by-rule.json'), groupedFindings);
   await writeJson(path.join(paths.reportsDir, 'grouped-by-component.json'), groupedComponents);
-  await writeJson(path.join(paths.reportsDir, 'random-vs-structured-comparison.json'), comparison);
-  // Layer 3b R12 — new WCAG-EM Step 5 artefact.
-  await writeJson(path.join(paths.reportsDir, 'wcag-em-summary.json'), wcagEmSummary);
+  await writeJson(path.join(paths.reportsDir, 'random-vs-structured-comparison.json'), {
+    tool: TOOL_IDENTITY,
+    ...comparison,
+  });
+  // Layer 3b R12 — new WCAG-EM Step 5 artefact. Stamped with tool-identity
+  // as the first property.
+  await writeJson(path.join(paths.reportsDir, 'wcag-em-summary.json'), {
+    tool: TOOL_IDENTITY,
+    ...wcagEmSummary,
+  });
 
-  // ANCHOR: ManualBacklog — findings-aware (R9). Replaces the Layer 1 static template.
+  // ANCHOR: ManualBacklog — findings-aware (R9). Replaces the Layer 1 static
+  // template. Prepend the markdown tool-identity header per R13 spec.
   await writeText(
     path.join(paths.reportsDir, 'manual-backlog.md'),
-    buildManualBacklog({
-      findings: groupedFindings,
-      inventory,
-      processes: config.processes ?? [],
-    }),
+    toolIdentityMarkdownHeader() +
+      buildManualBacklog({
+        findings: groupedFindings,
+        inventory,
+        processes: config.processes ?? [],
+      }),
   );
 
   // ANCHOR: MarkdownReport — replaced by pluggable reporter in Layer 4
   const md = [
+    toolIdentityMarkdownHeader().trimEnd(),
+    '',
     '# Accessibility scan summary',
     '',
     `Site: **${config.name}**`,

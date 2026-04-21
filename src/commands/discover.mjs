@@ -32,6 +32,7 @@ import {
   urlExcludedByPatterns,
 } from '../lib/urls.mjs';
 import { getSitemapSeeds } from '../lib/sitemap.mjs';
+import { TOOL_IDENTITY } from '../lib/version.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Pure helpers (exported for testability)
@@ -231,6 +232,7 @@ export async function run(ctx) {
   await writeJson(path.join(paths.inventoryDir, 'page-clusters.json'), pageClusters);
   await writeJson(path.join(paths.inventoryDir, 'process-candidates.json'), processCandidates);
   await writeJson(path.join(paths.inventoryDir, 'inventory-metadata.json'), {
+    tool: TOOL_IDENTITY,
     site: config.name,
     rootUrl: config.rootUrl,
     seedCount: [...new Set(seeds)].length,

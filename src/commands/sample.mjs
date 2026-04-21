@@ -25,6 +25,7 @@ import path from 'node:path';
 import { writeJson, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { seededSample, unique } from '../lib/sample-utils.mjs';
+import { TOOL_IDENTITY } from '../lib/version.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
 
 // SECTION: Public API
@@ -105,6 +106,7 @@ export async function run(ctx) {
     structured.join('\n') + '\n',
   );
   await writeJson(path.join(paths.inventoryDir, 'structured-sample-suggested.json'), {
+    tool: TOOL_IDENTITY,
     manual,
     suggested: suggested.filter((url) => !manual.includes(url)),
     finalStructured: structured,
@@ -116,6 +118,7 @@ export async function run(ctx) {
   );
   await writeJson(paths.sampleJsonPath, finalSample);
   await writeJson(path.join(paths.inventoryDir, 'sample-metadata.json'), {
+    tool: TOOL_IDENTITY,
     site: config.name,
     rootUrl: config.rootUrl,
     inventoryCount,
