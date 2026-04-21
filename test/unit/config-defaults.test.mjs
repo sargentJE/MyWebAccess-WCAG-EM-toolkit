@@ -132,3 +132,50 @@ test('migrated configs/example-site.json supplies explicit viewports and passes 
   assert.equal(result[0].id, 'desktop');
   assert.equal(result[1].id, 'reflow');
 });
+
+// SECTION: Layer 3b DEFAULTS
+
+test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technologiesReliedUpon', async (t) => {
+  const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
+  t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
+  const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
+  assert.equal(config.wcagEm.wcagVersion, '2.2');
+  assert.equal(config.wcagEm.conformanceTarget, 'AA');
+  assert.deepEqual(config.wcagEm.atBaseline, []);
+  assert.deepEqual(config.wcagEm.technologiesReliedUpon, [
+    'HTML',
+    'CSS',
+    'JavaScript',
+    'WAI-ARIA',
+  ]);
+  assert.equal(config.wcagEm.samplingMethodNotes, '');
+  assert.deepEqual(config.wcagEm.evaluator, { name: '', contact: '' });
+});
+
+test('DEFAULTS do NOT ship config.auth (no-auth means absent field)', async (t) => {
+  const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
+  t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
+  const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
+  assert.equal(config.auth, undefined, 'auth must be absent from DEFAULTS');
+});
+
+test('configs/example-site-with-auth.json validates against the schema', async () => {
+  // Sidecar config file introduced in R11 as the F4-fix alternative to
+  // the rejected top-level `_note` approach. It must ship as a
+  // schema-valid config demonstrating auth usage.
+  const { validateConfig } = await import('../../src/lib/validate-config.mjs');
+  const { config } = await loadConfig('configs/example-site-with-auth.json');
+  const result = await validateConfig(config);
+  assert.equal(result.valid, true, `expected valid; errors: ${JSON.stringify(result.errors)}`);
+});
+
+test('configs/example-site-with-auth.json includes auth and beforeScan examples', async () => {
+  const { config } = await loadConfig('configs/example-site-with-auth.json');
+  assert.ok(config.auth?.storageState, 'demonstrates storageState path form');
+  assert.ok(config.auth?.httpCredentials, 'demonstrates httpCredentials');
+  assert.ok(config.auth?.ttlMinutes, 'demonstrates ttlMinutes');
+  assert.ok(
+    Array.isArray(config.scan?.beforeScan?.actions) && config.scan.beforeScan.actions.length > 0,
+    'demonstrates beforeScan cookie-consent dismissal',
+  );
+});

@@ -103,6 +103,24 @@ const DEFAULTS = {
       threshold: 1,
     },
   },
+  // WCAG-EM Step 5 report metadata. Layer 3b's `toWcagEmSummary` (R10)
+  // reads these fields into the emitted `wcag-em-summary.json` alongside
+  // auto-computed `evaluationDate` and `processesEvaluated`. Sensible
+  // defaults so users without explicit wcagEm config still get a valid
+  // WCAG 2.2 AA report shell — they can override any field.
+  wcagEm: {
+    wcagVersion: '2.2',
+    conformanceTarget: 'AA',
+    atBaseline: [],
+    technologiesReliedUpon: ['HTML', 'CSS', 'JavaScript', 'WAI-ARIA'],
+    samplingMethodNotes: '',
+    evaluator: { name: '', contact: '' },
+  },
+  // `auth` is intentionally ABSENT from DEFAULTS — absence means "no auth
+  // required". `applyAuth` in auth.mjs handles the no-auth case by
+  // returning empty contextOptions. Users who want authenticated scans
+  // see the sidecar `configs/example-site-with-auth.json` for a worked
+  // example.
   processes: [],
 };
 

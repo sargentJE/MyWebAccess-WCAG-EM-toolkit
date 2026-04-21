@@ -1,0 +1,93 @@
+{
+  "name": "example-site-with-auth",
+  "rootUrl": "https://example.com/",
+  "scope": {
+    "mode": "same-hostname",
+    "allowedHosts": []
+  },
+  "crawl": {
+    "maxPages": 80,
+    "maxConcurrency": 5,
+    "requestTimeoutSecs": 90,
+    "requestDelayMs": 0,
+    "excludeUrlPatterns": ["/wp-admin", "\\?replytocom=", "/feed/?$"],
+    "sitemapSeeding": {
+      "enabled": true,
+      "urls": [],
+      "commonPaths": ["/sitemap.xml", "/sitemap_index.xml"],
+      "maxUrls": 500
+    }
+  },
+  "discovery": {
+    "captureH1": true,
+    "captureCanonical": true,
+    "captureForms": true,
+    "captureLandmarks": true,
+    "captureSearchInputs": true
+  },
+  "sample": {
+    "structuredManual": [],
+    "autoSuggest": {
+      "enabled": true,
+      "perCluster": 1,
+      "preferTypes": ["homepage", "form-or-contact", "policy", "listing", "detail", "content"]
+    },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 2,
+    "randomSeed": 1,
+    "smallSiteSupplementaryScanThreshold": 50
+  },
+  "scan": {
+    "viewports": [
+      { "id": "desktop", "width": 1280, "height": 800 },
+      { "id": "reflow", "width": 320, "height": 800 }
+    ],
+    "waitUntil": "domcontentloaded",
+    "timeoutMs": 60000,
+    "retries": 1,
+    "fullPageScreenshots": true,
+    "beforeScan": {
+      "actions": [
+        {
+          "action": "click",
+          "selector": "button[data-cookie-accept], .cookie-banner button",
+          "urlPattern": "^https://example\\.com/"
+        }
+      ]
+    },
+    "axe": {
+      "include": [],
+      "exclude": [],
+      "withRules": [],
+      "withTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+      "runOnly": null
+    }
+  },
+  "processes": [],
+  "reporting": {
+    "groupBestPracticeSeparately": true,
+    "markdownReport": true
+  },
+  "auth": {
+    "storageState": "./.auth/state.json",
+    "httpCredentials": {
+      "username": "audit-user",
+      "password": "REPLACE_WITH_ENV_VAR_OR_SECRET_MANAGER"
+    },
+    "ttlMinutes": 1440,
+    "extraHttpHeaders": {
+      "X-Audit-Run": "wcag-em-a11y-toolkit"
+    }
+  },
+  "wcagEm": {
+    "wcagVersion": "2.2",
+    "conformanceTarget": "AA",
+    "atBaseline": [],
+    "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
+    "samplingMethodNotes": "Authenticated scan — sample selected to represent logged-in user journeys.",
+    "evaluator": {
+      "name": "",
+      "contact": ""
+    }
+  }
+}
