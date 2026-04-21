@@ -89,11 +89,15 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
 /**
  * Produce the WCAG-EM Step 5 per-SC summary.
  *
+ * Note on naming: the second parameter is a *bundle of raw results*, not a
+ * draft of the returned summary. `rawResults = { axeResults, processResults }`
+ * is the input feedstock; the return value is the inverted per-SC summary.
+ *
  * @param {{ config: Record<string, any> }} ctx
  * @param {{
  *   axeResults?: any[],
  *   processResults?: any[],
- * }} rawSummary
+ * }} rawResults - Bundle of raw axe + process results. Not a draft summary.
  * @returns {{
  *   criteriaOutcomes: CriterionOutcome[],
  *   evaluationDate: string,
@@ -107,11 +111,11 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
  *   evaluator: { name: string, contact: string },
  * }}
  */
-export function toWcagEmSummary(ctx, rawSummary) {
+export function toWcagEmSummary(ctx, rawResults) {
   const wcagEmConfig = ctx?.config?.wcagEm ?? {};
-  const axeResults = Array.isArray(rawSummary?.axeResults) ? rawSummary.axeResults : [];
-  const processResults = Array.isArray(rawSummary?.processResults)
-    ? rawSummary.processResults
+  const axeResults = Array.isArray(rawResults?.axeResults) ? rawResults.axeResults : [];
+  const processResults = Array.isArray(rawResults?.processResults)
+    ? rawResults.processResults
     : [];
 
   /** @type {string[]} */
