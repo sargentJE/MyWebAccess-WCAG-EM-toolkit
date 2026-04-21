@@ -34,9 +34,11 @@ import { runPreflight } from './preflight.mjs';
  * (`delete` + redefine) per ADR-0005's Consequences note; `writable: false`
  * prevents accidental mutation.
  *
- * Used for `config.crawl.excludeUrlPatternsCompiled` (compiled at load) and
- * `ctx.preflightRan` (set after preflight succeeds). The single source of
- * truth for the descriptor shape these fields rely on.
+ * Used for `config.crawl.excludeUrlPatternsCompiled` (compiled at load),
+ * `config.scan.axe.overridesCompiled` (Layer 3a), action-level regex fields
+ * at three sites (Layer 3b R7), and `ctx.preflightRan` (set after preflight
+ * succeeds). The single source of truth for the descriptor shape these
+ * fields rely on.
  *
  * @param {object} obj - Target object the property is attached to.
  * @param {string} key - Property name.
@@ -50,6 +52,69 @@ export function defineHidden(obj, key, value) {
     configurable: true,
     writable: false,
   });
+}
+
+/**
+ * Compile `$defs/action.urlPattern` at every consumer site in the config.
+ *
+ * The schema reuses `$defs/action` (with `validRegex: true` on `urlPattern`)
+ * at three sites: `scan.beforeScan.actions[]`, `scan.axe.overrides[].actions[]`,
+ * and `processes[].steps[]`. For each action object that has a truthy
+ * `urlPattern`, attach a non-enumerable `regex` property so the R8 runtime
+ * dispatcher can `.test(url)` without re-compiling per URL.
+ *
+ * F9 invariants (locked by `test/unit/context-compile-actions.test.mjs`):
+ *   - Actions without `urlPattern` are left untouched (no `regex` attached).
+ *   - Overrides without an `actions` key get no phantom `actions: []`.
+ *   - The `regex` property is non-enumerable — JSON.stringify output is
+ *     byte-equivalent to the pre-compile form.
+ *
+ * Called once at config-load by `buildContext`. Pure transformation over
+ * the loaded config object (mutates in place for the non-enumerable attach).
+ *
+ * @param {Record<string, any>} config
+ * @returns {void}
+ */
+export function compileActionUrlPatterns(config) {
+  // 1. scan.beforeScan.actions[]
+  const beforeScanActions = config.scan?.beforeScan?.actions;
+  if (Array.isArray(beforeScanActions)) {
+    for (const action of beforeScanActions) compileActionRegex(action);
+  }
+
+  // 2. scan.axe.overrides[].actions[]
+  const overrides = config.scan?.axe?.overrides;
+  if (Array.isArray(overrides)) {
+    for (const override of overrides) {
+      if (Array.isArray(override?.actions)) {
+        for (const action of override.actions) compileActionRegex(action);
+      }
+    }
+  }
+
+  // 3. processes[].steps[]
+  const processes = config.processes;
+  if (Array.isArray(processes)) {
+    for (const processDef of processes) {
+      if (Array.isArray(processDef?.steps)) {
+        for (const step of processDef.steps) compileActionRegex(step);
+      }
+    }
+  }
+}
+
+/**
+ * Attach a `regex` to a single action object IFF it has a truthy `urlPattern`.
+ * No-op otherwise — the F9 invariant that actions without a pattern are
+ * unmodified is locked here.
+ *
+ * @param {Record<string, any>} action
+ * @returns {void}
+ */
+function compileActionRegex(action) {
+  if (!action || typeof action !== 'object') return;
+  if (typeof action.urlPattern !== 'string' || action.urlPattern.length === 0) return;
+  defineHidden(action, 'regex', new RegExp(action.urlPattern));
 }
 
 /**
@@ -130,6 +195,15 @@ export async function buildContext(options = {}) {
       })),
     );
   }
+
+  // ANCHOR: CompileActionUrlPatterns — compile `$defs/action.urlPattern` at
+  // three consumer sites (scan.beforeScan.actions, scan.axe.overrides.actions,
+  // processes.steps). Ajv's `validRegex` keyword has already confirmed
+  // compilability for every entry. The `regex` property is attached via
+  // `defineHidden` (non-enumerable) so it doesn't leak into JSON-serialised
+  // artefacts and the F9 invariant holds: actions without a `urlPattern` get
+  // no new properties; overrides without an `actions` key are untouched.
+  compileActionUrlPatterns(loaded.config);
 
   // ANCHOR: StepC — logger
   const logger = createLogger({ level: options.logLevel });

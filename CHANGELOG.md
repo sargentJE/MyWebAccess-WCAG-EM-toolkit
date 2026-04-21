@@ -8,16 +8,13 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Layer 3 follow-ups
 
-- `processes[].actions[].urlPattern` compile-at-load — deferred pending a
-  runtime consumer. The schema field is validated by the `validRegex` Ajv
-  keyword today, but no code reads it, so attaching a compiled `RegExp[]`
-  would be YAGNI. Wire `defineHidden` compile-at-load alongside the first
-  consumer (likely Layer 3b's `beforeScan` action filtering or a future
-  process-action URL predicate). `scan.axe.overrides[].urlPattern` was
-  cleared in Layer 3a — compile-at-load now lives in `context.mjs` at
-  ANCHOR: CompileOverrides, mirroring `crawl.excludeUrlPatternsCompiled`.
+- `$defs/action.urlPattern` compile-at-load — **DONE in Layer 3b R7**.
+  Wired at all three consumer sites (`scan.beforeScan.actions[]`,
+  `scan.axe.overrides[].actions[]`, `processes[].steps[]`) via
+  `context.mjs` → `compileActionUrlPatterns`. Every validRegex field in
+  the schema is now compile-at-load.
 - Replace `test/unit/discover-timeout.test.mjs` (currently a source-text
-  regression) with a behavioural test against the Layer 3 e2e fixture
+  regression) with a behavioural test against the Layer 4 e2e fixture
   server so the `page.setDefaultTimeout` line in `discover.mjs` is
   verified by execution, not by grep.
 

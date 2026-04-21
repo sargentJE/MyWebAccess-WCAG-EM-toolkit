@@ -51,15 +51,19 @@ const ajv = new Ajv2020({
 addFormats(ajv);
 
 // ANCHOR: validRegex — custom keyword; compiles user regex at validation time
-// NOTE(Layer 3): the validRegex keyword is attached to three schema fields:
-// crawl.excludeUrlPatterns[], scan.axe.overrides[].urlPattern, and
-// processes[].actions[].urlPattern. The first two are compiled at config-load
-// via context.mjs → defineHidden (ANCHOR: CompileRuntimeFields and ANCHOR:
-// CompileOverrides). The third is intentionally deferred: the schema field
-// exists for forward-compat but has no runtime consumer today, so compile-
-// at-load would attach a RegExp array nothing reads (YAGNI). Wire it
-// alongside the first consumer.
-// See CHANGELOG.md [Unreleased] → "Layer 3 follow-ups" + ADR-0005 mechanism 2.
+// NOTE(Layer 3): the validRegex keyword is attached to TWO schema fields and
+// shared across three consumer sites:
+//   1. `crawl.excludeUrlPatterns[]` — compiled at load via
+//      context.mjs → defineHidden (ANCHOR: CompileRuntimeFields, Layer 2).
+//   2. `scan.axe.overrides[].urlPattern` — compiled at load via
+//      context.mjs → defineHidden (ANCHOR: CompileOverrides, Layer 3a R2).
+//   3. `$defs/action.urlPattern` — compiled at load via
+//      context.mjs → compileActionUrlPatterns (ANCHOR: CompileActionUrlPatterns,
+//      Layer 3b R7) at three consumer sites: scan.beforeScan.actions[],
+//      scan.axe.overrides[].actions[], processes[].steps[].
+// All validRegex fields are now compile-at-load — the Layer 3 follow-up
+// tracked in CHANGELOG `[Unreleased]` is cleared by this commit.
+// LINK: docs/adr/0005-fail-fast-on-config.md
 ajv.addKeyword({
   keyword: 'validRegex',
   type: 'string',
