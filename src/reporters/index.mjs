@@ -27,6 +27,7 @@
 import * as jsonReporter from './json.mjs';
 import * as markdownReporter from './markdown.mjs';
 import * as htmlReporter from './html.mjs';
+import * as earlJsonldReporter from './earl-jsonld.mjs';
 
 // SECTION: Types
 
@@ -68,6 +69,7 @@ const registry = new Map([
   [jsonReporter.name, /** @type {ReporterModule} */ (jsonReporter)],
   [markdownReporter.name, /** @type {ReporterModule} */ (markdownReporter)],
   [htmlReporter.name, /** @type {ReporterModule} */ (htmlReporter)],
+  [earlJsonldReporter.name, /** @type {ReporterModule} */ (earlJsonldReporter)],
 ]);
 
 // SECTION: Public API
