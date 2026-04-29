@@ -16,7 +16,6 @@
       "default": "./src/index.mjs"
     },
     "./commands/*": "./src/commands/*.mjs",
-    "./reporters/*": "./src/reporters/*.mjs",
     "./lib/*": "./src/lib/*.mjs"
   },
   "scripts": {

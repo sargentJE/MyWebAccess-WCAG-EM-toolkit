@@ -27,6 +27,7 @@ import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
 import { TOOL_IDENTITY, toolIdentityMarkdownHeader } from '../lib/version.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
+import { runReporters } from '../reporters/index.mjs';
 
 // SECTION: Pure helpers (exported for testability)
 
@@ -333,7 +334,19 @@ export async function run(ctx) {
   };
 
   // SECTION: Persist artefacts
-  await writeJson(path.join(paths.reportsDir, 'summary.json'), summary);
+  // Layer 4 R3: `summary.json` emission is delegated to the JSON reporter via
+  // the registry. The other four `writeJson` calls below stay inline — they
+  // are analytical side-artefacts that always write regardless of
+  // `reporting.reporters` config (per ADR-0008's reporter-vs-side-artefact
+  // split). R4 will fold the markdown ANCHOR into a single `runReporters`
+  // call that supersedes this one.
+  const reporterOutcome = await runReporters(['json'], summary, ctx);
+  for (const failure of reporterOutcome.errors) {
+    logger.error(
+      { reporter: failure.name, err: { name: failure.error.name, message: failure.error.message } },
+      'reporter failed',
+    );
+  }
   await writeJson(path.join(paths.reportsDir, 'grouped-by-rule.json'), groupedFindings);
   await writeJson(path.join(paths.reportsDir, 'grouped-by-component.json'), groupedComponents);
   await writeJson(path.join(paths.reportsDir, 'random-vs-structured-comparison.json'), {
@@ -406,12 +419,19 @@ export async function run(ctx) {
 
   await writeText(path.join(paths.reportsDir, 'summary.md'), md.join('\n'));
 
-  const exitCode = computeExitCode(summary, config.reporting?.failOnFindings);
+  // Compose the exit code: `computeExitCode` returns 0 (clean) or 2
+  // (failOnFindings threshold hit). Reporter errors bump to 1, but never
+  // override 2 — the threshold-hit signal is the stronger CI signal and
+  // wins when both are present.
+  const baseExitCode = computeExitCode(summary, config.reporting?.failOnFindings);
+  const exitCode = Math.max(baseExitCode, reporterOutcome.errors.length > 0 ? 1 : 0);
   logger.info(
     {
       findings: summary.groupedFindingCount,
       reportsDir: paths.reportsDir,
       exitCode,
+      reporters: reporterOutcome.results.map((r) => r.name),
+      reporterErrors: reporterOutcome.errors.length,
     },
     'summarize done',
   );
