@@ -25,6 +25,7 @@
 
 // SECTION: Imports
 import * as jsonReporter from './json.mjs';
+import * as markdownReporter from './markdown.mjs';
 
 // SECTION: Types
 
@@ -64,6 +65,7 @@ import * as jsonReporter from './json.mjs';
  */
 const registry = new Map([
   [jsonReporter.name, /** @type {ReporterModule} */ (jsonReporter)],
+  [markdownReporter.name, /** @type {ReporterModule} */ (markdownReporter)],
 ]);
 
 // SECTION: Public API

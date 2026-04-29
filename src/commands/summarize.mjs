@@ -334,13 +334,15 @@ export async function run(ctx) {
   };
 
   // SECTION: Persist artefacts
-  // Layer 4 R3: `summary.json` emission is delegated to the JSON reporter via
-  // the registry. The other four `writeJson` calls below stay inline — they
-  // are analytical side-artefacts that always write regardless of
+  // Layer 4 R3-R4: report emission delegated to the registry. The four
+  // `writeJson` calls + `manual-backlog.md` writeText below stay inline —
+  // they are analytical side-artefacts that always write regardless of
   // `reporting.reporters` config (per ADR-0008's reporter-vs-side-artefact
-  // split). R4 will fold the markdown ANCHOR into a single `runReporters`
-  // call that supersedes this one.
-  const reporterOutcome = await runReporters(['json'], summary, ctx);
+  // split).
+  const resolvedReporters = Array.isArray(config.reporting?.reporters)
+    ? config.reporting.reporters
+    : ['json', 'markdown'];
+  const reporterOutcome = await runReporters(resolvedReporters, summary, ctx);
   for (const failure of reporterOutcome.errors) {
     logger.error(
       { reporter: failure.name, err: { name: failure.error.name, message: failure.error.message } },
@@ -372,52 +374,10 @@ export async function run(ctx) {
       }),
   );
 
-  // ANCHOR: MarkdownReport — replaced by pluggable reporter in Layer 4
-  const md = [
-    toolIdentityMarkdownHeader().trimEnd(),
-    '',
-    '# Accessibility scan summary',
-    '',
-    `Site: **${config.name}**`,
-    `Generated: ${summary.generatedAt}`,
-    '',
-    '## Method guardrails',
-    '',
-    '- This is the automated layer of the audit workflow.',
-    '- It does not make a sitewide WCAG conformance claim on its own.',
-    '- Complete processes and manual checks still need separate review.',
-    '',
-    '## Run summary',
-    '',
-    `- Inventory count: ${summary.inventoryCount}`,
-    `- Final selected sample: ${summary.finalSampleCount}`,
-    `- Sample pages scanned: ${summary.samplePagesScanned}`,
-    `- Process runs: ${summary.processRuns}`,
-    `- Grouped findings: ${summary.groupedFindingCount}`,
-    '',
-    '## Random vs structured sample comparison',
-    '',
-    `- New rule IDs found only in random sample: ${comparison.randomSampleIntroducedNewRuleIds.length}`,
-    `- New clusters found only in random sample: ${comparison.randomSampleIntroducedNewClusters.length}`,
-    `- Expand structured sample recommended: ${comparison.expandStructuredSampleRecommended ? 'yes' : 'no'}`,
-    '',
-    '## Grouped findings by rule',
-    '',
-  ];
-
-  for (const item of groupedFindings) {
-    md.push(`### ${item.id}`);
-    md.push(`- Impact: ${item.impact ?? 'n/a'}`);
-    md.push(`- Classification: ${item.classification}`);
-    md.push(`- Pages affected: ${item.pageCount}`);
-    if (item.pageTypes.length) md.push(`- Page types: ${item.pageTypes.join(', ')}`);
-    if (item.help) md.push(`- Help: ${item.help}`);
-    if (item.helpUrl) md.push(`- Rule URL: ${item.helpUrl}`);
-    if (item.targets.length) md.push(`- Example target: \`${item.targets[0]}\``);
-    md.push('');
-  }
-
-  await writeText(path.join(paths.reportsDir, 'summary.md'), md.join('\n'));
+  // ANCHOR: MarkdownReport — Layer 4 R4 absorbed the inline string-assembly
+  // block into `src/reporters/markdown.mjs`; the `runReporters` call above
+  // now writes `summary.md` via the registry when 'markdown' is in the
+  // resolved reporter list (default ['json','markdown']).
 
   // Compose the exit code: `computeExitCode` returns 0 (clean) or 2
   // (failOnFindings threshold hit). Reporter errors bump to 1, but never
