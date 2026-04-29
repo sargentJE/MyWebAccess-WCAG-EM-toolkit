@@ -41,13 +41,19 @@ import { buildContext, ensurePreflight } from '../lib/context.mjs';
  * viewports. ADR-0006 documents the low-likelihood collision risk when a
  * URL path itself contains the substring `__<vp.id>`.
  *
+ * Layer 4 R8 adds the optional `format` parameter so the file extension
+ * matches `config.reporting.screenshotFormat`. Default `'png'` preserves
+ * call-site compatibility for callers that don't care about format.
+ *
  * @param {string} screenshotsDir
  * @param {string} url
  * @param {{ id: string }} viewport
+ * @param {'png' | 'jpeg'} [format]
  * @returns {string}
  */
-export function buildScreenshotPath(screenshotsDir, url, viewport) {
-  return path.join(screenshotsDir, `${fileSafeFromUrl(url)}__${viewport.id}.png`);
+export function buildScreenshotPath(screenshotsDir, url, viewport, format = 'png') {
+  const ext = format === 'jpeg' ? 'jpg' : 'png';
+  return path.join(screenshotsDir, `${fileSafeFromUrl(url)}__${viewport.id}.${ext}`);
 }
 
 /**
@@ -170,6 +176,9 @@ export async function run(ctx) {
   /** @type {any[]} */
   const allResults = [];
   let pagesFailed = 0;
+  // Layer 4 R8: one-shot warn flag — fires the first time a (png + quality)
+  // mismatch is observed, then stays quiet for the rest of the scan.
+  let pngQualityWarnFired = false;
 
   /**
    * @param {import('playwright').Page} page
@@ -182,9 +191,42 @@ export async function run(ctx) {
       timeout: config.scan.timeoutMs,
     });
 
-    const screenshotPath = buildScreenshotPath(paths.screenshotsDir, url, viewport);
+    // Layer 4 R8: honour reporting.screenshotFormat + screenshotQuality.
+    // Playwright's page.screenshot rejects `quality` when type is png, so
+    // we conditionally include it. The schema permits both fields
+    // independently, so we also warn (once per process) when a user sets
+    // quality with png — that combination has no effect.
+    const screenshotFormat =
+      config.reporting?.screenshotFormat === 'jpeg' ? 'jpeg' : 'png';
+    const rawQuality = config.reporting?.screenshotQuality;
+    const screenshotQuality =
+      typeof rawQuality === 'number' && rawQuality >= 1 && rawQuality <= 100
+        ? rawQuality
+        : 80;
+    if (
+      screenshotFormat === 'png' &&
+      typeof rawQuality === 'number' &&
+      !pngQualityWarnFired
+    ) {
+      logger.warn(
+        { screenshotFormat, screenshotQuality: rawQuality },
+        'reporting.screenshotQuality has no effect when screenshotFormat is png; ignoring',
+      );
+      pngQualityWarnFired = true;
+    }
+    const screenshotPath = buildScreenshotPath(
+      paths.screenshotsDir,
+      url,
+      viewport,
+      screenshotFormat,
+    );
     if (config.scan.fullPageScreenshots !== false) {
-      await page.screenshot({ path: screenshotPath, fullPage: true });
+      await page.screenshot({
+        path: screenshotPath,
+        fullPage: true,
+        type: screenshotFormat,
+        ...(screenshotFormat === 'jpeg' ? { quality: screenshotQuality } : {}),
+      });
     }
 
     // ANCHOR: AxeBuilderChain — apply config.scan.axe settings.

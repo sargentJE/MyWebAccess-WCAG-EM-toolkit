@@ -41,3 +41,28 @@ test('buildScreenshotPath is pure — same inputs yield same output', () => {
   const b = buildScreenshotPath('/out', 'https://x.com/a', { id: 'v1' });
   assert.equal(a, b);
 });
+
+// SECTION: Layer 4 R8 — format-aware extension
+
+test('buildScreenshotPath defaults to .png extension when format is omitted', () => {
+  const result = buildScreenshotPath('/out', 'https://example.com/p', { id: 'desktop' });
+  assert.ok(result.endsWith('__desktop.png'));
+});
+
+test('buildScreenshotPath honours format=jpeg with a .jpg extension', () => {
+  const result = buildScreenshotPath('/out', 'https://example.com/p', { id: 'desktop' }, 'jpeg');
+  assert.ok(result.endsWith('__desktop.jpg'));
+});
+
+test('buildScreenshotPath: explicit format=png keeps .png (call-site safety net)', () => {
+  const result = buildScreenshotPath('/out', 'https://example.com/p', { id: 'desktop' }, 'png');
+  assert.ok(result.endsWith('__desktop.png'));
+});
+
+test('buildScreenshotPath: jpeg + reflow viewport — both axes flow through to filename', () => {
+  const desktopPng = buildScreenshotPath('/out', 'https://example.com/x', { id: 'desktop' }, 'png');
+  const reflowJpeg = buildScreenshotPath('/out', 'https://example.com/x', { id: 'reflow' }, 'jpeg');
+  assert.ok(desktopPng.endsWith('__desktop.png'));
+  assert.ok(reflowJpeg.endsWith('__reflow.jpg'));
+  assert.notEqual(desktopPng, reflowJpeg);
+});
