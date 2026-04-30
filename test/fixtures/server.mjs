@@ -123,8 +123,18 @@ async function readBody(req) {
  */
 export async function startFixtureServer(options = {}) {
   const { staticDir, routes = {}, auth, slowMs } = options;
+  // baseUrl is set after `listen(0)` resolves; closures below read it.
+  // String captured by closure so request handlers see the assigned value.
+  /** @type {string} */
+  let baseUrl = '';
 
   const server = createServer(async (req, res) => {
+    // Force connection close on every response. Default keep-alive
+    // (Keep-Alive: timeout=5) causes some headless-browser navigation
+    // strategies (waitUntil: 'load' / 'networkidle') to wait the full
+    // keep-alive interval before declaring the page settled, which
+    // makes test runs flaky and slow.
+    res.setHeader('Connection', 'close');
     try {
       const url = req.url ?? '/';
       const urlPath = url.split('?')[0];
@@ -198,7 +208,18 @@ export async function startFixtureServer(options = {}) {
           const body = await fs.readFile(filePath);
           const ext = path.extname(filePath).toLowerCase();
           res.setHeader('content-type', MIME[ext] ?? 'application/octet-stream');
-          res.end(body);
+          // Server-side `__BASE_URL__` substitution for text-format files
+          // (HTML, XML, CSS, JS, JSON, plain text). Lets fixture files
+          // reference the dynamic ephemeral baseUrl by placeholder without
+          // a build step. Binary files (PNG, JPEG, SVG bytes) pass through
+          // unchanged.
+          if (ext === '.html' || ext === '.xml' || ext === '.css' ||
+              ext === '.js'   || ext === '.mjs' || ext === '.json' ||
+              ext === '.txt') {
+            res.end(body.toString('utf8').replaceAll('__BASE_URL__', baseUrl));
+          } else {
+            res.end(body);
+          }
           return;
         } catch (err) {
           if (/** @type {any} */ (err)?.code === 'ENOENT') {
@@ -224,7 +245,7 @@ export async function startFixtureServer(options = {}) {
   server.listen(0);
   await once(server, 'listening');
   const address = /** @type {import('node:net').AddressInfo} */ (server.address());
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+  baseUrl = `http://127.0.0.1:${address.port}`;
 
   /** @type {FixtureServerHandle} */
   return {
