@@ -48,9 +48,11 @@ test('json reporter: tool field is the first key of the emitted JSON', async (t)
   };
   await jsonReporter.emit(summary, ctx);
   const raw = await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8');
-  const firstKeyMatch = raw.match(/^\s*\{\s*"([^"]+)"/);
-  assert.ok(firstKeyMatch, 'expected a leading JSON object key');
-  assert.equal(firstKeyMatch[1], 'tool', 'tool must be the first JSON key');
+  // Trust the JSON spec parser instead of regex-matching whitespace —
+  // robust to indentation changes, BOMs, line-ending variants. Insertion
+  // order of own enumerable string keys is preserved per ES2015+.
+  const firstKey = Object.keys(JSON.parse(raw))[0];
+  assert.equal(firstKey, 'tool', 'tool must be the first JSON key');
 });
 
 test('json reporter: findings are sorted by [impact desc, ruleId asc]', async (t) => {

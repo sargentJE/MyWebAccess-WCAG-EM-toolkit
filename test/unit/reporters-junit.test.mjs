@@ -206,11 +206,33 @@ test('junit reporter: multi-byte UTF-8 character truncation preserves valid outp
       },
     ],
   });
-  // The output must be a valid string; if truncation split a surrogate pair,
-  // toString or readFile would have failed before reaching this point.
-  // Assert truncation marker `…` is present (truncate adds it when over).
+  // Surface evidence: emoji and ellipsis present.
   assert.ok(xml.includes('🎉'), 'emoji rendered in HTML CDATA');
   assert.ok(xml.includes('…'), 'truncation ellipsis present');
+  // Stronger structural validity: balanced CDATA + at least one closing
+  // testsuite tag. A split surrogate would produce invalid UTF-8 that
+  // either kills `readFile`'s utf8 decode or leaves an unmatched lone
+  // surrogate observable as an unpaired \uD800-\uDBFF or \uDC00-\uDFFF
+  // that NEVER appears alongside the inverse half — so we also assert
+  // there are no unpaired surrogates in the output.
+  assert.equal(
+    (xml.match(/<!\[CDATA\[/g) ?? []).length,
+    (xml.match(/\]\]>/g) ?? []).length,
+    '<![CDATA[ count must equal ]]> count',
+  );
+  assert.match(xml, /<\/testsuite>\n?$/);
+  // Lone surrogate detection — a high surrogate (D800-DBFF) must always
+  // be followed by a low surrogate (DC00-DFFF), and vice versa.
+  for (let i = 0; i < xml.length; i++) {
+    const code = xml.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = xml.charCodeAt(i + 1);
+      assert.ok(next >= 0xdc00 && next <= 0xdfff, `lone high surrogate at index ${i}`);
+      i++; // skip the low surrogate we just verified
+    } else {
+      assert.ok(code < 0xdc00 || code > 0xdfff, `lone low surrogate at index ${i}`);
+    }
+  }
 });
 
 test('junit reporter: registry now lists junit', () => {

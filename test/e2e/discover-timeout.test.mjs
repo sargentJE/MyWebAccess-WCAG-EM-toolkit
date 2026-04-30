@@ -31,6 +31,6 @@ import { test } from 'node:test';
 
 // SECTION: Tests
 
-test.skip('discover: pages exceeding crawl.requestTimeoutSecs are dropped (DEFERRED — Crawlee hang)', async () => {
+test.skip('[DEFERRED-CRAWLEE] discover: pages exceeding crawl.requestTimeoutSecs are dropped', async () => {
   // Body kept minimal; see file-level comment for the investigation log.
 });

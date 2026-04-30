@@ -66,3 +66,16 @@ test('buildScreenshotPath: jpeg + reflow viewport — both axes flow through to 
   assert.ok(reflowJpeg.endsWith('__reflow.jpg'));
   assert.notEqual(desktopPng, reflowJpeg);
 });
+
+test('buildScreenshotPath: unknown format value silently defaults to .png', () => {
+  // Defensive — any non-'jpeg' value falls back to png. Documents the
+  // behaviour so a future schema-tightening doesn't silently break
+  // existing call sites.
+  const result = buildScreenshotPath(
+    '/out',
+    'https://example.com/x',
+    { id: 'desktop' },
+    /** @type {any} */ ('unknown'),
+  );
+  assert.ok(result.endsWith('__desktop.png'));
+});

@@ -31,6 +31,6 @@ import { test } from 'node:test';
 
 // SECTION: Tests
 
-test.skip('reporters smoke: full audit produces all 5 reporter outputs (DEFERRED — Crawlee hang)', async () => {
+test.skip('[DEFERRED-CRAWLEE] reporters smoke: full audit produces all 5 reporter outputs', async () => {
   // Body kept minimal; see file-level comment for the investigation log.
 });

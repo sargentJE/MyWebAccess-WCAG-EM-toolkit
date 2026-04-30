@@ -239,6 +239,51 @@ test('includePasses=false: passes section absent', async (t) => {
   assert.ok(!got.includes('<h2>Passing criteria</h2>'), 'no passes section by default');
 });
 
+test('html reporter: screenshot src uses forward slashes (Windows path safety)', async (t) => {
+  // Even on POSIX the test runs against forward slashes; the explicit
+  // assertion guards against a future regression that re-introduces
+  // path.relative without normalisation. On Windows the same code path
+  // would break <img src=> rendering otherwise.
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'reporters-html-win-'));
+  t.after(() => fs.rm(tmp, { recursive: true, force: true }));
+  const reportsDir = path.join(tmp, 'reports');
+  const resultsDir = path.join(tmp, 'results');
+  await fs.mkdir(reportsDir, { recursive: true });
+  await fs.mkdir(resultsDir, { recursive: true });
+  // Synthesize axe-results.json with a screenshot path the reporter will
+  // try to render. The path lives one level up from reportsDir under
+  // a sibling 'screenshots' directory.
+  const screenshotAbs = path.join(tmp, 'screenshots', 'page__desktop.png');
+  await fs.writeFile(
+    path.join(resultsDir, 'axe-results.json'),
+    JSON.stringify([{ url: 'https://example.com/', screenshot: screenshotAbs }]),
+  );
+  const ctx = { paths: { reportsDir, resultsDir }, config: {} };
+  const summary = {
+    ...baseSummary(),
+    findings: [
+      {
+        id: 'rule-with-screenshot',
+        impact: 'serious',
+        classification: 'primary-automated-finding',
+        pageCount: 1,
+        pageTypes: [],
+        help: 'help',
+        helpUrl: 'https://example.com',
+        targets: [],
+        pages: ['https://example.com/'],
+      },
+    ],
+  };
+  await htmlReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  // <img src> must not contain backslashes; it must use forward slashes.
+  const imgMatch = got.match(/<img class="screenshot"[^>]*src="([^"]+)"/);
+  assert.ok(imgMatch, 'expected screenshot <img> tag');
+  assert.ok(!imgMatch[1].includes('\\'), `src must not contain backslashes: ${imgMatch[1]}`);
+  assert.match(imgMatch[1], /\/screenshots\/page__desktop\.png$/);
+});
+
 test('includePasses=true: passes section present with passing criteria', async (t) => {
   const { ctx, reportsDir } = await makeCtx(t, { includePasses: true });
   const summary = {

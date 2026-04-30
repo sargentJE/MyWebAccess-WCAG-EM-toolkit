@@ -197,8 +197,14 @@ multi-vocab object embedding `ptr:` and `doap:` explicitly.
 
 ## Symbol references (per ADR-0001)
 
-- `name` / `emit` / `OUTCOME_MAP` / `EARL_CONTEXT` / `buildAssertion` /
-  `buildAssertor` / `buildInfo` — `src/reporters/earl-jsonld.mjs`.
+- `name` / `emit` — exported by `src/reporters/earl-jsonld.mjs` (the
+  reporter's public contract, registered in
+  `src/reporters/index.mjs`).
+- `OUTCOME_MAP` / `EARL_CONTEXT` / `buildAssertion` / `buildAssertor` /
+  `buildInfo` — module-private inside
+  `src/reporters/earl-jsonld.mjs`. Tests assert behaviour through
+  `emit()` rather than importing the helpers directly; a future change
+  that needs to extract one for re-use should also export it.
 - `TOOL_IDENTITY` — `src/lib/version.mjs` (source of `doap:name` +
   `doap:release`).
 - `sortFindings` — `src/reporters/_sort.mjs` (orders the `@graph`).

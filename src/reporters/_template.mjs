@@ -4,7 +4,7 @@
  * @module reporters/_template
  *
  * @description
- * Three exports cover the contexts the HTML reporter actually emits into:
+ * Four exports cover the contexts the HTML reporter actually emits into:
  *
  *   - `text(s)` — escapes the five "danger characters" (& < > " ') for HTML
  *     element text content. Every interpolation that lands between tags
@@ -20,11 +20,11 @@
  *     reusing one helper is sound and avoids the "did the author pick the
  *     right context?" footgun.
  *
- * `safeUrl(s)` is a fourth helper for URL-context — `text()` and `attr()`
- * cannot prevent the `<a href="javascript:alert(1)">` vector because `:`
- * and the scheme literal pass through escape unchanged. `safeUrl` returns
- * the URL if its protocol is `http:` or `https:` (or relative), otherwise
- * `'#'`.
+ *   - `safeUrl(s)` — URL-context guard. `text()` and `attr()` cannot
+ *     prevent the `<a href="javascript:alert(1)">` vector because `:` and
+ *     the scheme literal pass through escape unchanged. `safeUrl` returns
+ *     the URL if its protocol is `http:` or `https:` (or relative),
+ *     otherwise `'#'`.
  *
  * No `raw()` export — minimal attack surface.
  *
@@ -59,11 +59,16 @@ const ATTR_ESCAPES = Object.freeze({
  */
 function buildAttrPattern() {
   const dangerChars = ['&', '<', '>', '"', "'", '`'];
+  // Includes ASCII C0 controls (0x00-0x1f minus tab/LF/CR), DEL (0x7f),
+  // and Unicode C1 controls (0x80-0x9f). HTML 5 forbids the C1 range in
+  // attribute context too, so we escape them for spec compliance — even
+  // though most browsers tolerate them.
   const ranges = [
     [0x00, 0x08],
     [0x0b, 0x0c],
     [0x0e, 0x1f],
     [0x7f, 0x7f],
+    [0x80, 0x9f],
   ];
   let body = dangerChars.map((c) => escapeForCharClass(c)).join('');
   for (const [lo, hi] of ranges) {

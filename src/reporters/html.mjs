@@ -201,7 +201,12 @@ function renderFindings(findings, ctx, screenshotsByUrl) {
     for (const url of pages) {
       const shots = screenshotsByUrl.get(url);
       if (shots && shots.length > 0) {
-        const rel = path.relative(ctx.paths.reportsDir, shots[0]);
+        // path.relative emits OS-native separators — backslashes on
+        // Windows. HTML `src=` attribute requires forward slashes per the
+        // URL standard, so normalise unconditionally. Same logic as
+        // upstream URL-encoding libraries; we have no consumer that
+        // wants Windows paths in HTML output.
+        const rel = path.relative(ctx.paths.reportsDir, shots[0]).split(path.sep).join('/');
         out += html`<img class="screenshot" alt="Page screenshot" src="${rel}">\n`;
         break;
       }
