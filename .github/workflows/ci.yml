@@ -58,12 +58,14 @@ jobs:
       - name: npm audit (production only, non-blocking)
         run: npm audit --omit=dev || true
 
-  # Smoke test the pipeline itself — defers the full e2e run to when the
-  # test/fixtures/static-site harness lands (Layer 1).
+  # Heavier e2e gate — runs after `checks` so a broken unit suite or
+  # broken type definitions short-circuits before we spend cycles on
+  # browser launches. Caches the Playwright browsers directory keyed
+  # on the resolved Playwright version from package-lock.json.
   pipeline-smoke:
-    name: Pipeline smoke
+    name: Pipeline smoke (e2e)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: checks
     steps:
       - uses: actions/checkout@v4
@@ -75,9 +77,23 @@ jobs:
       - name: Install deps
         run: npm ci --no-audit --no-fund
 
-      # TODO(Layer 1): cache ~/.cache/ms-playwright and run the e2e
-      # fixture-backed audit here. For Layer 0b we only verify the library
-      # modules load cleanly — which the smoke test in test/unit/smoke.test.mjs
-      # already covers.
-      - name: Re-run smoke to confirm CI environment parity
-        run: npm test
+      # Cache ~/.cache/ms-playwright across runs. The cache key contains
+      # the Playwright version pulled from package-lock.json so a
+      # dependency bump invalidates the cache automatically.
+      - name: Resolve Playwright version
+        id: playwright
+        run: |
+          version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright Chromium (with system deps)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e suite
+        run: npm run test:e2e
