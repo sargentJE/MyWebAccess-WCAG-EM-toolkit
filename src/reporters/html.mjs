@@ -66,12 +66,26 @@ const STATIC_CSS = `
   .impact-serious  { color: #c43d00; }
   .impact-moderate { color: #806000; }
   .impact-minor    { color: #555; }
-  .impact-null     { color: #888; }
+  .impact-null     { color: #767676; }
   code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f5f5f5; padding: 0.4rem; }
   @media (prefers-color-scheme: dark) { pre { background: #1e1e1e; } }
   .tool-banner { font-size: 0.85rem; color: #555; margin-bottom: 1rem; }
   .screenshot { max-width: 100%; border: 1px solid #ddd; margin-top: 0.5rem; }
+  /* Dark-mode content-layer overrides. Source-order AFTER the light rules
+     so they win on equal specificity when the @media query matches. Hand-
+     calculated against #121212 for WCAG 2.1 AA 4.5:1 and locked by the
+     e2e axe-core self-check at test/e2e/reporters-html-axe.test.mjs.
+     .tool-banner inherits the same #555 problem as .impact-minor — both
+     are too dark on #121212 (2.5 : 1). */
+  @media (prefers-color-scheme: dark) {
+    .impact-critical { color: #ff5b5b; }
+    .impact-serious  { color: #ff8c5b; }
+    .impact-moderate { color: #d6a44a; }
+    .impact-minor    { color: #c8c8c8; }
+    .impact-null     { color: #888; }
+    .tool-banner     { color: #aaa; }
+  }
 `;
 
 // SECTION: Public API
