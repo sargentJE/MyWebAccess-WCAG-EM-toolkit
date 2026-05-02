@@ -8,16 +8,30 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Layer 4 follow-ups
 
-- **Crawlee/PlaywrightCrawler hang on localhost fixtures** — investigated
-  during R9; raw Playwright `page.goto` against the fixture server loads
-  in <100 ms but `PlaywrightCrawler.requestHandler` consistently times out
-  at 30 s × 3 retries on the same URL. Independent of `CRAWLEE_STORAGE_DIR`
-  isolation, `Connection: close`, scope strategy (`same-origin` vs
-  `same-hostname`), or sitemap seeding. Two e2e tests blocked behind this
-  hang ship as `test.skip` placeholders with explanatory comments:
+- **Crawlee/PlaywrightCrawler hang on localhost fixtures** — first
+  investigated during R9; revisited during the v2 audit with refined
+  diagnosis. Raw Playwright `page.goto` against the fixture server
+  loads in <250 ms but `PlaywrightCrawler.requestHandler` consistently
+  times out at the configured `requestHandlerTimeoutSecs` × retries on
+  the same URL — even though instrumented probes confirm the handler
+  enters and passes `page.title()` successfully. Mitigations ruled out:
+  `CRAWLEE_STORAGE_DIR` per-test isolation; `Connection: close`
+  server-side; scope strategy (`same-origin` vs `same-hostname`);
+  sitemap seeding; and (v2 audit) `useSessionPool: false`,
+  `browserPoolOptions.retireBrowserAfterPageCount: Infinity`,
+  `persistCookiesPerSession: false`. v2 bisect: a hand-rolled standalone
+  `PlaywrightCrawler` with the EXACT discover.mjs handler logic copied
+  verbatim crawls all 5 fixture pages in 991 ms — so the hang is
+  somewhere in `discover.run`'s invocation path (not Crawlee itself,
+  not the handler, not the fixture). Closest upstream symptom match:
+  apify/crawlee#2785. Next experiment is to progressively replace
+  `discover.run`'s wrapping code with the working standalone setup
+  until the boundary that triggers the hang is identified. Two e2e
+  tests blocked behind this hang ship as `test.skip` placeholders:
   - `test/e2e/reporters-smoke.test.mjs` — full-audit reporter pipeline
     smoke (still validated end-to-end via R3-R7 unit tests against
-    synthetic summary inputs).
+    synthetic summary inputs and via `test/e2e/reporters-html-axe.
+    test.mjs` for the HTML reporter's own a11y).
   - `test/e2e/discover-timeout.test.mjs` — behavioural replacement for
     the deleted `test/unit/discover-timeout.test.mjs` source-text test.
 

@@ -10,20 +10,53 @@
  *
  * **CURRENTLY SKIPPED.** During R9 development the Crawlee-driven
  * `discover` stage hangs on `127.0.0.1` localhost fixtures — every
- * `requestHandler` invocation times out at 30s × 3 retries even though
- * the fixture HTTP server returns the page within milliseconds (raw
- * Playwright `page.goto` against the same fixture loads in <100 ms).
- * The hang appears to be inside Crawlee 3.16's PlaywrightCrawler
- * lifecycle and is independent of:
- *   - storage isolation (`CRAWLEE_STORAGE_DIR` set per-test, fresh dir)
- *   - HTTP keep-alive (set `Connection: close` server-side, no change)
- *   - scope strategy (`same-hostname` vs `same-origin` both hang)
- *   - sitemap seeding (disabled, no change)
+ * `requestHandler` invocation times out at the configured boundary even
+ * though the underlying user handler runs to completion (instrumented
+ * probes confirm the handler reaches and passes `page.title()`).
  *
- * Tracked in `CHANGELOG.md [Unreleased]` as a Layer 4 follow-up. The
- * fixture harness, deterministic-sort helper, and reporter modules
- * landed in R1-R8 are independently exercised by the unit suites; this
- * smoke test will unskip once the Crawlee hang is diagnosed.
+ * Mitigations tried + ruled out (R9 + Layer 4 v2 audit):
+ *   - `CRAWLEE_STORAGE_DIR` per-test isolation
+ *   - HTTP `Connection: close` server-side
+ *   - scope strategy `same-hostname` vs `same-origin`
+ *   - sitemap seeding disabled
+ *   - `useSessionPool: false`                    [v2 audit]
+ *   - `browserPoolOptions: { retireBrowserAfterPageCount: Infinity }`  [v2 audit]
+ *   - `persistCookiesPerSession: false`          [v2 audit]
+ *
+ * Bisect evidence (v2 audit, against the same fixture + Crawlee 3.16):
+ *   - Raw Playwright `page.goto` + `page.title()`: 219 ms total.
+ *   - Hand-rolled standalone `PlaywrightCrawler` with the EXACT discover.mjs
+ *     handler logic copied verbatim (including `page.setDefaultTimeout`,
+ *     `waitForLoadState`, `enqueueLinks` with `transformRequestFunction`,
+ *     and `preNavigationHooks`): 991 ms, all 5 fixture pages crawled.
+ *   - `discover.run(ctx)` against the same fixture via the same buildContext
+ *     setup: 41 s (3 × 10s requestHandlerTimeoutSecs + retries) and never
+ *     succeeds.
+ *
+ * The hang is therefore NOT in Crawlee itself, NOT in the fixture server,
+ * NOT in raw Playwright, NOT in our handler code. It IS in some interaction
+ * specific to the `discover.run` invocation path that the standalone
+ * reproducer does not trigger. The closest upstream symptom match is
+ * apify/crawlee#2785 ("RequestHandler Timed Out But Actually Browser
+ * Error") which describes browser-pool page-creation hanging silently
+ * under the requestHandler timeout cap, but our bisect shows the page IS
+ * being created and navigated successfully — the timeout fires WHILE the
+ * handler is making progress.
+ *
+ * Next experiment for a future investigator: progressively replace
+ * `discover.run`'s code path with the working standalone reproducer until
+ * the boundary that triggers the hang is identified. Promising candidates
+ * to swap in/out:
+ *   - the `getSitemapSeeds` await before the crawler (returns `[]` for
+ *     `sitemapSeeding.enabled: false` but exercises Node fetch).
+ *   - the `[...new Set(seeds)]` deduplication around `crawler.run`'s
+ *     argument (subtle but might change Crawlee's queue priming).
+ *   - whether `ensurePreflight(ctx)`'s side effects (Pino logger setup,
+ *     paths.outDir creation) interact with Crawlee's storage init.
+ *
+ * Tracked in `CHANGELOG.md [Unreleased] / Layer 4 follow-ups` with the
+ * full bisect log; the smoke test will unskip once the boundary is
+ * identified and a fix lands.
  */
 
 // SECTION: Imports
