@@ -26,6 +26,13 @@
  *     the URL if its protocol is `http:` or `https:` (or relative),
  *     otherwise `'#'`.
  *
+ * Both `text()` and `attr()` also strip Unicode bidirectional override and
+ * isolate formatting characters (U+202A-U+202E, U+2066-U+2069) before the
+ * standard escape pass. These are render-affecting invisible chars used in
+ * the Trojan Source attack class (CVE-2021-42574); HTML-entity escaping is
+ * insufficient because the browser decodes the entity and re-applies the
+ * bidi behaviour. Stripping is the correct mitigation.
+ *
  * No `raw()` export — minimal attack surface.
  *
  * @see docs/adr/0008-pluggable-reporters.md
@@ -92,6 +99,16 @@ function escapeForCharClass(ch) {
 const TEXT_PATTERN = /[&<>"']/g;
 const ATTR_PATTERN = buildAttrPattern();
 
+// Unicode bidirectional override / isolate formatting characters.
+// U+202A-U+202E: LRE / RLE / PDF / LRO / RLO
+// U+2066-U+2069: LRI / RLI / FSI / PDI
+// Stripped (not escaped) from both text() and attr() output: these characters
+// have no defensible reason to appear in axe-captured strings, and HTML-entity
+// escaping wouldn't help — the bidi behaviour returns when the browser decodes
+// the entity, leaving the Trojan Source attack surface intact
+// (CVE-2021-42574). \u escapes per the convention in buildAttrPattern.
+const BIDI_PATTERN = /[\u202a-\u202e\u2066-\u2069]/g;
+
 // SECTION: Public API
 
 /**
@@ -101,7 +118,9 @@ const ATTR_PATTERN = buildAttrPattern();
  * @returns {string}
  */
 export function text(s) {
-  return String(s ?? '').replace(TEXT_PATTERN, (ch) => TEXT_ESCAPES[ch] ?? ch);
+  return String(s ?? '')
+    .replace(BIDI_PATTERN, '')
+    .replace(TEXT_PATTERN, (ch) => TEXT_ESCAPES[ch] ?? ch);
 }
 
 /**
@@ -113,11 +132,13 @@ export function text(s) {
  * @returns {string}
  */
 export function attr(s) {
-  return String(s ?? '').replace(ATTR_PATTERN, (ch) => {
-    if (ATTR_ESCAPES[ch]) return ATTR_ESCAPES[ch];
-    // Control characters — emit as numeric entity.
-    return `&#${ch.charCodeAt(0)};`;
-  });
+  return String(s ?? '')
+    .replace(BIDI_PATTERN, '')
+    .replace(ATTR_PATTERN, (ch) => {
+      if (ATTR_ESCAPES[ch]) return ATTR_ESCAPES[ch];
+      // Control characters — emit as numeric entity.
+      return `&#${ch.charCodeAt(0)};`;
+    });
 }
 
 /**

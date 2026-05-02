@@ -42,6 +42,23 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Layer 4] - 2026-04-30 - Pluggable reporters
 
+### Security
+
+- HTML reporter strips Unicode bidirectional override / isolate
+  formatting characters (U+202A-U+202E, U+2066-U+2069) from rendered
+  output. Defends `summary.html` against Trojan Source-style visual
+  spoofing (CVE-2021-42574) where attacker-controlled axe rule
+  metadata could embed bidi codepoints to mask the real content from
+  a human auditor. HTML-entity escaping is insufficient because the
+  browser decodes the entity and re-applies the bidi behaviour;
+  stripping is the correct mitigation.
+- JUnit reporter strips XML 1.0-illegal control bytes (0x00-0x08,
+  0x0b, 0x0c, 0x0e-0x1f) from CDATA payloads. Mirrors the discipline
+  already applied to attribute context. Without this fix, axe-captured
+  `outerHTML` containing a NUL byte would produce a JUnit XML the
+  strict parsers in CI consumers (Jenkins, GitLab, jUnit XML schema
+  validators) reject, dropping the entire test report.
+
 ### Added
 
 - Pluggable reporter runtime: `json`, `markdown`, `html`, `earl-jsonld`,

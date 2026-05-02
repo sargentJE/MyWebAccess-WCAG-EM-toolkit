@@ -209,6 +209,38 @@ test('XSS: control characters in target string emit as numeric entities', async 
   assert.ok(got.includes('&#0;') && got.includes('&#31;'), 'numeric entities emitted');
 });
 
+test('XSS: bidi-override formatting characters in finding metadata are stripped', async (t) => {
+  // Trojan Source CVE-2021-42574 defence — attacker-controlled axe rule
+  // metadata (rule id, help, helpUrl, targets) could embed bidi codepoints
+  // that visually mask the actual content from a human auditor reading
+  // summary.html. _template.mjs:text/attr strip these before escape; this
+  // test asserts the strip survives the full reporter pipeline.
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    ...baseSummary(),
+    findings: [
+      {
+        id: `rule-with-${String.fromCharCode(0x202e)}hidden-bidi`,
+        impact: 'critical',
+        classification: 'primary-automated-finding',
+        pageCount: 1,
+        pageTypes: [],
+        help: `help with ${String.fromCharCode(0x202e)}bidi`,
+        helpUrl: `https://example.com/${String.fromCharCode(0x202e)}path`,
+        targets: [`#elem-${String.fromCharCode(0x2066)}isolated${String.fromCharCode(0x2069)}`],
+      },
+    ],
+  };
+  await htmlReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  for (const cp of [0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069]) {
+    assert.ok(
+      !got.includes(String.fromCharCode(cp)),
+      `bidi U+${cp.toString(16).toUpperCase()} must be stripped from rendered HTML`,
+    );
+  }
+});
+
 // SECTION: Static-CSS invariant
 
 test('XSS: <style> block contains no template-literal placeholders', async (t) => {

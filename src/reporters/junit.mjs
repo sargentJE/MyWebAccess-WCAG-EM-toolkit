@@ -162,6 +162,17 @@ function truncateChars(s, maxChars) {
  * `<failure>...</failure>`. Lines: help, helpUrl, selector, truncated
  * outerHTML.
  *
+ * XML 1.0-illegal control bytes (0x00-0x08, 0x0b, 0x0c, 0x0e-0x1f) are
+ * stripped from the assembled body. CDATA admits these bytes lexically
+ * (they aren't `]]>` so they don't terminate the section) but the spec
+ * forbids them anywhere in an XML 1.0 document. Strict parsers (Jenkins,
+ * GitLab CI consumers, jUnit XML schema validators) reject the document
+ * outright. axe-core captures node `outerHTML` verbatim, so an attacker-
+ * shaped page injecting `<input value="\x00">` could otherwise produce
+ * a CI report that the strict parser drops entirely. Mirror the
+ * `escapeXmlAttr` discipline that already strips these bytes from the
+ * attribute context.
+ *
  * @param {{ help: string, helpUrl: string, selector: string, html: string }} args
  * @returns {string}
  */
@@ -171,7 +182,7 @@ function buildFailureBody({ help, helpUrl, selector, html }) {
   if (helpUrl) parts.push(helpUrl);
   if (selector) parts.push(`Selector: ${selector}`);
   if (html) parts.push(`HTML: ${truncateChars(html, HTML_TRUNCATE)}`);
-  return parts.join('\n');
+  return parts.join('\n').replace(stripControlPattern(), '');
 }
 
 /**

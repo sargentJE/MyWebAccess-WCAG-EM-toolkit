@@ -65,6 +65,38 @@ test('attr(): preserves valid whitespace (tab, LF, CR)', () => {
   assert.equal(attr('a\rb'), 'a\rb');
 });
 
+// SECTION: Bidi-override strip — Trojan Source defence (CVE-2021-42574)
+
+const BIDI_CODEPOINTS = [0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069];
+
+test('text(): strips Unicode bidi-override formatting characters', () => {
+  // U+202E (RLO) is the canonical Trojan Source attack glyph; the function
+  // must remove it (and the rest of the bidi/isolate set) entirely rather
+  // than escape — entity-escaping doesn't help because the browser decodes
+  // the entity and re-applies the bidi behaviour.
+  const input = `safe${String.fromCharCode(0x202e)}malicious${String.fromCharCode(0x2066)}wrap${String.fromCharCode(0x2069)}`;
+  const got = text(input);
+  for (const cp of BIDI_CODEPOINTS) {
+    assert.ok(
+      !got.includes(String.fromCharCode(cp)),
+      `bidi U+${cp.toString(16).toUpperCase()} must be stripped`,
+    );
+  }
+  assert.equal(got, 'safemaliciouswrap');
+});
+
+test('attr(): strips Unicode bidi-override formatting characters', () => {
+  const input = `a${String.fromCharCode(0x202e)}b${String.fromCharCode(0x2066)}c${String.fromCharCode(0x2069)}d`;
+  const got = attr(input);
+  for (const cp of BIDI_CODEPOINTS) {
+    assert.ok(
+      !got.includes(String.fromCharCode(cp)),
+      `bidi U+${cp.toString(16).toUpperCase()} must be stripped`,
+    );
+  }
+  assert.equal(got, 'abcd');
+});
+
 // SECTION: safeUrl()
 
 test('safeUrl(): admits http and https schemes', () => {
@@ -113,6 +145,16 @@ test('html: handles empty interpolations and edge cases', () => {
   assert.equal(html`${null}`, '');
   assert.equal(html`${undefined}`, '');
   assert.equal(html`<p>${1 + 1}</p>`, '<p>2</p>');
+});
+
+test('html: bidi codepoints in interpolation are stripped (Trojan Source defence)', () => {
+  // Worked PoC: a malicious URL hidden via U+202E (RLO). The visible
+  // rendering would read "https://safe.example/attacker.png" but the
+  // actual stored URL ends in "gnp.kcatta" before the override.
+  const malicious = `https://safe.example/${String.fromCharCode(0x202e)}gnp.kcatta`;
+  const out = html`<a data-x="${malicious}">link</a>`;
+  assert.ok(!out.includes(String.fromCharCode(0x202e)), 'bidi char absent from html`` interpolation');
+  assert.ok(out.includes('https://safe.example/gnp.kcatta'), 'visible chars survive');
 });
 
 test('html: full XSS payload chain — element + attribute + URL contexts', () => {

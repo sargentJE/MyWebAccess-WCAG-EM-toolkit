@@ -235,6 +235,44 @@ test('junit reporter: multi-byte UTF-8 character truncation preserves valid outp
   }
 });
 
+test('junit reporter: XML 1.0-illegal control bytes are stripped from CDATA payload', async (t) => {
+  // Strict XML parsers (Jenkins, GitLab CI consumers) reject control bytes
+  // anywhere in the document — the lexical fact that CDATA admits them is
+  // overridden by XML 1.0's character-level forbiddance. axe-core captures
+  // node outerHTML verbatim, so an attacker-shaped page injecting NUL into
+  // an attribute could otherwise produce a JUnit report the strict parser
+  // drops entirely. The `escapeXmlAttr` path already strips these bytes in
+  // attribute context; this test asserts the CDATA path mirrors the
+  // discipline.
+  const xml = await emitAndRead(t, {
+    findings: [
+      {
+        id: 'ctrl-rule',
+        impact: 'serious',
+        help: `a${String.fromCharCode(0x00)}b${String.fromCharCode(0x01)}c`,
+        helpUrl: `https://example.com/${String.fromCharCode(0x1f)}`,
+        targets: [`x${String.fromCharCode(0x08)}`],
+        pages: ['https://example.com/'],
+        examples: [
+          { html: `<input value="${String.fromCharCode(0x00)}${String.fromCharCode(0x0c)}">` },
+        ],
+      },
+    ],
+  });
+  // No XML 1.0-illegal control byte may survive in the output. Tab/LF/CR
+  // (0x09/0x0a/0x0d) ARE legal so they are excluded from the assertion.
+  for (let cp = 0x00; cp <= 0x1f; cp++) {
+    if (cp === 0x09 || cp === 0x0a || cp === 0x0d) continue;
+    assert.ok(
+      !xml.includes(String.fromCharCode(cp)),
+      `XML-illegal control 0x${cp.toString(16).padStart(2, '0')} must be stripped`,
+    );
+  }
+  // Surface check: visible text around the stripped bytes survives.
+  assert.ok(xml.includes('abc'), 'help text survives strip');
+  assert.ok(xml.includes('Selector: x'), 'selector survives strip');
+});
+
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
   assert.ok(names.includes('junit'), 'junit registered after R7');
