@@ -178,7 +178,7 @@ findings only, matching v0.3 behaviour.
 | helper | context | escape set |
 |---|---|---|
 | `text(s)` | element text | `&` `<` `>` `"` `'` |
-| `attr(s)` | attribute value | text set + backtick + ASCII control chars 0x00-0x08, 0x0b-0x0c, 0x0e-0x1f, 0x7f |
+| `attr(s)` | attribute value | text set + backtick + ASCII control chars 0x00-0x08, 0x0b-0x0c, 0x0e-0x1f, 0x7f, plus Unicode C1 controls 0x80-0x9f (HTML 5 forbids the C1 range in attribute context). Both `text(s)` and `attr(s)` additionally STRIP Unicode bidi-override / isolate formatting characters (U+202A-U+202E, U+2066-U+2069) before the escape pass — defends against Trojan Source-style visual spoofing (CVE-2021-42574). |
 | `safeUrl(s)` | `<a href>` / `<img src>` | http / https / relative pass through; everything else (`javascript:`, `data:`, `file:`, `vbscript:`) is quarantined to `'#'` |
 | `html\`...\`` | tagged template | applies `attr()` (strict superset of text-context) to every interpolation |
 

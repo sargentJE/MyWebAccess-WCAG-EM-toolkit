@@ -104,7 +104,8 @@ export async function run(ctx) {
     warnLegacyAliasResolved(logger, {
       oldField: 'reporting.markdownReport',
       newField: 'reporting.reporters',
-      guidance: "Omit the field to keep the default ['json','markdown'] set.",
+      guidance:
+        "Omit the field to keep the default ['json','markdown'] set; or set reporters: ['json'] to disable markdown.",
     });
   }
 
