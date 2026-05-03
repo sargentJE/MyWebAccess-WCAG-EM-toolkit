@@ -280,3 +280,83 @@ test('toWcagEmSummary: evaluationDate is ISO-8601', () => {
   const out = toWcagEmSummary(buildCtx(), { axeResults: [] });
   assert.match(out.evaluationDate, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
 });
+
+// SECTION: examples by outcome (D3 regression — partition violation/incomplete)
+
+test('failed SC: examples contains only violation entries, excludes cantTell from other pages', () => {
+  // Reproduction of the AU-dogfood bug: SC 1.4.3 has a real color-contrast
+  // violation on before.html and a cantTell (incomplete with reviewable
+  // nodes) on after.html. Pre-fix, examples mixed both; post-fix, only the
+  // violation entry surfaces in the failed SC's examples.
+  const axeResults = [
+    pageResult('https://x.com/before.html', {
+      violations: [{ id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodes: [{}] }],
+    }),
+    pageResult('https://x.com/after.html', {
+      incompleteDetail: [
+        { id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodesCount: 31 },
+      ],
+    }),
+  ];
+  const out = toWcagEmSummary(buildCtx(), { axeResults });
+  const sc143 = out.criteriaOutcomes.find((o) => o.sc === '1.4.3');
+  assert.ok(sc143, '1.4.3 bucket must exist');
+  assert.equal(sc143.outcome, 'failed', 'violation wins over cantTell');
+  assert.ok(
+    sc143.examples.every((e) => e.pageUrl === 'https://x.com/before.html'),
+    `failed-SC examples must contain only violation entries; got ${JSON.stringify(sc143.examples)}`,
+  );
+  assert.equal(sc143.examples.length, 1);
+});
+
+test('cantTell SC: examples contains incomplete entries (preserves visibility)', () => {
+  // Naive "filter out incompletes" fix would drop these; the partition
+  // approach preserves them so auditors can see what needs manual review.
+  const axeResults = [
+    pageResult('https://x.com/page.html', {
+      incompleteDetail: [
+        { id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodesCount: 4 },
+      ],
+    }),
+  ];
+  const out = toWcagEmSummary(buildCtx(), { axeResults });
+  const sc143 = out.criteriaOutcomes.find((o) => o.sc === '1.4.3');
+  assert.ok(sc143);
+  assert.equal(sc143.outcome, 'cantTell');
+  assert.equal(sc143.examples.length, 1);
+  assert.equal(sc143.examples[0].pageUrl, 'https://x.com/page.html');
+  assert.equal(sc143.examples[0].ruleId, 'color-contrast');
+});
+
+test('failed SC: violation examples capped at 5; subsequent incomplete entries do NOT contaminate', () => {
+  // 6 pages with the same violation (cap is 5); 3 additional pages with a
+  // reviewable incomplete for the same SC. Pre-fix, the incompletes could
+  // crowd out violations OR appear alongside them in the examples array.
+  // Post-fix, examples is pure violations capped at 5.
+  const axeResults = [
+    ...Array.from({ length: 6 }, (_, i) =>
+      pageResult(`https://x.com/violation-${i}`, {
+        violations: [{ id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodes: [{}] }],
+      }),
+    ),
+    ...Array.from({ length: 3 }, (_, i) =>
+      pageResult(`https://x.com/incomplete-${i}`, {
+        incompleteDetail: [
+          { id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodesCount: 2 },
+        ],
+      }),
+    ),
+  ];
+  const out = toWcagEmSummary(buildCtx(), { axeResults });
+  const sc143 = out.criteriaOutcomes.find((o) => o.sc === '1.4.3');
+  assert.ok(sc143);
+  assert.equal(sc143.outcome, 'failed');
+  assert.equal(sc143.examples.length, 5, 'cap is 5');
+  assert.ok(
+    sc143.examples.every((e) => e.pageUrl.startsWith('https://x.com/violation-')),
+    `every example must be from a violation page; got ${JSON.stringify(sc143.examples)}`,
+  );
+  // Sanity: pages set still includes ALL contributing pages (incomplete pages
+  // were ingested into the bucket; they just don't surface in examples).
+  assert.equal(sc143.pagesExamined, 9, 'all 9 pages contributed to the bucket');
+});
