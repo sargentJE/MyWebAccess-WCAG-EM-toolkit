@@ -197,18 +197,11 @@ export async function run(ctx) {
     // we conditionally include it. The schema permits both fields
     // independently, so we also warn (once per process) when a user sets
     // quality with png — that combination has no effect.
-    const screenshotFormat =
-      config.reporting?.screenshotFormat === 'jpeg' ? 'jpeg' : 'png';
+    const screenshotFormat = config.reporting?.screenshotFormat === 'jpeg' ? 'jpeg' : 'png';
     const rawQuality = config.reporting?.screenshotQuality;
     const screenshotQuality =
-      typeof rawQuality === 'number' && rawQuality >= 1 && rawQuality <= 100
-        ? rawQuality
-        : 80;
-    if (
-      screenshotFormat === 'png' &&
-      typeof rawQuality === 'number' &&
-      !pngQualityWarnFired
-    ) {
+      typeof rawQuality === 'number' && rawQuality >= 1 && rawQuality <= 100 ? rawQuality : 80;
+    if (screenshotFormat === 'png' && typeof rawQuality === 'number' && !pngQualityWarnFired) {
       logger.warn(
         { screenshotFormat, screenshotQuality: rawQuality },
         'reporting.screenshotQuality has no effect when screenshotFormat is png; ignoring',
@@ -238,10 +231,7 @@ export async function run(ctx) {
     // NOTE: Overrides affect AxeBuilder chain construction only — viewport
     // concurrency is orthogonal (ADR-0006 keeps the two concerns separate).
     const baseAxeConfig = config.scan.axe ?? {};
-    const matchedOverride = findMatchingOverride(
-      url,
-      baseAxeConfig.overridesCompiled ?? [],
-    );
+    const matchedOverride = findMatchingOverride(url, baseAxeConfig.overridesCompiled ?? []);
     const axeConfig = applyAxeOverride(baseAxeConfig, matchedOverride);
 
     // ANCHOR: PreScanActions — run beforeScan.actions[] + matched override's
@@ -331,10 +321,7 @@ export async function run(ctx) {
           logger.info({ url, viewport: vp.id, attempt }, 'scanning');
           const result = await runForPage(page, url, vp);
           allResults.push({ url, viewport: vp.id, attempts: attempt, ...result });
-          logger.info(
-            { url, viewport: vp.id, violations: result.violations.length },
-            'scanned',
-          );
+          logger.info({ url, viewport: vp.id, violations: result.violations.length }, 'scanned');
           success = true;
         } catch (error) {
           lastError = /** @type {Error} */ (error);

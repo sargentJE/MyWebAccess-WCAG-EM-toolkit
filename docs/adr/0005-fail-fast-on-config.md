@@ -51,13 +51,13 @@ reach the crawl path.
 Currently attached at three schema fields (symbol-first — line numbers
 drift; the schema location is authoritative):
 
-| Schema location (symbol-first) | Compiled at load? |
-|---|---|
-| `crawl.excludeUrlPatterns[]` — `validRegex: true` | **yes** (mechanism 3; ANCHOR: CompileRuntimeFields) |
-| `scan.axe.overrides[].urlPattern` — `validRegex: true` | **yes** (Layer 3a; ANCHOR: CompileOverrides) |
-| `processes[].actions[].urlPattern` — `validRegex: true` | no (deferred; no runtime consumer yet) |
+| Schema location (symbol-first)                          | Compiled at load?                                   |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| `crawl.excludeUrlPatterns[]` — `validRegex: true`       | **yes** (mechanism 3; ANCHOR: CompileRuntimeFields) |
+| `scan.axe.overrides[].urlPattern` — `validRegex: true`  | **yes** (Layer 3a; ANCHOR: CompileOverrides)        |
+| `processes[].actions[].urlPattern` — `validRegex: true` | no (deferred; no runtime consumer yet)              |
 
-All three are *validated* on load; the first two are also *compiled* on
+All three are _validated_ on load; the first two are also _compiled_ on
 load. The `processes[].actions[].urlPattern` field has no runtime
 consumer today, so compile-at-load would attach a `RegExp[]` nothing
 reads — tracked as a `CHANGELOG.md [Unreleased]` entry under

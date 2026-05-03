@@ -99,9 +99,7 @@ test('toWcagEmSummary: best-practice rule passing does NOT count as passed', () 
 test('toWcagEmSummary: reviewable incomplete (nodesCount > 0) → outcome cantTell', () => {
   const axeResults = [
     pageResult('https://x.com/', {
-      incompleteDetail: [
-        { id: 'color-contrast', tags: ['wcag143'], impact: null, nodesCount: 2 },
-      ],
+      incompleteDetail: [{ id: 'color-contrast', tags: ['wcag143'], impact: null, nodesCount: 2 }],
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
@@ -112,9 +110,7 @@ test('toWcagEmSummary: reviewable incomplete (nodesCount > 0) → outcome cantTe
 test('toWcagEmSummary F8: infra-failure incomplete (nodesCount === 0) → scanWarnings, NOT cantTell', () => {
   const axeResults = [
     pageResult('https://x.com/', {
-      incompleteDetail: [
-        { id: 'color-contrast', tags: ['wcag143'], impact: null, nodesCount: 0 },
-      ],
+      incompleteDetail: [{ id: 'color-contrast', tags: ['wcag143'], impact: null, nodesCount: 0 }],
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
@@ -127,9 +123,7 @@ test('toWcagEmSummary F8: infra-failure incomplete (nodesCount === 0) → scanWa
 test('toWcagEmSummary: inapplicable only → outcome inapplicable', () => {
   const axeResults = [
     pageResult('https://x.com/', {
-      inapplicableDetail: [
-        { id: 'image-alt', tags: ['wcag111'], impact: null, nodesCount: 0 },
-      ],
+      inapplicableDetail: [{ id: 'image-alt', tags: ['wcag111'], impact: null, nodesCount: 0 }],
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
@@ -206,9 +200,7 @@ test('toWcagEmSummary: relatedRules per SC is unique + sorted', () => {
 test('toWcagEmSummary: examples capped at 5 per SC', () => {
   const axeResults = Array.from({ length: 10 }, (_, i) =>
     pageResult(`https://x.com/p${i}`, {
-      violations: [
-        { id: 'image-alt', tags: ['wcag111'], impact: 'critical', nodes: [{}] },
-      ],
+      violations: [{ id: 'image-alt', tags: ['wcag111'], impact: 'critical', nodes: [{}] }],
     }),
   );
   const out = toWcagEmSummary(buildCtx(), { axeResults });
@@ -224,9 +216,7 @@ test('toWcagEmSummary: processResults states are ingested via virtual URL', () =
       states: [
         {
           state: 'blank-submit',
-          violations: [
-            { id: 'label', tags: ['wcag332'], impact: 'critical', nodes: [{}] },
-          ],
+          violations: [{ id: 'label', tags: ['wcag332'], impact: 'critical', nodes: [{}] }],
         },
       ],
     },

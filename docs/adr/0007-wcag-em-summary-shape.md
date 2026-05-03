@@ -14,7 +14,7 @@ Up to Layer 3a this toolkit produced rule-grouped output: findings
 keyed by axe rule id (`image-alt`, `color-contrast`, …) with per-rule
 tallies. That is useful for axe-familiar engineers but not
 well-matched to the WCAG-EM Step 5 workflow, which demands per-**SC**
-outcomes. The WCAG Evaluation Methodology (W3C, *WCAG-EM 1.0*) Step 5
+outcomes. The WCAG Evaluation Methodology (W3C, _WCAG-EM 1.0_) Step 5
 asks evaluators to record, for every SC in scope, whether the target
 conforms — `passed`, `failed`, needs manual review (`cantTell`), the
 SC is `inapplicable` to the sampled content, or the automated run did
@@ -40,20 +40,20 @@ For each SC bucket (populated by the R2 `withActAndWcagMetadata` tag
 parse across the R6-widened rule arrays), determine the outcome by
 checking in order:
 
-| # | Check | Verdict |
-|---|---|---|
-| 1 | Any violation tagged with this SC | `failed` |
-| 2 | Any incomplete tagged with this SC **and** `nodesCount > 0` | `cantTell` |
-| 3 | Any **non-best-practice** rule passed at this SC | `passed` |
-| 4 | Any rule inapplicable at this SC (no pass / fail / cantTell above) | `inapplicable` |
-| 5 | Bucket populated by tag but no arm fired | `untested` |
+| #   | Check                                                              | Verdict        |
+| --- | ------------------------------------------------------------------ | -------------- |
+| 1   | Any violation tagged with this SC                                  | `failed`       |
+| 2   | Any incomplete tagged with this SC **and** `nodesCount > 0`        | `cantTell`     |
+| 3   | Any **non-best-practice** rule passed at this SC                   | `passed`       |
+| 4   | Any rule inapplicable at this SC (no pass / fail / cantTell above) | `inapplicable` |
+| 5   | Bucket populated by tag but no arm fired                           | `untested`     |
 
 ### 2. F8 refinement — `cantTell` excludes infrastructure failures
 
 Axe's `incomplete` array mixes (a) genuinely ambiguous findings (color
 contrast on gradient backgrounds, ARIA state requiring human review)
 from (b) infrastructure failures (script timeout, cross-origin iframe
-blocked, engine snag producing zero candidate nodes). Mapping *all*
+blocked, engine snag producing zero candidate nodes). Mapping _all_
 incompletes to `cantTell` would produce spurious SC-verdict flips
 whenever the network or sandbox flakes.
 
@@ -101,23 +101,23 @@ evaluation".
       "level": "AA",
       "outcome": "failed",
       "examples": [
-        { "pageUrl": "https://…/admin", "ruleId": "color-contrast", "impact": "serious" }
+        { "pageUrl": "https://…/admin", "ruleId": "color-contrast", "impact": "serious" },
       ],
       "pagesExamined": 12,
-      "relatedRules": ["color-contrast"]
-    }
+      "relatedRules": ["color-contrast"],
+    },
   ],
   "evaluationDate": "2026-04-19T12:00:00.000Z",
   "processesEvaluated": ["signup", "checkout"],
   "scanWarnings": [
-    "axe rule color-contrast reported incomplete with zero reviewable nodes on https://…/admin; infra failure (script timeout / cross-origin / engine snag). Does not affect SC verdicts."
+    "axe rule color-contrast reported incomplete with zero reviewable nodes on https://…/admin; infra failure (script timeout / cross-origin / engine snag). Does not affect SC verdicts.",
   ],
   "wcagVersion": "2.2",
   "conformanceTarget": "AA",
   "atBaseline": [],
   "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
   "samplingMethodNotes": "",
-  "evaluator": { "name": "", "contact": "" }
+  "evaluator": { "name": "", "contact": "" },
 }
 ```
 

@@ -41,10 +41,7 @@ async function makeCtx(t, opts = {}) {
   await fs.mkdir(reportsDir, { recursive: true });
   await fs.mkdir(resultsDir, { recursive: true });
   if (Array.isArray(opts.axeResults)) {
-    await fs.writeFile(
-      path.join(resultsDir, 'axe-results.json'),
-      JSON.stringify(opts.axeResults),
-    );
+    await fs.writeFile(path.join(resultsDir, 'axe-results.json'), JSON.stringify(opts.axeResults));
   }
   const ctx = {
     paths: { reportsDir, resultsDir },

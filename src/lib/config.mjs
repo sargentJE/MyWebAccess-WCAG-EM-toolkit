@@ -152,8 +152,7 @@ const DEFAULTS = {
 export async function loadConfig(overridePath) {
   const args = parseArgs();
   const configPath =
-    overridePath ??
-    (typeof args.config === 'string' ? args.config : 'configs/example-site.json');
+    overridePath ?? (typeof args.config === 'string' ? args.config : 'configs/example-site.json');
   const resolved = path.resolve(configPath);
   const raw = await fs.readFile(resolved, 'utf8');
   const config = deepMerge(DEFAULTS, JSON.parse(raw));

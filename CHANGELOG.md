@@ -69,7 +69,7 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   - `test/e2e/reporters-smoke.test.mjs` — full-audit reporter pipeline
     smoke (still validated end-to-end via R3-R7 unit tests against
     synthetic summary inputs and via `test/e2e/reporters-html-axe.
-    test.mjs` for the HTML reporter's own a11y).
+test.mjs` for the HTML reporter's own a11y).
   - `test/e2e/discover-timeout.test.mjs` — behavioural replacement for
     the deleted `test/unit/discover-timeout.test.mjs` source-text test.
 
@@ -115,14 +115,14 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 - HTML reporter impact-color classes (and the `.tool-banner` subtitle)
   meet WCAG 2.1 AA 4.5:1 contrast in both light and dark `prefers-color-
-  scheme` modes. Pre-fix, 5 of 10 (impact × scheme) combinations failed
+scheme` modes. Pre-fix, 5 of 10 (impact × scheme) combinations failed
   — most severely `.impact-minor` on dark background at 2.5:1, with
   `.tool-banner` failing identically. The dark-mode `@media` block now
   overrides the four impact-color classes plus `.tool-banner` with
   brighter hues that pass 4.5:1 on `#121212`; `.impact-null` shifts
   from `#888` (3.6:1 on white) to `#767676` (4.5:1 on white). Locked
   by a new e2e regression guard at `test/e2e/reporters-html-axe.test.
-  mjs` that runs `@axe-core/playwright` against the rendered reporter
+mjs` that runs `@axe-core/playwright` against the rendered reporter
   in both color schemes.
 
 ### Added

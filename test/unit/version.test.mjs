@@ -20,9 +20,7 @@ import { TOOL_IDENTITY, toolIdentityMarkdownHeader } from '../../src/lib/version
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(__filename, '../../..');
-const SELF_PKG = JSON.parse(
-  fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'),
-);
+const SELF_PKG = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 const AXE_PKG = JSON.parse(
   fs.readFileSync(
     path.join(REPO_ROOT, 'node_modules', '@axe-core', 'playwright', 'package.json'),

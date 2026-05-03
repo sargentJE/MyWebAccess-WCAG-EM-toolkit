@@ -69,9 +69,7 @@ test('json reporter: findings are sorted by [impact desc, ruleId asc]', async (t
     ],
   };
   await jsonReporter.emit(summary, ctx);
-  const parsed = JSON.parse(
-    await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8'),
-  );
+  const parsed = JSON.parse(await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8'));
   assert.deepEqual(
     parsed.findings.map((/** @type {any} */ f) => `${f.impact}:${f.id}`),
     ['critical:b', 'serious:alpha', 'serious:zebra', 'minor:a'],
@@ -109,10 +107,7 @@ test('runReporters: unknown reporter name throws BEFORE any reporter runs', asyn
   );
   // Even though 'json' was first in the list, fail-fast means it must NOT
   // have been emitted before the unknown name was rejected.
-  await assert.rejects(
-    () => fs.access(path.join(reportsDir, 'summary.json')),
-    /ENOENT/,
-  );
+  await assert.rejects(() => fs.access(path.join(reportsDir, 'summary.json')), /ENOENT/);
 });
 
 test('runReporters: success path returns { results, errors:[] } and writes the file', async (t) => {
@@ -131,8 +126,5 @@ test('runReporters: success path returns { results, errors:[] } and writes the f
 });
 
 test('runReporters: non-array names throws TypeError', async () => {
-  await assert.rejects(
-    () => runReporters(/** @type {any} */ (null), {}, {}),
-    /must be an array/,
-  );
+  await assert.rejects(() => runReporters(/** @type {any} */ (null), {}, {}), /must be an array/);
 });

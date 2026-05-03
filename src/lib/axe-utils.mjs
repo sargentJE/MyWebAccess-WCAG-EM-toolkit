@@ -95,7 +95,7 @@ export function isValidRunOnly(runOnly) {
   return (
     typeof runOnly === 'object' &&
     runOnly !== null &&
-    typeof /** @type {any} */ (runOnly).type === 'string' &&
+    typeof (/** @type {any} */ (runOnly).type) === 'string' &&
     Array.isArray(/** @type {any} */ (runOnly).values)
   );
 }

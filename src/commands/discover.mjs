@@ -156,15 +156,13 @@ export async function run(ctx) {
 
       const currentUrl = normalizeUrl(page.url());
       const title = await page.title().catch(() => '');
-      const probe = await page
-        .evaluate(captureDiscoveryMetadata, config.discovery)
-        .catch(() => ({
-          h1: null,
-          canonical: null,
-          formCount: 0,
-          landmarkCount: 0,
-          searchInputCount: 0,
-        }));
+      const probe = await page.evaluate(captureDiscoveryMetadata, config.discovery).catch(() => ({
+        h1: null,
+        canonical: null,
+        formCount: 0,
+        landmarkCount: 0,
+        searchInputCount: 0,
+      }));
       const { h1, canonical, formCount, landmarkCount, searchInputCount } = probe;
 
       const pageType = guessPageType(currentUrl);

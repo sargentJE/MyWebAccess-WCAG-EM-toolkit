@@ -196,9 +196,7 @@ export async function startFixtureServer(options = {}) {
       // 4. Static file serving.
       if (staticDir) {
         const filePath =
-          urlPath === '/'
-            ? path.join(staticDir, 'index.html')
-            : safeResolve(staticDir, urlPath);
+          urlPath === '/' ? path.join(staticDir, 'index.html') : safeResolve(staticDir, urlPath);
         if (filePath === null) {
           res.statusCode = 400;
           res.end('Bad path');
@@ -213,9 +211,15 @@ export async function startFixtureServer(options = {}) {
           // reference the dynamic ephemeral baseUrl by placeholder without
           // a build step. Binary files (PNG, JPEG, SVG bytes) pass through
           // unchanged.
-          if (ext === '.html' || ext === '.xml' || ext === '.css' ||
-              ext === '.js'   || ext === '.mjs' || ext === '.json' ||
-              ext === '.txt') {
+          if (
+            ext === '.html' ||
+            ext === '.xml' ||
+            ext === '.css' ||
+            ext === '.js' ||
+            ext === '.mjs' ||
+            ext === '.json' ||
+            ext === '.txt'
+          ) {
             res.end(body.toString('utf8').replaceAll('__BASE_URL__', baseUrl));
           } else {
             res.end(body);

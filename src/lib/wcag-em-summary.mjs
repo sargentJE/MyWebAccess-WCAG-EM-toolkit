@@ -50,28 +50,96 @@ import { withActAndWcagMetadata } from './axe-utils.mjs';
 // WCAG version than 2.2), the verdict is still emitted with `level: null`.
 const SC_LEVEL_MAP = /** @type {const} */ ({
   // Principle 1 — Perceivable
-  '1.1.1': 'A', '1.2.1': 'A', '1.2.2': 'A', '1.2.3': 'A', '1.2.4': 'AA',
-  '1.2.5': 'AA', '1.2.6': 'AAA', '1.2.7': 'AAA', '1.2.8': 'AAA', '1.2.9': 'AAA',
-  '1.3.1': 'A', '1.3.2': 'A', '1.3.3': 'A', '1.3.4': 'AA', '1.3.5': 'AA', '1.3.6': 'AAA',
-  '1.4.1': 'A', '1.4.2': 'A', '1.4.3': 'AA', '1.4.4': 'AA', '1.4.5': 'AA',
-  '1.4.6': 'AAA', '1.4.7': 'AAA', '1.4.8': 'AAA', '1.4.9': 'AAA',
-  '1.4.10': 'AA', '1.4.11': 'AA', '1.4.12': 'AA', '1.4.13': 'AA',
+  '1.1.1': 'A',
+  '1.2.1': 'A',
+  '1.2.2': 'A',
+  '1.2.3': 'A',
+  '1.2.4': 'AA',
+  '1.2.5': 'AA',
+  '1.2.6': 'AAA',
+  '1.2.7': 'AAA',
+  '1.2.8': 'AAA',
+  '1.2.9': 'AAA',
+  '1.3.1': 'A',
+  '1.3.2': 'A',
+  '1.3.3': 'A',
+  '1.3.4': 'AA',
+  '1.3.5': 'AA',
+  '1.3.6': 'AAA',
+  '1.4.1': 'A',
+  '1.4.2': 'A',
+  '1.4.3': 'AA',
+  '1.4.4': 'AA',
+  '1.4.5': 'AA',
+  '1.4.6': 'AAA',
+  '1.4.7': 'AAA',
+  '1.4.8': 'AAA',
+  '1.4.9': 'AAA',
+  '1.4.10': 'AA',
+  '1.4.11': 'AA',
+  '1.4.12': 'AA',
+  '1.4.13': 'AA',
   // Principle 2 — Operable
-  '2.1.1': 'A', '2.1.2': 'A', '2.1.3': 'AAA', '2.1.4': 'A',
-  '2.2.1': 'A', '2.2.2': 'A', '2.2.3': 'AAA', '2.2.4': 'AAA', '2.2.5': 'AAA', '2.2.6': 'AAA',
-  '2.3.1': 'A', '2.3.2': 'AAA', '2.3.3': 'AAA',
-  '2.4.1': 'A', '2.4.2': 'A', '2.4.3': 'A', '2.4.4': 'A', '2.4.5': 'AA',
-  '2.4.6': 'AA', '2.4.7': 'AA', '2.4.8': 'AAA', '2.4.9': 'AAA', '2.4.10': 'AAA',
-  '2.4.11': 'AA', '2.4.12': 'AAA', '2.4.13': 'AAA',
-  '2.5.1': 'A', '2.5.2': 'A', '2.5.3': 'A', '2.5.4': 'A',
-  '2.5.5': 'AAA', '2.5.6': 'AAA', '2.5.7': 'AA', '2.5.8': 'AA',
+  '2.1.1': 'A',
+  '2.1.2': 'A',
+  '2.1.3': 'AAA',
+  '2.1.4': 'A',
+  '2.2.1': 'A',
+  '2.2.2': 'A',
+  '2.2.3': 'AAA',
+  '2.2.4': 'AAA',
+  '2.2.5': 'AAA',
+  '2.2.6': 'AAA',
+  '2.3.1': 'A',
+  '2.3.2': 'AAA',
+  '2.3.3': 'AAA',
+  '2.4.1': 'A',
+  '2.4.2': 'A',
+  '2.4.3': 'A',
+  '2.4.4': 'A',
+  '2.4.5': 'AA',
+  '2.4.6': 'AA',
+  '2.4.7': 'AA',
+  '2.4.8': 'AAA',
+  '2.4.9': 'AAA',
+  '2.4.10': 'AAA',
+  '2.4.11': 'AA',
+  '2.4.12': 'AAA',
+  '2.4.13': 'AAA',
+  '2.5.1': 'A',
+  '2.5.2': 'A',
+  '2.5.3': 'A',
+  '2.5.4': 'A',
+  '2.5.5': 'AAA',
+  '2.5.6': 'AAA',
+  '2.5.7': 'AA',
+  '2.5.8': 'AA',
   // Principle 3 — Understandable
-  '3.1.1': 'A', '3.1.2': 'AA', '3.1.3': 'AAA', '3.1.4': 'AAA', '3.1.5': 'AAA', '3.1.6': 'AAA',
-  '3.2.1': 'A', '3.2.2': 'A', '3.2.3': 'AA', '3.2.4': 'AA', '3.2.5': 'AAA', '3.2.6': 'A',
-  '3.3.1': 'A', '3.3.2': 'A', '3.3.3': 'AA', '3.3.4': 'AA', '3.3.5': 'AAA',
-  '3.3.6': 'AAA', '3.3.7': 'A', '3.3.8': 'AA', '3.3.9': 'AAA',
+  '3.1.1': 'A',
+  '3.1.2': 'AA',
+  '3.1.3': 'AAA',
+  '3.1.4': 'AAA',
+  '3.1.5': 'AAA',
+  '3.1.6': 'AAA',
+  '3.2.1': 'A',
+  '3.2.2': 'A',
+  '3.2.3': 'AA',
+  '3.2.4': 'AA',
+  '3.2.5': 'AAA',
+  '3.2.6': 'A',
+  '3.3.1': 'A',
+  '3.3.2': 'A',
+  '3.3.3': 'AA',
+  '3.3.4': 'AA',
+  '3.3.5': 'AAA',
+  '3.3.6': 'AAA',
+  '3.3.7': 'A',
+  '3.3.8': 'AA',
+  '3.3.9': 'AAA',
   // Principle 4 — Robust
-  '4.1.1': 'A', '4.1.2': 'A', '4.1.3': 'AA',
+  '4.1.1': 'A',
+  '4.1.2': 'A',
+  '4.1.3': 'AA',
 });
 
 // SECTION: Public API
@@ -114,9 +182,7 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
 export function toWcagEmSummary(ctx, rawResults) {
   const wcagEmConfig = ctx?.config?.wcagEm ?? {};
   const axeResults = Array.isArray(rawResults?.axeResults) ? rawResults.axeResults : [];
-  const processResults = Array.isArray(rawResults?.processResults)
-    ? rawResults.processResults
-    : [];
+  const processResults = Array.isArray(rawResults?.processResults) ? rawResults.processResults : [];
 
   /** @type {string[]} */
   const scanWarnings = [];
@@ -284,9 +350,7 @@ export function toWcagEmSummary(ctx, rawResults) {
     criteriaOutcomes,
     evaluationDate: new Date().toISOString(),
     processesEvaluated: Array.isArray(ctx?.config?.processes)
-      ? ctx.config.processes
-          .map((p) => (typeof p?.name === 'string' ? p.name : ''))
-          .filter(Boolean)
+      ? ctx.config.processes.map((p) => (typeof p?.name === 'string' ? p.name : '')).filter(Boolean)
       : [],
     scanWarnings,
     wcagVersion: wcagEmConfig.wcagVersion ?? '2.2',

@@ -99,9 +99,7 @@ export async function runReporters(names, summary, ctx) {
   for (const n of names) {
     if (!registry.has(n)) {
       const known = [...registry.keys()].sort().join(', ');
-      throw new Error(
-        `unknown reporter '${n}'; known reporters at this layer: [${known}]`,
-      );
+      throw new Error(`unknown reporter '${n}'; known reporters at this layer: [${known}]`);
     }
   }
   /** @type {ReporterResult[]} */

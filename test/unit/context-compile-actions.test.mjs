@@ -56,7 +56,12 @@ async function writeFixtureConfig(tmpdir) {
             {
               urlPattern: '^https://example\\.com/admin',
               actions: [
-                { action: 'fill', selector: '#search', value: 'x', urlPattern: '^https://example\\.com/admin/search' },
+                {
+                  action: 'fill',
+                  selector: '#search',
+                  value: 'x',
+                  urlPattern: '^https://example\\.com/admin/search',
+                },
               ],
             },
             {
@@ -71,7 +76,11 @@ async function writeFixtureConfig(tmpdir) {
           name: 'signup',
           startUrl: 'https://example.com/signup',
           steps: [
-            { action: 'goto', url: 'https://example.com/signup', urlPattern: '^https://example\\.com/signup' },
+            {
+              action: 'goto',
+              url: 'https://example.com/signup',
+              urlPattern: '^https://example\\.com/signup',
+            },
             { action: 'click', selector: '#submit' }, // no urlPattern — untouched
           ],
         },

@@ -91,6 +91,9 @@ test('dispatch() switch case literals equal DISPATCH_ACTIONS', async () => {
     assert.ok(caseSet.has(name), `dispatch() is missing case for "${name}"`);
   }
   for (const name of caseSet) {
-    assert.ok(dispatchSet.has(name), `dispatch() has case for "${name}" not listed in DISPATCH_ACTIONS`);
+    assert.ok(
+      dispatchSet.has(name),
+      `dispatch() has case for "${name}" not listed in DISPATCH_ACTIONS`,
+    );
   }
 });

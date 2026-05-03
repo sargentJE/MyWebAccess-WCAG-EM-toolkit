@@ -153,7 +153,10 @@ test('html: bidi codepoints in interpolation are stripped (Trojan Source defence
   // actual stored URL ends in "gnp.kcatta" before the override.
   const malicious = `https://safe.example/${String.fromCharCode(0x202e)}gnp.kcatta`;
   const out = html`<a data-x="${malicious}">link</a>`;
-  assert.ok(!out.includes(String.fromCharCode(0x202e)), 'bidi char absent from html`` interpolation');
+  assert.ok(
+    !out.includes(String.fromCharCode(0x202e)),
+    'bidi char absent from html`` interpolation',
+  );
   assert.ok(out.includes('https://safe.example/gnp.kcatta'), 'visible chars survive');
 });
 

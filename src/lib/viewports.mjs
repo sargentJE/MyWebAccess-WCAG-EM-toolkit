@@ -69,10 +69,7 @@ export function resolveViewports(config, logger) {
   if (scan.viewport && typeof scan.viewport === 'object') {
     const { width, height } = scan.viewport;
     if (typeof width === 'number' && typeof height === 'number') {
-      logger?.warn?.(
-        { width, height },
-        'scan.viewport is deprecated; migrate to scan.viewports[]',
-      );
+      logger?.warn?.({ width, height }, 'scan.viewport is deprecated; migrate to scan.viewports[]');
       return [{ id: 'legacy', width, height }];
     }
   }

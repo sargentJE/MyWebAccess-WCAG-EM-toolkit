@@ -81,13 +81,15 @@ export async function emit(summary, ctx) {
     // finding represents a violation -> earl:failed.
     const outcomeKey = typeof f.outcome === 'string' ? f.outcome : 'failed';
     for (const url of pages) {
-      graph.push(buildAssertion({
-        subject: String(url),
-        test: ruleId,
-        outcomeKey,
-        info: buildInfo(f),
-        pointer,
-      }));
+      graph.push(
+        buildAssertion({
+          subject: String(url),
+          test: ruleId,
+          outcomeKey,
+          info: buildInfo(f),
+          pointer,
+        }),
+      );
     }
   }
 
@@ -99,13 +101,15 @@ export async function emit(summary, ctx) {
     const siteSubject = String(summary?.site ?? 'site');
     for (const c of outcomes) {
       if (c?.outcome !== 'passed') continue;
-      graph.push(buildAssertion({
-        subject: siteSubject,
-        test: String(c.criterion ?? ''),
-        outcomeKey: 'passed',
-        info: 'No violations recorded for this success criterion.',
-        pointer: '',
-      }));
+      graph.push(
+        buildAssertion({
+          subject: siteSubject,
+          test: String(c.criterion ?? ''),
+          outcomeKey: 'passed',
+          info: 'No violations recorded for this success criterion.',
+          pointer: '',
+        }),
+      );
     }
   }
 

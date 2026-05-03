@@ -38,10 +38,7 @@ test('findMatchingOverride returns null for empty overridesCompiled', () => {
 });
 
 test('findMatchingOverride returns null when array is not an array', () => {
-  assert.equal(
-    findMatchingOverride('https://example.com/admin', /** @type {any} */ (null)),
-    null,
-  );
+  assert.equal(findMatchingOverride('https://example.com/admin', /** @type {any} */ (null)), null);
 });
 
 test('findMatchingOverride returns the matching entry', () => {
@@ -59,10 +56,7 @@ test('findMatchingOverride: first match wins when multiple overrides match', () 
     withTags: ['wcag2a'],
   };
   // broader appears first — should win even though overrideAdmin also matches.
-  const result = findMatchingOverride('https://example.com/admin/users', [
-    broader,
-    overrideAdmin,
-  ]);
+  const result = findMatchingOverride('https://example.com/admin/users', [broader, overrideAdmin]);
   assert.equal(result, broader);
 });
 
@@ -76,10 +70,7 @@ test('findMatchingOverride returns null when no override matches', () => {
 
 test('findMatchingOverride skips entries with a non-RegExp regex', () => {
   const malformed = /** @type {any} */ ({ urlPattern: '^/admin', regex: null });
-  const result = findMatchingOverride('https://example.com/admin', [
-    malformed,
-    overrideAdmin,
-  ]);
+  const result = findMatchingOverride('https://example.com/admin', [malformed, overrideAdmin]);
   assert.equal(result, overrideAdmin, 'falls through to the next valid entry');
 });
 

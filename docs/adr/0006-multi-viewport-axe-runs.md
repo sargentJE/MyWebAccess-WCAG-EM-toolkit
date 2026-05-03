@@ -48,10 +48,10 @@ Four aspects of the decision, in dependency order:
 
 `DEFAULT_VIEWPORTS` is intentionally minimal:
 
-| id | width | height | Rationale |
-|---|---|---|---|
-| `desktop` | 1280 | 800 | Representative desktop; CI-stable; axe-core tested at this size. |
-| `reflow` | 320 | 800 | SC 1.4.10 reflow baseline. |
+| id        | width | height | Rationale                                                        |
+| --------- | ----- | ------ | ---------------------------------------------------------------- |
+| `desktop` | 1280  | 800    | Representative desktop; CI-stable; axe-core tested at this size. |
+| `reflow`  | 320   | 800    | SC 1.4.10 reflow baseline.                                       |
 
 Mobile (e.g. 375×667) and tablet (768×1024) are **not** default — a real
 WCAG-EM audit should sample them explicitly via `scan.viewports`, and

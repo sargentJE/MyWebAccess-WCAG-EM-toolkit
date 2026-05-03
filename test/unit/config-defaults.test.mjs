@@ -142,12 +142,7 @@ test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technolog
   assert.equal(config.wcagEm.wcagVersion, '2.2');
   assert.equal(config.wcagEm.conformanceTarget, 'AA');
   assert.deepEqual(config.wcagEm.atBaseline, []);
-  assert.deepEqual(config.wcagEm.technologiesReliedUpon, [
-    'HTML',
-    'CSS',
-    'JavaScript',
-    'WAI-ARIA',
-  ]);
+  assert.deepEqual(config.wcagEm.technologiesReliedUpon, ['HTML', 'CSS', 'JavaScript', 'WAI-ARIA']);
   assert.equal(config.wcagEm.samplingMethodNotes, '');
   assert.deepEqual(config.wcagEm.evaluator, { name: '', contact: '' });
 });

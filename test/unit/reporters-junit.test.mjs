@@ -134,9 +134,7 @@ test('junit reporter: includePasses=true emits clean-pass <testcase> with no fai
   assert.match(xml, /tests="2" failures="1"/);
   // The pass case is self-closing or open-without-failure; it must NOT
   // contain a <failure>.
-  const passLine = xml
-    .split('\n')
-    .find((line) => line.includes('classname="rule-pass"'));
+  const passLine = xml.split('\n').find((line) => line.includes('classname="rule-pass"'));
   assert.ok(passLine, 'expected a testcase for rule-pass');
   assert.ok(passLine && passLine.includes('/>'), 'rule-pass must be self-closed');
 });

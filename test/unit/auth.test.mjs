@@ -189,7 +189,10 @@ test('warnSchemaAcceptedRuntimeIgnored: emits a uniform message format', () => {
   });
   assert.equal(logger.calls.length, 2);
   assert.match(logger.calls[0].msg ?? '', /auth\.setupScript.*schema-accepted but runtime-ignored/);
-  assert.match(logger.calls[1].msg ?? '', /reporting\.reporters.*schema-accepted but runtime-ignored/);
+  assert.match(
+    logger.calls[1].msg ?? '',
+    /reporting\.reporters.*schema-accepted but runtime-ignored/,
+  );
   // Uniform structural shape: both pass {feature} as the obj.
   assert.equal(logger.calls[0].obj.feature, 'auth.setupScript');
   assert.equal(logger.calls[1].obj.feature, 'reporting.reporters');

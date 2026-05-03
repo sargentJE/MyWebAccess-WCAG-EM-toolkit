@@ -43,13 +43,13 @@ already on the input summary.
 
 ### 1. JSON-LD vs the other four serialisations
 
-| Format | Status | Rationale |
-|---|---|---|
+| Format      | Status       | Rationale                                                                                                                                                                                                                                                                                                                                      |
+| ----------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **JSON-LD** | **Selected** | (a) Zero-dep parsing — Node 22's `JSON.parse` reads it; `Turtle`/RDF-XML/N3/N-Triples need an external parser. (b) Modern ecosystem default — Alfa's `@siteimprove/alfa-earl` package emits JSON-LD; the W3C ACT-rules CG validator consumes JSON-LD. (c) Diff-friendly in PR review (line-oriented like the existing `wcag-em-summary.json`). |
-| Turtle | Rejected | Most compact human-readable RDF, but every consumer also accepts JSON-LD; shipping Turtle alongside doubles maintenance for no consumer benefit. Re-add as a second reporter (`earl-turtle`?) only if a downstream tool emerges that requires it. |
-| RDF/XML | Rejected | Verbose, XML-ecosystem-specific (collides with our existing `junit.xml` mental model). The W3C is moving away from RDF/XML as a default. |
-| N3 | Rejected | Subset of Turtle plus rules; no consumer in the accessibility audit space requires it. |
-| N-Triples | Rejected | Line-oriented but lossy (no @context, no CURIEs); strictly worse than JSON-LD for our use case. |
+| Turtle      | Rejected     | Most compact human-readable RDF, but every consumer also accepts JSON-LD; shipping Turtle alongside doubles maintenance for no consumer benefit. Re-add as a second reporter (`earl-turtle`?) only if a downstream tool emerges that requires it.                                                                                              |
+| RDF/XML     | Rejected     | Verbose, XML-ecosystem-specific (collides with our existing `junit.xml` mental model). The W3C is moving away from RDF/XML as a default.                                                                                                                                                                                                       |
+| N3          | Rejected     | Subset of Turtle plus rules; no consumer in the accessibility audit space requires it.                                                                                                                                                                                                                                                         |
+| N-Triples   | Rejected     | Line-oriented but lossy (no @context, no CURIEs); strictly worse than JSON-LD for our use case.                                                                                                                                                                                                                                                |
 
 ### 2. Per-violation Assertion model (Alfa convention)
 
@@ -65,7 +65,7 @@ URL)** pair:
       "earl:assertedBy": {
         "@type": "earl:Assertor",
         "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-        "doap:release": "0.3.0"
+        "doap:release": "0.3.0",
       },
       "earl:subject": "https://example.com/page",
       "earl:test": "image-alt",
@@ -73,11 +73,11 @@ URL)** pair:
         "@type": "earl:Result",
         "earl:outcome": "earl:failed",
         "earl:info": "impact: critical | classification: primary-automated-finding | Images must have alt text | https://dequeuniversity.com/...",
-        "earl:pointer": "img"
+        "earl:pointer": "img",
       },
-      "earl:mode": "earl:automatic"
-    }
-  ]
+      "earl:mode": "earl:automatic",
+    },
+  ],
 }
 ```
 
@@ -104,12 +104,12 @@ WCAG SC is a site-level claim, not a per-page one.
 
 ### 3. Outcome mapping table
 
-| axe outcome | EARL outcome | Always shown? |
-|---|---|---|
-| `failed` | `earl:failed` | Yes |
-| `incomplete` | `earl:cantTell` | Yes (regardless of `includePasses`) |
-| `inapplicable` | `earl:inapplicable` | **Never emitted by the reporter** (volume guard, ADR-0008 §6) |
-| `passed` | `earl:passed` | Only when `includePasses === true` (and only at per-SC level — never per-rule) |
+| axe outcome    | EARL outcome        | Always shown?                                                                  |
+| -------------- | ------------------- | ------------------------------------------------------------------------------ |
+| `failed`       | `earl:failed`       | Yes                                                                            |
+| `incomplete`   | `earl:cantTell`     | Yes (regardless of `includePasses`)                                            |
+| `inapplicable` | `earl:inapplicable` | **Never emitted by the reporter** (volume guard, ADR-0008 §6)                  |
+| `passed`       | `earl:passed`       | Only when `includePasses === true` (and only at per-SC level — never per-rule) |
 
 Unknown outcome values fall back to `earl:cantTell` — the safest
 "we don't know" answer for an audit. The mapping lives in
@@ -193,7 +193,7 @@ multi-vocab object embedding `ptr:` and `doap:` explicitly.
   rule-on-page tuples.
 - `doap:homepage` deferred until Layer 5 — minor; the
   current Assertor identifies the tool unambiguously via `name +
-  release`.
+release`.
 
 ## Symbol references (per ADR-0001)
 

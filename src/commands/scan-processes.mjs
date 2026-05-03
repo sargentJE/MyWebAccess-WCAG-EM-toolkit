@@ -166,10 +166,7 @@ export async function runOneProcess(browser, processDef, ctx, viewport, contextO
         await context.close();
       } catch (closeErr) {
         const msg = closeErr instanceof Error ? closeErr.message : String(closeErr);
-        ctx.logger.warn(
-          { viewport: viewport.id, err: msg },
-          'process context close failed',
-        );
+        ctx.logger.warn({ viewport: viewport.id, err: msg }, 'process context close failed');
       }
     }
   }

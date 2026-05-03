@@ -43,9 +43,7 @@
  */
 export function buildManualBacklog({ findings, inventory = [], processes = [] }) {
   const findingIds = new Set(
-    (Array.isArray(findings) ? findings : []).map((f) =>
-      typeof f?.id === 'string' ? f.id : '',
-    ),
+    (Array.isArray(findings) ? findings : []).map((f) => (typeof f?.id === 'string' ? f.id : '')),
   );
   const hasColorContrast = findingIds.has('color-contrast');
   const hasRegion = findingIds.has('region') || findingIds.has('landmark-one-main');

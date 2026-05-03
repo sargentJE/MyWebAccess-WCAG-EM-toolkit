@@ -55,11 +55,7 @@ test('buildManualBacklog: landmark-one-main finding also triggers landmarks sect
 test('buildManualBacklog: processes → one walkthrough item per process', () => {
   const md = buildManualBacklog({
     findings: [],
-    processes: [
-      { name: 'signup' },
-      { name: 'checkout' },
-      { name: 'password-reset' },
-    ],
+    processes: [{ name: 'signup' }, { name: 'checkout' }, { name: 'password-reset' }],
   });
   assert.match(md, /## Process walkthroughs/);
   assert.match(md, /Complete walkthrough of process: \*\*signup\*\*/);

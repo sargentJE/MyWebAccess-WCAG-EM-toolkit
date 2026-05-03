@@ -66,10 +66,7 @@ test('liftRuleSummaries: incomplete with zero nodes (infra failure signal for R1
 });
 
 test('liftRuleSummaries: missing/malformed fields default safely', () => {
-  const out = liftRuleSummaries([
-    /** @type {any} */ ({ id: 'no-tags' }),
-    /** @type {any} */ ({}),
-  ]);
+  const out = liftRuleSummaries([/** @type {any} */ ({ id: 'no-tags' }), /** @type {any} */ ({})]);
   assert.equal(out[0].id, 'no-tags');
   assert.deepEqual(out[0].tags, []);
   assert.equal(out[0].impact, null);

@@ -70,10 +70,7 @@ test('buildContext attaches overridesCompiled as non-enumerable', async (t) => {
   const configPath = await writeFixtureConfig(tmpdir);
   const ctx = await buildContext({ configPath, outDir: tmpdir, skipPreflight: true });
 
-  const descriptor = Object.getOwnPropertyDescriptor(
-    ctx.config.scan.axe,
-    'overridesCompiled',
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(ctx.config.scan.axe, 'overridesCompiled');
   assert.ok(descriptor, 'descriptor must exist');
   assert.strictEqual(descriptor.enumerable, false);
   assert.strictEqual(descriptor.configurable, true);
