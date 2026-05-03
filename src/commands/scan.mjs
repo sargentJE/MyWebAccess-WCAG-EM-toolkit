@@ -160,8 +160,9 @@ export async function run(ctx) {
   // ANCHOR: PreScanActionsReady — Layer 3b R8 replaces the Layer 3a
   // OverrideActionsWarn block. beforeScan.actions[] and override.actions[]
   // are now executed per-URL (URL-matching via compiled action.regex from R7).
-  // The paired `reporting.reporters` warn in summarize.mjs is swapped to the
-  // shared `warnSchemaAcceptedRuntimeIgnored` helper for discipline symmetry.
+  // The companion `reporting.reporters` warn in summarize.mjs was retired
+  // when Layer 4 shipped the runReporters runtime; only `auth.setupScript`
+  // still uses warnSchemaAcceptedRuntimeIgnored today.
 
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan viewports');

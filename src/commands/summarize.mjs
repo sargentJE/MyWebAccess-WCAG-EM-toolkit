@@ -22,7 +22,7 @@ import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
-import { warnSchemaAcceptedRuntimeIgnored, warnLegacyAliasResolved } from '../lib/auth.mjs';
+import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
 import { TOOL_IDENTITY, toolIdentityMarkdownHeader } from '../lib/version.mjs';
@@ -83,17 +83,6 @@ export function computeExitCode(summary, failOnFindings) {
 export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
-
-  // ANCHOR: ReportersWarn — uses the shared warnSchemaAcceptedRuntimeIgnored
-  // helper (Layer 3b R3) for discipline symmetry with auth.setupScript. The
-  // schema accepts `reporting.reporters` (Layer 4's pluggable-reporter
-  // surface) but the runtime hard-codes JSON + Markdown today.
-  if (Array.isArray(config.reporting?.reporters) && config.reporting.reporters.length > 0) {
-    warnSchemaAcceptedRuntimeIgnored(logger, {
-      feature: 'reporting.reporters',
-      deferralLayer: 'Layer 4',
-    });
-  }
 
   // ANCHOR: MarkdownReportDeprecated — Layer 4 R2. DEFAULTS no longer injects
   // `reporting.markdownReport`, so the only way this field is truthy post-
