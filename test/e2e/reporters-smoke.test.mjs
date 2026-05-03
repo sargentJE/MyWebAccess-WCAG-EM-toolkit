@@ -64,6 +64,14 @@ import { test } from 'node:test';
 
 // SECTION: Tests
 
+// [Update 2026-05-03] After landing the D2 fix in src/commands/discover.mjs
+// (replacing the locator-based capture chain with a single page.evaluate),
+// this test was un-skipped briefly and confirmed to remain dead — the body
+// is still empty pending the unsolved localhost-fixture hang documented
+// above. D2 was a distinct bug (per-locator timeout coupling on remote
+// pages lacking h1/canonical, falsified the prior "localhost-only" framing)
+// and is NOT the same root cause as this deferral. Investigation of the
+// localhost-fixture hang continues per the candidates listed above.
 test.skip('[DEFERRED-CRAWLEE] reporters smoke: full audit produces all 5 reporter outputs', async () => {
   // Body kept minimal; see file-level comment for the investigation log.
 });

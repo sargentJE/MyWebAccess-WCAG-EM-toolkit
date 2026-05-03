@@ -6,6 +6,44 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Crawlee/PlaywrightCrawler hang on remote pages lacking `<h1>` or
+  `<link rel="canonical">`** — root-caused via 2026-05-02 dogfood against
+  UW's Accessible University demo
+  (`projects.accesscomputing.uw.edu/au/before.html`). The previous CHANGELOG
+  framing as "localhost fixtures only" was partially falsified: the dogfood
+  surfaced a distinct second hang in `discover.mjs` where
+  `page.setDefaultTimeout(requestTimeoutSecs * 1000)` coupled per-locator
+  auto-wait to the outer 90s handler budget, so each
+  `.first().textContent()` (h1) and `.getAttribute()` (canonical) on a
+  missing element burned the full budget; Crawlee reclaimed the request as
+  failed and retried infinitely. Bites the toolkit's exact target population
+  — sites being audited for accessibility issues, often missing one or
+  more of those elements. Fix in `src/commands/discover.mjs`: replaced the
+  six locator-based capture queries with a single `page.evaluate` running
+  `document.querySelector*` in-browser (no auto-wait; one CDP round-trip
+  per page). The pre-existing localhost-fixture mystery hang remains
+  unsolved and distinct — bisect evidence preserved in the
+  `Layer 4 follow-ups` entry below. See `output/au-run-1/AU-DOGFOOD-REPORT.md`
+  for the full diagnostic.
+- **`wcag-em-summary.json` `examples[]` mislabelled cantTell entries as
+  failure offenders** — when an SC's outcome was `failed`, the bucket
+  surfaced `incompleteDetail` entries from negative-control pages (or from
+  the same page) inside the same `examples[]` array as real violations,
+  making clean pages look like they had a finding they did not. Fix in
+  `src/lib/wcag-em-summary.mjs`: bucket now tracks `violationExamples`
+  and `incompleteExamples` separately and the emitter composes the
+  output `examples[]` based on outcome (`failed` → violations;
+  `cantTell` → incompletes). Output shape is unchanged; semantics are
+  now correct per EARL outcome and consistent with ADR-0007's
+  documented strict per-outcome contract.
+- **Stale `warnSchemaAcceptedRuntimeIgnored` warning for
+  `reporting.reporters`** — the guard was never removed when Layer 4
+  shipped the `runReporters` runtime, so every audit emitted a misleading
+  `warn` entry. Removed from `summarize.mjs`; companion narrative comment
+  in `scan.mjs` updated.
+
 ### Layer 4 follow-ups
 
 - **Crawlee/PlaywrightCrawler hang on localhost fixtures** — first

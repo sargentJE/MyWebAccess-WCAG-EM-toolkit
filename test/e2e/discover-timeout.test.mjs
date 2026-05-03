@@ -34,6 +34,10 @@ import { test } from 'node:test';
 
 // SECTION: Tests
 
+// [Update 2026-05-03] D2 fix in src/commands/discover.mjs landed; the test
+// body remains empty pending the unsolved localhost-fixture hang. D2
+// addressed a different surface (locator-timeout coupling on remote pages
+// lacking h1/canonical) and is NOT the same root cause as this deferral.
 test.skip('[DEFERRED-CRAWLEE] discover: pages exceeding crawl.requestTimeoutSecs are dropped', async () => {
   // Body kept minimal; see file-level comment + reporters-smoke for the investigation log.
 });
