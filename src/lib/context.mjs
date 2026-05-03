@@ -178,6 +178,19 @@ export async function buildContext(options = {}) {
     excludePatterns.map((/** @type {string} */ p) => new RegExp(p)),
   );
 
+  // ANCHOR: CompileDocumentLinkPatterns — pathname-anchored regexes used by
+  // discover.mjs's transformRequestFunction (and sitemap-seed loop) to drop
+  // non-HTML document URLs before Crawlee tries to render them. Same Ajv
+  // `validRegex` discipline as `excludeUrlPatterns`; same `defineHidden`
+  // shape so the compiled array never leaks into JSON-serialised artefacts.
+  // LINK: docs/adr/0005-fail-fast-on-config.md
+  const documentLinkPatterns = loaded.config.crawl.documentLinkPatterns ?? [];
+  defineHidden(
+    loaded.config.crawl,
+    'documentLinkPatternsCompiled',
+    documentLinkPatterns.map((/** @type {string} */ p) => new RegExp(p)),
+  );
+
   // ANCHOR: CompileOverrides — per-URL axe override patterns.
   // Each compiled entry preserves the original override's own keys (via
   // spread) so `applyAxeOverride`'s replace-if-defined predicate — which

@@ -40,6 +40,10 @@ export interface WCAGEMAccessibilityToolkitConfig {
      * Regex source strings; validated at load by the `validRegex` custom keyword.
      */
     excludeUrlPatterns?: string[];
+    /**
+     * Regex source strings matched against URL.pathname; matching links are skipped at enqueue time. Default ships with common document/archive/installer/media/e-book/design-binary/data-file extensions. Set to [] to opt out and crawl all link types.
+     */
+    documentLinkPatterns?: string[];
     sitemapSeeding?: {
       enabled?: boolean;
       urls?: string[];

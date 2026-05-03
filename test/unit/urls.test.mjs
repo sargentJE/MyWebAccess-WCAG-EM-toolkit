@@ -18,6 +18,7 @@ import {
   firstPathSegment,
   urlAllowedByScope,
   urlExcludedByPatterns,
+  urlSkippedByExtension,
 } from '../../src/lib/urls.mjs';
 
 // SECTION: normalizeUrl
@@ -133,4 +134,30 @@ test('urlExcludedByPatterns ORs multiple patterns', () => {
   const patterns = [/\/admin/, /\?debug=1/];
   assert.strictEqual(urlExcludedByPatterns('https://example.com/page?debug=1', patterns), true);
   assert.strictEqual(urlExcludedByPatterns('https://example.com/public', patterns), false);
+});
+
+// SECTION: urlSkippedByExtension (P2 — pathname-only extension predicate)
+
+test('urlSkippedByExtension returns false when pathname has no recognised extension', () => {
+  assert.strictEqual(urlSkippedByExtension('https://x.com/page', [/\.pdf$/]), false);
+});
+
+test('urlSkippedByExtension returns true when pathname matches a compiled pattern', () => {
+  assert.strictEqual(urlSkippedByExtension('https://x.com/file.pdf', [/\.pdf$/]), true);
+});
+
+test('urlSkippedByExtension ignores querystring after the extension', () => {
+  assert.strictEqual(urlSkippedByExtension('https://x.com/file.pdf?download=1', [/\.pdf$/]), true);
+});
+
+test('urlSkippedByExtension ignores fragment after the extension', () => {
+  assert.strictEqual(urlSkippedByExtension('https://x.com/file.pdf#section', [/\.pdf$/]), true);
+});
+
+test('urlSkippedByExtension returns false on malformed URLs (defensive)', () => {
+  assert.strictEqual(urlSkippedByExtension('not-a-url', [/\.pdf$/]), false);
+});
+
+test('urlSkippedByExtension returns false when compiledPatterns is empty (short-circuit)', () => {
+  assert.strictEqual(urlSkippedByExtension('https://x.com/file.pdf', []), false);
 });

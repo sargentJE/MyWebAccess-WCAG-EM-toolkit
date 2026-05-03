@@ -6,6 +6,32 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Added
+
+- **`crawl.documentLinkPatterns`** — regex array (validated by the existing
+  `validRegex` Ajv keyword) matched against `URL.pathname`. Matching links
+  are skipped at enqueue time inside `discover.mjs`'s
+  `transformRequestFunction` and the sitemap-seed loop, so non-HTML
+  document URLs never reach Crawlee's `page.goto` (which would otherwise
+  spend the full `requestHandlerTimeoutSecs` budget rendering a binary
+  before retrying 3× and dropping it). Default ships strict — covers
+  document / archive / installer / media / e-book / design-binary /
+  data-file extensions across 8 regex families. Skipped count surfaces
+  alongside `outOfScopeLinkCount` and `excludedByPatternCount` in
+  `inventory-metadata.json` as `excludedByExtensionCount`.
+
+### Changed
+
+- **Behaviour change (DEFAULTS-only, schema-additive)**: existing audit
+  configs that previously crawled `.pdf` / `.docx` / `.zip` / `.mp4` etc.
+  URLs as page-equivalents now silently exclude them. To restore prior
+  behaviour, set `crawl.documentLinkPatterns: []` in the site config.
+  Driven by the AU dogfood (2026-05-02) where 7 broken document links
+  cost ~27s of wall time per audit before being dropped from inventory.
+  On large client sites with hundreds of document references this could
+  10× the discover stage; the strict default is the safer ship for the
+  v1.0 toolkit's primary auditor population.
+
 ### Fixed
 
 - **Crawlee/PlaywrightCrawler hang on remote pages lacking `<h1>` or

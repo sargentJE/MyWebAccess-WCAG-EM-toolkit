@@ -66,6 +66,16 @@ test('validRegex keyword accepts a valid pattern', async () => {
   assert.equal(result.valid, true);
 });
 
+test('validRegex keyword rejects an unparseable documentLinkPatterns entry', async () => {
+  const broken = {
+    ...validConfig,
+    crawl: { ...validConfig.crawl, documentLinkPatterns: ['(unclosed-group', '\\.pdf$'] },
+  };
+  const result = await validateConfig(broken);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors && result.errors.some((e) => e.keyword === 'validRegex'));
+});
+
 test('runOnly enforces {type, values} object shape', async () => {
   const broken = {
     ...validConfig,

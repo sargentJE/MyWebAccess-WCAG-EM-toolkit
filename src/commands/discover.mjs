@@ -30,6 +30,7 @@ import {
   guessProcessTypes,
   urlAllowedByScope,
   urlExcludedByPatterns,
+  urlSkippedByExtension,
 } from '../lib/urls.mjs';
 import { getSitemapSeeds } from '../lib/sitemap.mjs';
 import { TOOL_IDENTITY } from '../lib/version.mjs';
@@ -119,20 +120,28 @@ export async function run(ctx) {
   const excludedOutOfScope = new Set();
   /** @type {Set<string>} */
   const excludedByPattern = new Set();
+  /** @type {Set<string>} */
+  const excludedByExtension = new Set();
   const seeds = [normalizeUrl(config.rootUrl)];
 
-  // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap
+  // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap.
+  // Filters early-exit per check (mirrors the per-filter return-false pattern in
+  // transformRequestFunction below) so the extension-skip counter only fires for
+  // URLs that would otherwise have been seeded — out-of-scope and pattern-excluded
+  // URLs are silently dropped (matches existing sitemap-loop behaviour, which
+  // tracks neither in telemetry).
   for (const url of await getSitemapSeeds(
     config.rootUrl,
     config.crawl.sitemapSeeding,
     config.scope,
   )) {
-    if (
-      urlAllowedByScope(url, config.rootUrl, config.scope) &&
-      !urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])
-    ) {
-      seeds.push(url);
+    if (!urlAllowedByScope(url, config.rootUrl, config.scope)) continue;
+    if (urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])) continue;
+    if (urlSkippedByExtension(url, config.crawl.documentLinkPatternsCompiled ?? [])) {
+      excludedByExtension.add(url);
+      continue;
     }
+    seeds.push(url);
   }
 
   // ANCHOR: Crawler — PlaywrightCrawler with bounded maxPages + concurrency
@@ -201,6 +210,10 @@ export async function run(ctx) {
             excludedByPattern.add(normalized);
             return false;
           }
+          if (urlSkippedByExtension(normalized, config.crawl.documentLinkPatternsCompiled ?? [])) {
+            excludedByExtension.add(normalized);
+            return false;
+          }
           req.url = normalized;
           return req;
         },
@@ -260,6 +273,7 @@ export async function run(ctx) {
     discoveredCount: inventory.length,
     outOfScopeLinkCount: excludedOutOfScope.size,
     excludedByPatternCount: excludedByPattern.size,
+    excludedByExtensionCount: excludedByExtension.size,
     generatedAt: new Date().toISOString(),
   });
 

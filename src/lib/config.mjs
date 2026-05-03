@@ -26,6 +26,29 @@ import { parseArgs } from './args.mjs';
 
 // SECTION: Constants
 
+// ANCHOR: DEFAULT_DOCUMENT_LINK_PATTERNS — pathname-anchored regex sources matching
+// non-HTML document/archive/installer/media/e-book/design-binary/data-file URLs.
+// Wired into discover.mjs's transformRequestFunction (and sitemap-seed loop) via
+// `config.crawl.documentLinkPatternsCompiled`; matching links are dropped before
+// Crawlee enqueues them. Each entry is one regex per logical filetype family so the
+// compiled `RegExp[]` stays compact and the source list reads as a taxonomy.
+//
+// AU dogfood (2026-05-02) showed Crawlee retrying 7 broken document links 3× each
+// before dropping (~27s wasted). On real client sites with hundreds of document
+// references this could 10× the discover stage. Power users override via
+// `crawl.documentLinkPatterns: [...]` (e.g. set to `[]` to crawl PDFs as page-
+// equivalents on a docs-site audit).
+export const DEFAULT_DOCUMENT_LINK_PATTERNS = [
+  '\\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf)$', // documents
+  '\\.(zip|tar|tar\\.gz|tgz|gz|bz2|xz|7z|rar)$', // archives
+  '\\.(dmg|exe|iso|pkg|deb|rpm|msi)$', // installers
+  '\\.(mp4|mov|avi|mkv|webm|flv|m4v)$', // video
+  '\\.(mp3|wav|flac|ogg|m4a|aac)$', // audio
+  '\\.(epub|mobi|azw3?)$', // e-books
+  '\\.(psd|ai|sketch|fig|xd)$', // design binaries
+  '\\.(sqlite|db)$', // data files
+];
+
 // ANCHOR: DEFAULTS — every key the toolkit understands, with a shippable default.
 // Layer 3a landed `scan.viewports` (sentinel), `crawl.requestDelayMs`, the
 // default axe tag profile, `reporting.failOnFindings`, and deleted the legacy
@@ -51,6 +74,7 @@ const DEFAULTS = {
       maxUrls: 500,
     },
     excludeUrlPatterns: [],
+    documentLinkPatterns: DEFAULT_DOCUMENT_LINK_PATTERNS,
   },
   discovery: {
     captureH1: true,

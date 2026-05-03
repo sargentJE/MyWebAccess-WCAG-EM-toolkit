@@ -59,6 +59,11 @@
           "items": { "type": "string", "validRegex": true },
           "description": "Regex source strings; validated at load by the `validRegex` custom keyword."
         },
+        "documentLinkPatterns": {
+          "type": "array",
+          "items": { "type": "string", "validRegex": true },
+          "description": "Regex source strings matched against URL.pathname; matching links are skipped at enqueue time. Default ships with common document/archive/installer/media/e-book/design-binary/data-file extensions. Set to [] to opt out and crawl all link types."
+        },
         "sitemapSeeding": {
           "type": "object",
           "additionalProperties": false,
