@@ -160,6 +160,11 @@ export async function run(ctx) {
       // safety) and any future interactive locator work; per-element
       // metadata capture has been moved to a single page.evaluate (no
       // auto-wait — see captureDiscoveryMetadata).
+      //
+      // INVARIANT: this handler must NOT use Playwright locator queries —
+      // use page.evaluate instead. The 90s default would couple per-call
+      // auto-wait to the handler budget and re-cause the AU dogfood hang.
+      // Enforced by test/unit/discover-no-locator-invariant.test.mjs.
       page.setDefaultTimeout(config.crawl.requestTimeoutSecs * 1000);
       await page.waitForLoadState('domcontentloaded');
 
