@@ -49,10 +49,11 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   more of those elements. Fix in `src/commands/discover.mjs`: replaced the
   six locator-based capture queries with a single `page.evaluate` running
   `document.querySelector*` in-browser (no auto-wait; one CDP round-trip
-  per page). The pre-existing localhost-fixture mystery hang remains
-  unsolved and distinct — bisect evidence preserved in the
-  `Layer 4 follow-ups` entry below. See `output/au-run-1/AU-DOGFOOD-REPORT.md`
-  for the full diagnostic.
+  per page). Confirmed via the 2026-05-09 commit-bisect (recorded in
+  `docs/adr/0013-crawlee-localhost-investigation.md`), this same fix also
+  resolved the previously-deferred localhost-fixture hang — see the
+  separate Fixed bullet below. See `output/au-run-1/AU-DOGFOOD-REPORT.md`
+  for the AU-dogfood diagnostic.
 - **`wcag-em-summary.json` `examples[]` mislabelled cantTell entries as
   failure offenders** — when an SC's outcome was `failed`, the bucket
   surfaced `incompleteDetail` entries from negative-control pages (or from
@@ -69,35 +70,27 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   shipped the `runReporters` runtime, so every audit emitted a misleading
   `warn` entry. Removed from `summarize.mjs`; companion narrative comment
   in `scan.mjs` updated.
-
-### Layer 4 follow-ups
-
-- **Crawlee/PlaywrightCrawler hang on localhost fixtures** — first
-  investigated during R9; revisited during the v2 audit with refined
-  diagnosis. Raw Playwright `page.goto` against the fixture server
-  loads in <250 ms but `PlaywrightCrawler.requestHandler` consistently
-  times out at the configured `requestHandlerTimeoutSecs` × retries on
-  the same URL — even though instrumented probes confirm the handler
-  enters and passes `page.title()` successfully. Mitigations ruled out:
-  `CRAWLEE_STORAGE_DIR` per-test isolation; `Connection: close`
-  server-side; scope strategy (`same-origin` vs `same-hostname`);
-  sitemap seeding; and (v2 audit) `useSessionPool: false`,
-  `browserPoolOptions.retireBrowserAfterPageCount: Infinity`,
-  `persistCookiesPerSession: false`. v2 bisect: a hand-rolled standalone
-  `PlaywrightCrawler` with the EXACT discover.mjs handler logic copied
-  verbatim crawls all 5 fixture pages in 991 ms — so the hang is
-  somewhere in `discover.run`'s invocation path (not Crawlee itself,
-  not the handler, not the fixture). Closest upstream symptom match:
-  apify/crawlee#2785. Next experiment is to progressively replace
-  `discover.run`'s wrapping code with the working standalone setup
-  until the boundary that triggers the hang is identified. Two e2e
-  tests blocked behind this hang ship as `test.skip` placeholders:
-  - `test/e2e/reporters-smoke.test.mjs` — full-audit reporter pipeline
-    smoke (still validated end-to-end via R3-R7 unit tests against
-    synthetic summary inputs and via `test/e2e/reporters-html-axe.
-test.mjs` for the HTML reporter's own a11y).
-  - `test/e2e/discover-timeout.test.mjs` — behavioural replacement for
-    the deleted `test/unit/discover-timeout.test.mjs` source-text test.
+- **Crawlee/PlaywrightCrawler hang on localhost fixtures (long-deferred,
+  now resolved)** — first observed during R9 (Layer 4) and revisited
+  during the v2 audit; documented under `Layer 4 follow-ups` while two
+  e2e tests (`test/e2e/reporters-smoke.test.mjs`,
+  `test/e2e/discover-timeout.test.mjs`) shipped as `test.skip`
+  placeholders. The 2026-05-09 commit-bisect (Phase 2 of the P1
+  investigation; harness at `p1-bisect.mjs`, untracked) flipped the
+  verdict on the 2026-05-03 update note that claimed D2 didn't unblock
+  these tests: pre-D2 (`32f27cd`) reproducibly hangs at 60s × 3 runs;
+  D2 (`468f5c1`) onwards completes in <2s. The original update note was
+  wrong because the test bodies were empty — re-running them passed
+  trivially without exercising the hang. D2 (commit `468f5c1`)
+  inadvertently fixed both surfaces while addressing the AU-dogfood
+  remote-pages hang. Mechanism (CDP message-queue interaction with
+  Crawlee's session/queue management when the handler issues many small
+  awaits in series) is hypothesised in
+  `docs/adr/0013-crawlee-localhost-investigation.md` § Mechanism;
+  framework-internals confirmation is Phase 3 work for a future session.
+  Both e2e tests un-skipped in the same release with real spawnSync-based
+  bodies. Bisect intellectual capital migrated from CHANGELOG and the
+  e2e file-level comments into the ADR's Bisect history section.
 
 ### Layer 3b follow-ups (carry-forward)
 

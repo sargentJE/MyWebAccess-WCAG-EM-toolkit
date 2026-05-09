@@ -98,8 +98,10 @@ on-disk byte count — for the dispatch caller's logging.
 Test: a user setting `reporting.reporters: []` gets only the side-
 artefacts on disk. A user setting `reporting.reporters: ['html']`
 gets `summary.html` + all five side-artefacts. The split is
-covered by `test/e2e/reporters-smoke.test.mjs` (currently skipped
-behind the Crawlee hang documented in `CHANGELOG.md [Unreleased]`).
+covered by `test/e2e/reporters-smoke.test.mjs` (un-skipped after the
+Crawlee localhost-fixture hang resolution — see
+`docs/adr/0013-crawlee-localhost-investigation.md`; resolved by D2 /
+commit `468f5c1`).
 
 ### 4. Deterministic-sort contract
 
@@ -222,7 +224,9 @@ listed above for HTML escaping is overlapping but not identical.
 - Zero new runtime dependencies. Total surface added: ~1500 LOC of
   reporter modules + ~600 LOC of unit tests, all hand-rolled.
 - Three CHANGELOG carry-forwards triaged by R9: 1 closed
-  (authenticated-scan), 2 deferred behind a documented Crawlee hang.
+  (authenticated-scan), 2 deferred behind a documented Crawlee
+  localhost-fixture hang — both since resolved by D2 / commit `468f5c1`
+  and un-skipped (see `docs/adr/0013-crawlee-localhost-investigation.md`).
 - Future reporters land by adding one file under `src/reporters/`,
   one entry in the registry import block, and one test file. The
   shape is small enough to memorise.
