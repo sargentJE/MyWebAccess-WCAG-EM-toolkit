@@ -51,8 +51,18 @@ so re-running them passed trivially without exercising the actual hang.
 ## Decision
 
 **The localhost-fixture hang was inadvertently fixed by D2 (commit `468f5c1`),
-confirmed via 2026-05-09 commit-bisect. The two e2e tests are un-skipped
-in the same release.**
+confirmed via 2026-05-09 commit-bisect.** The `reporters-smoke.test.mjs`
+e2e test is un-skipped in the same release with a real spawn-based body
+that exercises all 5 reporters end-to-end. The companion
+`discover-timeout.test.mjs` remains skipped — empirical verification
+(2026-05-09 + 2026-05-11) showed its original assertion premise ("`/slow`
+dropped from inventory after `crawl.requestTimeoutSecs` exceeded") doesn't
+match Crawlee's actual timeout layering: `crawl.requestTimeoutSecs` is
+wired only into `requestHandlerTimeoutSecs`, leaving Crawlee's
+`navigationTimeoutSecs` at its 60s default. A v1.1 follow-up
+(`crawl.navigationTimeoutSecs` config) is the preferred un-skip path; see
+the file-level comment in `test/e2e/discover-timeout.test.mjs` for the two
+options.
 
 ### Bisect history (intellectual capital, single canonical home)
 
@@ -124,7 +134,9 @@ future session.
 
 ### Positive
 
-- Two e2e tests un-skipped with real bodies — closes Layer 4's deferred work.
+- `reporters-smoke.test.mjs` un-skipped with a real spawn-based body —
+  closes the larger half of Layer 4's deferred work. `discover-timeout.test.mjs`
+  remains skipped pending a separate v1.1 config addition (see Decision).
 - The bisect intellectual capital from R9 / v2 audit / 2026-05-09 is preserved
   in this single canonical home, not scattered across CHANGELOG and e2e
   file-level comments.

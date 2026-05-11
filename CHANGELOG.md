@@ -88,9 +88,16 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   awaits in series) is hypothesised in
   `docs/adr/0013-crawlee-localhost-investigation.md` § Mechanism;
   framework-internals confirmation is Phase 3 work for a future session.
-  Both e2e tests un-skipped in the same release with real spawnSync-based
-  bodies. Bisect intellectual capital migrated from CHANGELOG and the
-  e2e file-level comments into the ADR's Bisect history section.
+  `test/e2e/reporters-smoke.test.mjs` un-skipped in the same release with
+  a real async-spawn-based body exercising all 5 reporters end-to-end (the
+  test uses async `child_process.spawn` rather than `spawnSync` to sidestep
+  a Node-level deadlock between sync waitpid and the CLI's subprocess
+  tree). `test/e2e/discover-timeout.test.mjs` remains skipped pending a
+  v1.1 `crawl.navigationTimeoutSecs` config addition — the original test
+  premise was based on an incorrect model of Crawlee's two-timeout
+  separation (see the file-level comment in that test for details).
+  Bisect intellectual capital migrated from CHANGELOG and the e2e
+  file-level comments into the ADR's Bisect history section.
 
 ### Layer 3b follow-ups (carry-forward)
 

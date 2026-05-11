@@ -9,24 +9,44 @@
  * version was meant to point discover at a `/slow` route and assert the
  * timed-out URL is dropped from inventory.
  *
- * **CURRENTLY SKIPPED.** The Crawlee/PlaywrightCrawler hang documented
- * in `test/e2e/reporters-smoke.test.mjs` blocks this test too — every
- * fixture URL hits the requestHandlerTimeoutSecs cap regardless of
- * whether the fixture is fast or slow, so the test cannot distinguish
- * the timeout-firing-correctly signal from the underlying hang.
+ * **CURRENTLY SKIPPED — TEST PREMISE INVALIDATED 2026-05-09.**
  *
- * The Layer 4 v2 audit refined the deferral diagnosis (see the file-level
- * comment in `reporters-smoke.test.mjs` for the full bisect log). Three
- * additional mitigations were ruled out and the boundary was narrowed:
- * the bug lives somewhere in `discover.run`'s invocation path, NOT in
- * Crawlee itself, NOT in our handler code, NOT in the fixture. Closest
- * upstream issue: apify/crawlee#2785.
+ * The Crawlee localhost-fixture hang that originally blocked this test
+ * was resolved by D2 / commit 468f5c1 (see
+ * `docs/adr/0013-crawlee-localhost-investigation.md`) and the
+ * `reporters-smoke.test.mjs` companion test has been un-skipped. However,
+ * empirical verification (2026-05-09) showed the originally-intended
+ * assertion ("`/slow` is dropped from inventory after `crawl.requestTimeoutSecs`
+ * exceeded") doesn't match the toolkit's actual behaviour.
  *
- * The Layer 2 source-text guard at `src/commands/discover.mjs:108`
- * (`page.setDefaultTimeout(...)`) remains protected by the existing
- * lint/typecheck pipeline; the symbol is referenced and the line cannot
- * be silently deleted without breaking the surrounding requestHandler
- * structure.
+ * Why: Crawlee separates two timeouts — `navigationTimeoutSecs` (bounds
+ * `page.goto`) and `requestHandlerTimeoutSecs` (bounds the user-supplied
+ * requestHandler). `src/commands/discover.mjs` wires
+ * `crawl.requestTimeoutSecs` only into the latter, leaving
+ * `navigationTimeoutSecs` at Crawlee's 60s default. So a fixture with
+ * `slowMs: 8000` lets `page.goto` complete (8s < 60s nav budget), then
+ * the user handler runs against a fully-loaded page — no timeout fires,
+ * `/slow` ends up in inventory with full metadata captured. Diagnostic:
+ *
+ *   slow entry → { url, title: 'Slow', h1: 'Eventually responded',
+ *                  formCount: 0, landmarkCount: 0, processTypes: [] }
+ *
+ * Two paths to un-skip cleanly (v1.1 work):
+ *
+ *   1. **Add `crawl.navigationTimeoutSecs` config** wired to Crawlee's
+ *      navigationTimeoutSecs. Then `slowMs > navigationTimeoutSecs`
+ *      genuinely drops the URL. Production-relevant: client sites with
+ *      slow CDN endpoints would benefit from a tighter nav cap than 60s.
+ *
+ *   2. **Reframe the test** as a positive-case "discover handles slow
+ *      pages without crashing" assertion. Useful but doesn't match the
+ *      test's original intent.
+ *
+ * Preferred: option 1 (real config addition, real test). Tracked as a
+ * v1.1 follow-up in CHANGELOG.
+ *
+ * The `[DEFERRED-CRAWLEE]` prefix on the test name is replaced with
+ * `[DEFERRED-NAV-TIMEOUT-CONFIG]` to reflect the actual blocker.
  */
 
 // SECTION: Imports
@@ -34,10 +54,7 @@ import { test } from 'node:test';
 
 // SECTION: Tests
 
-// [Update 2026-05-03] D2 fix in src/commands/discover.mjs landed; the test
-// body remains empty pending the unsolved localhost-fixture hang. D2
-// addressed a different surface (locator-timeout coupling on remote pages
-// lacking h1/canonical) and is NOT the same root cause as this deferral.
-test.skip('[DEFERRED-CRAWLEE] discover: pages exceeding crawl.requestTimeoutSecs are dropped', async () => {
-  // Body kept minimal; see file-level comment + reporters-smoke for the investigation log.
+test.skip('[DEFERRED-NAV-TIMEOUT-CONFIG] discover: pages exceeding crawl.requestTimeoutSecs are dropped', async () => {
+  // Body kept minimal; see file-level comment for the test-premise correction
+  // and the two un-skip paths (preferred: add `crawl.navigationTimeoutSecs`).
 });
