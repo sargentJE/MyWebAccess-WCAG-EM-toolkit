@@ -1,0 +1,78 @@
+{
+  "name": "example-site-best-practice",
+  "rootUrl": "https://example.com/",
+  "scope": {
+    "mode": "same-hostname",
+    "allowedHosts": []
+  },
+  "crawl": {
+    "maxPages": 80,
+    "maxConcurrency": 5,
+    "requestTimeoutSecs": 90,
+    "requestDelayMs": 250,
+    "excludeUrlPatterns": [],
+    "sitemapSeeding": {
+      "enabled": true,
+      "urls": [],
+      "commonPaths": ["/sitemap.xml", "/sitemap_index.xml"],
+      "maxUrls": 500
+    }
+  },
+  "discovery": {
+    "captureH1": true,
+    "captureCanonical": true,
+    "captureForms": true,
+    "captureLandmarks": true,
+    "captureSearchInputs": true
+  },
+  "sample": {
+    "structuredManual": [],
+    "autoSuggest": {
+      "enabled": true,
+      "perCluster": 1,
+      "preferTypes": ["homepage", "form-or-contact", "policy", "listing", "detail", "content"]
+    },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 2,
+    "randomSeed": 1,
+    "smallSiteSupplementaryScanThreshold": 50
+  },
+  "scan": {
+    "viewports": [
+      { "id": "desktop", "width": 1280, "height": 800 },
+      { "id": "reflow", "width": 320, "height": 800 }
+    ],
+    "waitUntil": "domcontentloaded",
+    "timeoutMs": 60000,
+    "retries": 1,
+    "fullPageScreenshots": true,
+    "axe": {
+      "include": [],
+      "exclude": [],
+      "withRules": [],
+      "withTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"],
+      "runOnly": null
+    }
+  },
+  "processes": [],
+  "reporting": {
+    "reporters": ["json", "markdown", "html", "earl-jsonld", "junit"],
+    "groupBestPracticeSeparately": true,
+    "failOnFindings": {
+      "impacts": ["critical", "serious"],
+      "classifications": [],
+      "threshold": 1
+    }
+  },
+  "wcagEm": {
+    "wcagVersion": "2.2",
+    "conformanceTarget": "AA",
+    "atBaseline": [],
+    "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
+    "samplingMethodNotes": "Structured sample (WCAG-EM Step 3a) curated by the auditor for this run — set sample.structuredManual in your per-site config to pin critical user-journey URLs (homepage, contact, key flows, policy pages). Supplemented by toolkit auto-suggest (top page-type per cluster) and a 10% random pool.",
+    "evaluator": {
+      "name": "",
+      "contact": ""
+    }
+  }
+}

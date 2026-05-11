@@ -195,3 +195,38 @@ test('configs/example-site-with-auth.json includes auth and beforeScan examples'
     'demonstrates beforeScan cookie-consent dismissal',
   );
 });
+
+test('configs/example-site-best-practice.json validates against the schema', async () => {
+  // Sidecar introduced in B2 (2026-05-11) to give client-audit configs an
+  // explicit best-practice opt-in. The AU dogfood Lane A flagged that
+  // axe's best-practice tag (covering landmark-one-main, region,
+  // heading-order, page-has-heading-one — universally-expected auditor
+  // concerns) is OFF in DEFAULTS.scan.axe.withTags; this sidecar
+  // demonstrates the opt-in path.
+  const { validateConfig } = await import('../../src/lib/validate-config.mjs');
+  const { config } = await loadConfig('configs/example-site-best-practice.json');
+  const result = await validateConfig(config);
+  assert.equal(result.valid, true, `expected valid; errors: ${JSON.stringify(result.errors)}`);
+});
+
+test('configs/example-site-best-practice.json opts in to best-practice + all 5 reporters + CI failOnFindings', async () => {
+  const { config } = await loadConfig('configs/example-site-best-practice.json');
+  assert.ok(
+    config.scan.axe.withTags.includes('best-practice'),
+    'withTags must include best-practice for the AU dogfood Lane A gap',
+  );
+  assert.deepEqual(
+    config.reporting.reporters,
+    ['json', 'markdown', 'html', 'earl-jsonld', 'junit'],
+    'all 5 reporters explicitly enabled (DEFAULTS would only ship json+markdown)',
+  );
+  assert.equal(config.reporting.failOnFindings.threshold, 1, 'CI-gating threshold of 1');
+  assert.deepEqual(config.reporting.failOnFindings.impacts, ['critical', 'serious']);
+  assert.equal(config.wcagEm.wcagVersion, '2.2');
+  assert.equal(config.wcagEm.conformanceTarget, 'AA');
+  assert.deepEqual(
+    config.sample.structuredManual,
+    [],
+    'structuredManual deliberately omitted from sidecar (footgun avoidance: copying example.com URLs into a real audit); users add per-site',
+  );
+});
