@@ -86,6 +86,18 @@ export function buildManualBacklog({ findings, inventory = [], processes = [] })
     '- [ ] Zoom/reflow at 320 CSS px equivalent',
     '- [ ] Text spacing and clipping checks',
     '- [ ] Name/role/value review for custom controls',
+    // Items below close 5 gaps surfaced by the AU dogfood Lane B verdict
+    // (output/au-run-1/AU-DOGFOOD-REPORT.md). All five are ALWAYS-INCLUDED
+    // — axe-core has partial mechanical-presence overlap with three of them
+    // (audio-caption/video-caption, image-alt/area-alt, focus-* rules)
+    // but the SEMANTIC judgment ("is this alt truly meaningful? is the focus
+    // indicator visible to a sighted user?") remains an auditor responsibility.
+    // Multi-SC coverage is folded into a single line where wording permits.
+    '- [ ] Alt text semantics: decorative images use empty alt; informative images have meaningful descriptions',
+    '- [ ] Captions and transcripts: audio/video has synchronized captions or full transcript',
+    '- [ ] Color-only information: confirm no information is conveyed by color alone',
+    '- [ ] Focus indicator visibility: every interactive element has a visible focus indicator that is not obscured by overlapping content',
+    '- [ ] CAPTCHA alternative: if CAPTCHA is present, verify an accessible alternative (text, audio) is available AND keyboard-operable',
   );
 
   // Region findings → explicit landmarks review.
