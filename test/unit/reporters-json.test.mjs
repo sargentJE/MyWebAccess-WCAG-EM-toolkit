@@ -85,6 +85,28 @@ test('json reporter: returned bytes count matches the file size on disk', async 
   assert.ok(result.path.endsWith('summary.json'));
 });
 
+test('json reporter: wcagEmSummary propagates evaluator and metadata to summary.json (D4)', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: { name: 'wcag-em-toolkit', version: '0.3.0' },
+    findings: [],
+    wcagEmSummary: {
+      wcagVersion: '2.1',
+      conformanceTarget: 'AAA',
+      evaluator: { name: 'D4-regression-evaluator', contact: 'test@d4.example' },
+      criteriaOutcomes: [{ sc: '1.1.1', outcome: 'passed' }],
+    },
+  };
+  await jsonReporter.emit(summary, ctx);
+  const raw = await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8');
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.wcagEmSummary.evaluator.name, 'D4-regression-evaluator');
+  assert.equal(parsed.wcagEmSummary.evaluator.contact, 'test@d4.example');
+  assert.equal(parsed.wcagEmSummary.wcagVersion, '2.1');
+  assert.equal(parsed.wcagEmSummary.conformanceTarget, 'AAA');
+  assert.equal(parsed.wcagEmSummary.criteriaOutcomes[0].sc, '1.1.1');
+});
+
 // SECTION: Registry
 
 test('registry: listReporters reports the registered names alphabetically', () => {

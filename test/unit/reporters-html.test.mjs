@@ -330,3 +330,21 @@ test('includePasses=true: passes section present with passing criteria', async (
   assert.match(got, /<li>1\.1\.1 Non-text Content<\/li>/);
   assert.ok(!got.includes('<li>1.4.3 Contrast (Minimum)</li>'));
 });
+
+test('html reporter: criteriaOutcomes sc field renders in criteria table (D4)', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t, { includePasses: false });
+  const summary = {
+    ...baseSummary(),
+    wcagEmSummary: {
+      criteriaOutcomes: [
+        { sc: '1.4.3', outcome: 'failed', relatedRules: ['color-contrast'] },
+        { sc: '2.4.1', outcome: 'passed', relatedRules: ['bypass'] },
+      ],
+    },
+  };
+  await htmlReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  assert.match(got, /<td>1\.4\.3<\/td>/, 'SC identifier must render from sc field');
+  assert.match(got, /<td>2\.4\.1<\/td>/, 'second SC identifier must also render');
+  assert.match(got, /<td>color-contrast<\/td>/, 'relatedRules must render');
+});
