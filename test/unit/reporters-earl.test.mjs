@@ -118,8 +118,8 @@ test('earl reporter: includePasses=false skips per-SC passed Assertions', async 
       findings: [],
       wcagEmSummary: {
         criteriaOutcomes: [
-          { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-          { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+          { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+          { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
         ],
       },
     },
@@ -137,9 +137,9 @@ test('earl reporter: includePasses=true emits earl:passed for each passed criter
       findings: [],
       wcagEmSummary: {
         criteriaOutcomes: [
-          { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-          { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
-          { criterion: '2.4.1 Bypass Blocks', outcome: 'passed' },
+          { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+          { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+          { sc: '2.4.1 Bypass Blocks', outcome: 'passed' },
         ],
       },
     },

@@ -98,6 +98,17 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   separation (see the file-level comment in that test for details).
   Bisect intellectual capital migrated from CHANGELOG and the e2e
   file-level comments into the ADR's Bisect history section.
+- **`wcagEm.*` config not propagated to `summary.json`** — `summarize.mjs`
+  computed the WCAG-EM summary (wcagVersion, conformanceTarget, evaluator,
+  criteriaOutcomes) but never attached it to the summary object passed to
+  reporters. `summary.json` now includes a `wcagEmSummary` property; EARL
+  and HTML reporters can also read `criteriaOutcomes` (previously silently
+  `undefined`, breaking `includePasses` and the HTML criteria table).
+- **`criteriaOutcomes` field-name mismatch in EARL and HTML reporters** —
+  reporters read `c.criterion` but `toWcagEmSummary()` returns entries
+  keyed by `sc` (per ADR-0007 §5). Latent bug masked because
+  `criteriaOutcomes` never reached reporters until the above fix. Now
+  aligned to `sc` in both `earl-jsonld.mjs` and `html.mjs`.
 
 ### Layer 3b follow-ups (carry-forward)
 

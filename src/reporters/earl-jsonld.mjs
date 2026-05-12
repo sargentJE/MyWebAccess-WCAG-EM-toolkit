@@ -104,7 +104,7 @@ export async function emit(summary, ctx) {
       graph.push(
         buildAssertion({
           subject: siteSubject,
-          test: String(c.criterion ?? ''),
+          test: String(c.sc ?? ''),
           outcomeKey: 'passed',
           info: 'No violations recorded for this success criterion.',
           pointer: '',

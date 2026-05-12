@@ -321,6 +321,7 @@ export async function run(ctx) {
     // Layer 3b R12: surface infra-failure incompletes in the top-level
     // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
     scanWarnings: wcagEmSummary.scanWarnings,
+    wcagEmSummary,
   };
 
   // SECTION: Persist artefacts

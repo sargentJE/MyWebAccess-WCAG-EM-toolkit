@@ -260,7 +260,7 @@ test('includePasses=false: passes section absent', async (t) => {
   const summary = {
     ...baseSummary(),
     wcagEmSummary: {
-      criteriaOutcomes: [{ criterion: '1.1.1 Non-text Content', outcome: 'passed' }],
+      criteriaOutcomes: [{ sc: '1.1.1 Non-text Content', outcome: 'passed' }],
     },
   };
   await htmlReporter.emit(summary, ctx);
@@ -319,8 +319,8 @@ test('includePasses=true: passes section present with passing criteria', async (
     ...baseSummary(),
     wcagEmSummary: {
       criteriaOutcomes: [
-        { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-        { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+        { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+        { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
       ],
     },
   };
