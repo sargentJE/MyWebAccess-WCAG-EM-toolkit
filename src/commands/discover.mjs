@@ -149,6 +149,7 @@ export async function run(ctx) {
     maxRequestsPerCrawl: config.crawl.maxPages,
     maxConcurrency: config.crawl.maxConcurrency,
     requestHandlerTimeoutSecs: config.crawl.requestTimeoutSecs,
+    navigationTimeoutSecs: config.crawl.navigationTimeoutSecs,
     // ANCHOR: RequestDelayHook — per-navigation throttle honouring
     // `config.crawl.requestDelayMs`. Zero (the DEFAULT) is a no-op.
     preNavigationHooks: [buildRequestDelayHook(config.crawl.requestDelayMs)],

@@ -64,6 +64,7 @@ const DEFAULTS = {
     maxPages: 80,
     maxConcurrency: 5,
     requestTimeoutSecs: 90,
+    navigationTimeoutSecs: 60,
     // Crawl throttle in ms; wired into the Crawlee crawler's
     // `preNavigationHooks` in `src/commands/discover.mjs` (R7). 0 = no delay.
     requestDelayMs: 0,

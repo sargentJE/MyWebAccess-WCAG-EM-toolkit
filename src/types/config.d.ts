@@ -33,6 +33,10 @@ export interface WCAGEMAccessibilityToolkitConfig {
     maxConcurrency?: number;
     requestTimeoutSecs?: number;
     /**
+     * Timeout in seconds for page.goto navigation. Independent from the request-handler budget (requestTimeoutSecs).
+     */
+    navigationTimeoutSecs?: number;
+    /**
      * Politeness throttle between requests.
      */
     requestDelayMs?: number;

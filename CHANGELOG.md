@@ -13,6 +13,12 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   identity (`doap:name`, `doap:release`) is preserved alongside. Allows
   EARL consumers to identify both the automated tool and the human
   evaluator who configured the audit. ADR-0009 §5 amended.
+- **`crawl.navigationTimeoutSecs`** — integer config field (5–300, default 60) wired to Crawlee's `PlaywrightCrawler.navigationTimeoutSecs`.
+  Bounds `page.goto` independently from the request-handler budget
+  (`requestTimeoutSecs`). Client sites with slow CDN endpoints or heavy
+  server-side rendering can tighten the navigation cap without affecting
+  the handler's page-evaluation budget. Default 60 matches Crawlee's
+  prior implicit value — zero behaviour change for existing configs.
 - **`crawl.documentLinkPatterns`** — regex array (validated by the existing
   `validRegex` Ajv keyword) matched against `URL.pathname`. Matching links
   are skipped at enqueue time inside `discover.mjs`'s
@@ -97,10 +103,10 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   a real async-spawn-based body exercising all 5 reporters end-to-end (the
   test uses async `child_process.spawn` rather than `spawnSync` to sidestep
   a Node-level deadlock between sync waitpid and the CLI's subprocess
-  tree). `test/e2e/discover-timeout.test.mjs` remains skipped pending a
-  v1.1 `crawl.navigationTimeoutSecs` config addition — the original test
-  premise was based on an incorrect model of Crawlee's two-timeout
-  separation (see the file-level comment in that test for details).
+  tree). `test/e2e/discover-timeout.test.mjs` un-skipped with a real
+  assertion body; the `crawl.navigationTimeoutSecs` config addition
+  (see Added above) provides the missing config surface that the
+  original test premise required.
   Bisect intellectual capital migrated from CHANGELOG and the e2e
   file-level comments into the ADR's Bisect history section.
 - **`wcagEm.*` config not propagated to `summary.json`** — `summarize.mjs`
