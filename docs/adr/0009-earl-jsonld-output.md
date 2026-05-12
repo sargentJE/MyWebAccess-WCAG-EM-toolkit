@@ -146,29 +146,40 @@ true` → emits typed pointers + extends `@context` accordingly).
 The hooks are documented in the reporter's JSDoc; the change is
 ~20 LOC.
 
-### 5. Tool identity — `earl:Assertor` shape
+### 5. Tool + evaluator identity — `earl:Assertor` shape
 
 ```jsonc
 "earl:assertedBy": {
   "@type": "earl:Assertor",
   "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-  "doap:release": "0.3.0"
+  "doap:release": "0.3.0",
+  "foaf:name": "Jamie Sargent",          // optional — from wcagEm.evaluator.name
+  "foaf:mbox": "auditor@example.com"     // optional — from wcagEm.evaluator.contact
 }
 ```
 
-Pulled from `TOOL_IDENTITY` (`src/lib/version.mjs`). Two fields:
+Tool identity pulled from `TOOL_IDENTITY` (`src/lib/version.mjs`):
 
 - `doap:name` — package name. Stable across versions.
 - `doap:release` — package version. Increments per published release.
+
+When `wcagEm.evaluator` is configured with non-empty values, the
+assertor includes `foaf:name` (evaluator name) and `foaf:mbox`
+(evaluator contact). These fields are omitted for default/empty
+evaluator config, preserving backward compatibility. This allows
+EARL consumers to identify both the tool that produced the assertions
+and the human evaluator who configured and reviewed the audit.
 
 `doap:homepage` is **omitted** at v1.0. The package.json doesn't
 ship a `homepage` field yet (Layer 5 will, alongside the
 README rewrite). Adding it now would mean a version-bump path that
 adds a transient field; cleaner to defer to Layer 5.
 
-The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). When
-typed pointers ship (the §4 follow-up), `@context` becomes a
-multi-vocab object embedding `ptr:` and `doap:` explicitly.
+The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). The
+`foaf:` prefix follows the same informal pattern as `doap:` — no
+namespace expansion at v1.0. When typed pointers ship (the §4
+follow-up), `@context` becomes a multi-vocab object embedding
+`ptr:`, `doap:`, and `foaf:` explicitly.
 
 ## Consequences
 

@@ -65,6 +65,7 @@ const OUTCOME_MAP = Object.freeze({
  */
 export async function emit(summary, ctx) {
   const includePasses = Boolean(ctx?.config?.reporting?.includePasses);
+  const evaluator = ctx?.config?.wcagEm?.evaluator;
   const findings = sortFindings(Array.isArray(summary.findings) ? summary.findings : []);
 
   /** @type {Array<Record<string, any>>} */
@@ -88,6 +89,7 @@ export async function emit(summary, ctx) {
           outcomeKey,
           info: buildInfo(f),
           pointer,
+          evaluator,
         }),
       );
     }
@@ -108,6 +110,7 @@ export async function emit(summary, ctx) {
           outcomeKey: 'passed',
           info: 'No violations recorded for this success criterion.',
           pointer: '',
+          evaluator,
         }),
       );
     }
@@ -129,10 +132,10 @@ export async function emit(summary, ctx) {
 /**
  * Build a single `earl:Assertion` JSON-LD node.
  *
- * @param {{ subject: string, test: string, outcomeKey: string, info: string, pointer: string }} args
+ * @param {{ subject: string, test: string, outcomeKey: string, info: string, pointer: string, evaluator?: { name?: string, contact?: string } }} args
  * @returns {Record<string, any>}
  */
-function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
+function buildAssertion({ subject, test, outcomeKey, info, pointer, evaluator }) {
   /** @type {Record<string, any>} */
   const result = {
     '@type': 'earl:Result',
@@ -142,7 +145,7 @@ function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
   if (pointer) result['earl:pointer'] = pointer;
   return {
     '@type': 'earl:Assertion',
-    'earl:assertedBy': buildAssertor(),
+    'earl:assertedBy': buildAssertor(evaluator),
     'earl:subject': subject,
     'earl:test': test,
     'earl:result': result,
@@ -151,19 +154,22 @@ function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
 }
 
 /**
- * Build the EARL `earl:Assertor` for THIS toolkit, stamped from
- * TOOL_IDENTITY. Same shape every call — could be memoised, but
- * runtime-cheap and the stable JSON-LD output benefits from the doc
- * being a pure function of inputs.
+ * Build the EARL `earl:Assertor` stamped from TOOL_IDENTITY, with
+ * optional evaluator identity from `wcagEm.evaluator` config.
  *
+ * @param {{ name?: string, contact?: string }} [evaluator]
  * @returns {Record<string, any>}
  */
-function buildAssertor() {
-  return {
+function buildAssertor(evaluator) {
+  /** @type {Record<string, any>} */
+  const assertor = {
     '@type': 'earl:Assertor',
     'doap:name': TOOL_IDENTITY.name,
     'doap:release': TOOL_IDENTITY.version,
   };
+  if (evaluator?.name) assertor['foaf:name'] = evaluator.name;
+  if (evaluator?.contact) assertor['foaf:mbox'] = evaluator.contact;
+  return assertor;
 }
 
 /**

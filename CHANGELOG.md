@@ -8,6 +8,11 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Added
 
+- **EARL evaluator identity** — `earl:assertedBy` now includes `foaf:name`
+  and `foaf:mbox` from `wcagEm.evaluator` config when non-empty. Toolkit
+  identity (`doap:name`, `doap:release`) is preserved alongside. Allows
+  EARL consumers to identify both the automated tool and the human
+  evaluator who configured the audit. ADR-0009 §5 amended.
 - **`crawl.documentLinkPatterns`** — regex array (validated by the existing
   `validRegex` Ajv keyword) matched against `URL.pathname`. Matching links
   are skipped at enqueue time inside `discover.mjs`'s
