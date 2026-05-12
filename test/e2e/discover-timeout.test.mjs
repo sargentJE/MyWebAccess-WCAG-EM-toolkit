@@ -1,60 +1,135 @@
 // @ts-check
 /**
- * @file Behavioural test for discover's per-page timeout — Layer 4 R9.
+ * @file Behavioural test for discover's navigation timeout — validates crawl.navigationTimeoutSecs.
  * @module test/e2e/discover-timeout
- *
- * @description
- * INTENDED replacement for the source-text test at
- * `test/unit/discover-timeout.test.mjs` (deleted in R9). The behavioural
- * version was meant to point discover at a `/slow` route and assert the
- * timed-out URL is dropped from inventory.
- *
- * **CURRENTLY SKIPPED — TEST PREMISE INVALIDATED 2026-05-09.**
- *
- * The Crawlee localhost-fixture hang that originally blocked this test
- * was resolved by D2 / commit 468f5c1 (see
- * `docs/adr/0013-crawlee-localhost-investigation.md`) and the
- * `reporters-smoke.test.mjs` companion test has been un-skipped. However,
- * empirical verification (2026-05-09) showed the originally-intended
- * assertion ("`/slow` is dropped from inventory after `crawl.requestTimeoutSecs`
- * exceeded") doesn't match the toolkit's actual behaviour.
- *
- * Why: Crawlee separates two timeouts — `navigationTimeoutSecs` (bounds
- * `page.goto`) and `requestHandlerTimeoutSecs` (bounds the user-supplied
- * requestHandler). `src/commands/discover.mjs` wires
- * `crawl.requestTimeoutSecs` only into the latter, leaving
- * `navigationTimeoutSecs` at Crawlee's 60s default. So a fixture with
- * `slowMs: 8000` lets `page.goto` complete (8s < 60s nav budget), then
- * the user handler runs against a fully-loaded page — no timeout fires,
- * `/slow` ends up in inventory with full metadata captured. Diagnostic:
- *
- *   slow entry → { url, title: 'Slow', h1: 'Eventually responded',
- *                  formCount: 0, landmarkCount: 0, processTypes: [] }
- *
- * Two paths to un-skip cleanly (v1.1 work):
- *
- *   1. **Add `crawl.navigationTimeoutSecs` config** wired to Crawlee's
- *      navigationTimeoutSecs. Then `slowMs > navigationTimeoutSecs`
- *      genuinely drops the URL. Production-relevant: client sites with
- *      slow CDN endpoints would benefit from a tighter nav cap than 60s.
- *
- *   2. **Reframe the test** as a positive-case "discover handles slow
- *      pages without crashing" assertion. Useful but doesn't match the
- *      test's original intent.
- *
- * Preferred: option 1 (real config addition, real test). Tracked as a
- * v1.1 follow-up in CHANGELOG.
- *
- * The `[DEFERRED-CRAWLEE]` prefix on the test name is replaced with
- * `[DEFERRED-NAV-TIMEOUT-CONFIG]` to reflect the actual blocker.
  */
 
 // SECTION: Imports
 import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { startFixtureServer } from '../fixtures/server.mjs';
+import { createTmpConfig } from '../fixtures/make-config.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const REPO_ROOT = path.resolve(__filename, '../../..');
+const BIN = path.join(REPO_ROOT, 'bin', 'wcag-em.mjs');
+
+// SECTION: Helpers
+
+/**
+ * Run a child process to completion, capturing stdout + stderr. Async
+ * equivalent of spawnSync that avoids spawnSync's grand-child pipe-deadlock
+ * (see reporters-smoke.test.mjs file-level comment).
+ *
+ * @param {string} command
+ * @param {string[]} args
+ * @param {{ env?: NodeJS.ProcessEnv, timeoutMs?: number }} opts
+ * @returns {Promise<{ status: number | null, signal: NodeJS.Signals | null, stdout: string, stderr: string }>}
+ */
+function runChild(command, args, opts = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      env: opts.env ?? process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (/** @type {Buffer} */ chunk) => {
+      stdout += chunk.toString('utf8');
+    });
+    child.stderr.on('data', (/** @type {Buffer} */ chunk) => {
+      stderr += chunk.toString('utf8');
+    });
+    /** @type {NodeJS.Timeout | undefined} */
+    let killer;
+    if (typeof opts.timeoutMs === 'number') {
+      killer = setTimeout(() => child.kill('SIGTERM'), opts.timeoutMs);
+    }
+    child.on('exit', (status, signal) => {
+      if (killer) clearTimeout(killer);
+      resolve({ status, signal, stdout, stderr });
+    });
+  });
+}
 
 // SECTION: Tests
 
-test.skip('[DEFERRED-NAV-TIMEOUT-CONFIG] discover: pages exceeding crawl.requestTimeoutSecs are dropped', async () => {
-  // Body kept minimal; see file-level comment for the test-premise correction
-  // and the two un-skip paths (preferred: add `crawl.navigationTimeoutSecs`).
-});
+test(
+  'discover: slow pages exceeding navigationTimeoutSecs are dropped from inventory',
+  { timeout: 60_000 },
+  async (t) => {
+    const fixture = await startFixtureServer({
+      slowMs: 8000,
+      routes: {
+        '/': (req, res) => {
+          res.setHeader('content-type', 'text/html; charset=utf-8');
+          res.end(
+            '<!DOCTYPE html><html lang="en"><head><title>Nav Timeout Test</title></head>' +
+              '<body><main><h1>Root</h1>' +
+              '<a href="/fast">Fast page</a> ' +
+              '<a href="/slow">Slow page</a>' +
+              '</main></body></html>',
+          );
+        },
+        '/fast': (req, res) => {
+          res.setHeader('content-type', 'text/html; charset=utf-8');
+          res.end(
+            '<!DOCTYPE html><html lang="en"><head><title>Fast</title></head>' +
+              '<body><main><h1>Fast page</h1></main></body></html>',
+          );
+        },
+      },
+    });
+    t.after(() => fixture.stop());
+
+    const cfg = await createTmpConfig({
+      baseUrl: fixture.baseUrl,
+      overrides: {
+        crawl: {
+          navigationTimeoutSecs: 5,
+          sitemapSeeding: { enabled: false },
+        },
+        sample: {
+          structuredManual: [`${fixture.baseUrl}/`],
+        },
+      },
+    });
+    t.after(() => cfg.cleanup());
+
+    const crawleeStorage = await mkdtemp(path.join(tmpdir(), 'wcag-em-e2e-storage-'));
+    t.after(() => rm(crawleeStorage, { recursive: true, force: true }));
+
+    const result = await runChild(
+      process.execPath,
+      [BIN, 'audit', '--config', cfg.configPath, '--out-dir', cfg.outDir, '--log-level=warn'],
+      {
+        env: { ...process.env, CRAWLEE_STORAGE_DIR: crawleeStorage },
+        timeoutMs: 50_000,
+      },
+    );
+
+    assert.equal(
+      result.status,
+      0,
+      `audit should exit 0 (clean fixture, no findings)\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    );
+
+    const inventoryPath = path.join(cfg.outDir, 'inventory', 'inventory.json');
+    const inventory = JSON.parse(await readFile(inventoryPath, 'utf8'));
+    const urls = inventory.map((/** @type {{ url: string }} */ entry) => entry.url);
+
+    assert.ok(
+      urls.some((/** @type {string} */ u) => u.startsWith(fixture.baseUrl)),
+      'inventory should contain at least one page from the fixture',
+    );
+    assert.ok(
+      !urls.some((/** @type {string} */ u) => u.includes('/slow')),
+      `inventory must NOT contain /slow (navigation timed out)\ninventory URLs: ${urls.join(', ')}`,
+    );
+  },
+);
