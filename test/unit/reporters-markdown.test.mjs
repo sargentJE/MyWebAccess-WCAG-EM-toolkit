@@ -152,6 +152,68 @@ test('markdown reporter: returned bytes match on-disk file size', async (t) => {
   assert.ok(result.path.endsWith('summary.md'));
 });
 
+test('markdown reporter: incompleteFindings render an "Incomplete results" section', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: TOOL_IDENTITY,
+    site: 'inc-site',
+    generatedAt: '2026-04-29T00:00:00.000Z',
+    inventoryCount: 1,
+    finalSampleCount: 1,
+    samplePagesScanned: 1,
+    processRuns: 0,
+    groupedFindingCount: 0,
+    comparison: {
+      randomSampleIntroducedNewRuleIds: [],
+      randomSampleIntroducedNewClusters: [],
+      expandStructuredSampleRecommended: false,
+    },
+    findings: [],
+    incompleteFindings: [
+      {
+        id: 'aria-required-attr',
+        impact: 'critical',
+        help: 'Required ARIA attributes must be provided',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
+        classification: 'needs-review',
+        firstTarget: '[role="slider"]',
+        pages: ['https://example.com/a'],
+        pageCount: 1,
+      },
+    ],
+  };
+  await markdownReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.md'), 'utf8');
+  assert.match(got, /## Incomplete results \(needs review\)/);
+  assert.match(got, /### aria-required-attr/);
+  assert.match(got, /- Classification: needs-review/);
+  assert.match(got, /- Help: Required ARIA attributes must be provided/);
+  assert.match(got, /- Example target: `\[role="slider"\]`/);
+});
+
+test('markdown reporter: no incomplete section when incompleteFindings is absent', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: TOOL_IDENTITY,
+    site: 'no-inc',
+    generatedAt: '2026-04-29T00:00:00.000Z',
+    inventoryCount: 0,
+    finalSampleCount: 0,
+    samplePagesScanned: 0,
+    processRuns: 0,
+    groupedFindingCount: 0,
+    comparison: {
+      randomSampleIntroducedNewRuleIds: [],
+      randomSampleIntroducedNewClusters: [],
+      expandStructuredSampleRecommended: false,
+    },
+    findings: [],
+  };
+  await markdownReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.md'), 'utf8');
+  assert.ok(!got.includes('Incomplete results'), 'no incomplete section when absent');
+});
+
 test('markdown reporter: registry now lists json + markdown', async () => {
   const { listReporters } = await import('../../src/reporters/index.mjs');
   const names = listReporters();

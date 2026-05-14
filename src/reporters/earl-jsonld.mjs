@@ -95,6 +95,26 @@ export async function emit(summary, ctx) {
     }
   }
 
+  // Per-rule Assertions for incomplete results — earl:cantTell.
+  const incFindings = Array.isArray(summary.incompleteFindings) ? summary.incompleteFindings : [];
+  for (const f of incFindings) {
+    const pages = Array.isArray(f.pages) ? f.pages : [];
+    const ruleId = String(f.id ?? '');
+    const pointer = typeof f.firstTarget === 'string' ? f.firstTarget : '';
+    for (const url of pages) {
+      graph.push(
+        buildAssertion({
+          subject: String(url),
+          test: ruleId,
+          outcomeKey: 'incomplete',
+          info: buildInfo(f),
+          pointer,
+          evaluator,
+        }),
+      );
+    }
+  }
+
   // Per-SC Assertions for passed criteria (only when includePasses is on).
   if (includePasses) {
     const outcomes = Array.isArray(summary?.wcagEmSummary?.criteriaOutcomes)

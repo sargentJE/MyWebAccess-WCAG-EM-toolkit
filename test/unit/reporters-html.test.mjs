@@ -331,6 +331,39 @@ test('includePasses=true: passes section present with passing criteria', async (
   assert.ok(!got.includes('<li>1.4.3 Contrast (Minimum)</li>'));
 });
 
+test('html reporter: incompleteFindings render a "needs review" section', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    ...baseSummary(),
+    incompleteFindings: [
+      {
+        id: 'aria-required-attr',
+        impact: 'critical',
+        help: 'Required ARIA attributes must be provided',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
+        classification: 'needs-review',
+        firstTarget: '[role="slider"]',
+        pages: ['https://example.com/a', 'https://example.com/b'],
+        pageCount: 2,
+      },
+    ],
+  };
+  await htmlReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  assert.match(got, /<h2>Incomplete results \(needs review\)<\/h2>/);
+  assert.ok(got.includes('aria-required-attr'));
+  assert.ok(got.includes('needs review'));
+  assert.ok(got.includes('Required ARIA attributes must be provided'));
+  assert.ok(got.includes('[role=&quot;slider&quot;]'));
+});
+
+test('html reporter: no incomplete section when incompleteFindings is empty', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  await htmlReporter.emit({ ...baseSummary(), incompleteFindings: [] }, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  assert.ok(!got.includes('Incomplete results'), 'no incomplete section when empty');
+});
+
 test('html reporter: criteriaOutcomes sc field renders in criteria table (D4)', async (t) => {
   const { ctx, reportsDir } = await makeCtx(t, { includePasses: false });
   const summary = {

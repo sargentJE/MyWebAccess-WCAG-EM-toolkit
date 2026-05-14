@@ -97,6 +97,30 @@ export async function emit(summary, ctx) {
     }
   }
 
+  // Incomplete findings — <failure type="incomplete"> so CI flags cantTell results.
+  const incFindings = Array.isArray(summary.incompleteFindings) ? summary.incompleteFindings : [];
+  for (const f of incFindings) {
+    const ruleId = String(f.id ?? '');
+    const pages = Array.isArray(f.pages) ? f.pages : [];
+    const firstTarget = typeof f.firstTarget === 'string' ? f.firstTarget : '';
+    for (const url of pages) {
+      const caseName = firstTarget ? `${url}#${firstTarget}` : url;
+      testsCount += 1;
+      failuresCount += 1;
+      const body = buildFailureBody({
+        help: typeof f.help === 'string' ? f.help : '',
+        helpUrl: typeof f.helpUrl === 'string' ? f.helpUrl : '',
+        selector: firstTarget,
+        html: '',
+      });
+      cases.push(
+        `  <testcase classname="${escapeXmlAttr(ruleId)}" name="${escapeXmlAttr(caseName)}">\n` +
+          `    <failure type="incomplete"><![CDATA[${defuseCdata(body)}]]></failure>\n` +
+          `  </testcase>`,
+      );
+    }
+  }
+
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<testsuite name="WCAG-EM Audit" tests="${testsCount}" failures="${failuresCount}" time="0">\n` +

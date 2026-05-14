@@ -200,6 +200,34 @@ test('earl reporter: evaluator from wcagEm config appears in earl:assertedBy (D4
   assert.equal(assertor['foaf:mbox'], 'test@d4.example', 'evaluator contact stamped');
 });
 
+test('earl reporter: incompleteFindings emit earl:cantTell assertions', async (t) => {
+  const { doc } = await emitAndRead(t, {
+    tool: TOOL_IDENTITY,
+    findings: [],
+    incompleteFindings: [
+      {
+        id: 'aria-required-attr',
+        impact: 'critical',
+        help: 'Required ARIA attributes must be provided',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
+        classification: 'needs-review',
+        firstTarget: '[role="slider"]',
+        pages: ['https://example.com/a', 'https://example.com/b'],
+        pageCount: 2,
+      },
+    ],
+  });
+  const cantTell = doc['@graph'].filter(
+    (/** @type {any} */ a) => a['earl:result']['earl:outcome'] === 'earl:cantTell',
+  );
+  assert.equal(cantTell.length, 2, 'two pages → two cantTell Assertions');
+  for (const a of cantTell) {
+    assert.equal(a['earl:test'], 'aria-required-attr');
+    assert.equal(a['earl:result']['earl:pointer'], '[role="slider"]');
+    assert.ok(a['earl:result']['earl:info'].includes('critical'));
+  }
+});
+
 test('earl reporter: empty evaluator config omits foaf:name from assertedBy (D4)', async (t) => {
   const { doc } = await emitAndRead(
     t,

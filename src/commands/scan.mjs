@@ -58,13 +58,13 @@ export function buildScreenshotPath(screenshotsDir, url, viewport, format = 'png
 
 /**
  * Project an axe rule result array into a light summary shape for the
- * widened artefact contract. Keeps only the
- * fields `toWcagEmSummary` needs — id, tags, impact, nodesCount —
- * and drops the `nodes` bulk that would blow up `axe-results.json` on
- * large sites. Pure function.
+ * widened artefact contract. Keeps the fields `toWcagEmSummary` and
+ * the reporter pipeline need — id, tags, impact, nodesCount, help,
+ * helpUrl, firstTarget — and drops the `nodes` bulk that would blow
+ * up `axe-results.json` on large sites. Pure function.
  *
- * @param {Array<{ id?: string, tags?: string[], impact?: string|null, nodes?: any[] }>} rules
- * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>}
+ * @param {Array<{ id?: string, tags?: string[], impact?: string|null, help?: string, helpUrl?: string, nodes?: any[] }>} rules
+ * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null }>}
  */
 export function liftRuleSummaries(rules) {
   if (!Array.isArray(rules)) return [];
@@ -73,6 +73,10 @@ export function liftRuleSummaries(rules) {
     tags: Array.isArray(r.tags) ? [...r.tags] : [],
     impact: typeof r.impact === 'string' ? r.impact : null,
     nodesCount: Array.isArray(r.nodes) ? r.nodes.length : 0,
+    help: typeof r.help === 'string' ? r.help : '',
+    helpUrl: typeof r.helpUrl === 'string' ? r.helpUrl : '',
+    firstTarget:
+      Array.isArray(r.nodes) && r.nodes[0]?.target?.[0] ? String(r.nodes[0].target[0]) : null,
   }));
 }
 

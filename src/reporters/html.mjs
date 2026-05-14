@@ -100,6 +100,9 @@ const STATIC_CSS = `
  */
 export async function emit(summary, ctx) {
   const findings = sortFindings(Array.isArray(summary.findings) ? summary.findings : []);
+  const incompleteFindings = Array.isArray(summary.incompleteFindings)
+    ? summary.incompleteFindings
+    : [];
   const includePasses = Boolean(ctx?.config?.reporting?.includePasses);
   const screenshotsByUrl = await loadScreenshotMap(ctx);
 
@@ -114,6 +117,7 @@ export async function emit(summary, ctx) {
     renderRunSummary(summary) +
     renderCriteriaOutcomes(summary) +
     renderFindings(findings, ctx, screenshotsByUrl) +
+    renderIncompleteFindings(incompleteFindings) +
     (includePasses ? renderPasses(summary) : '') +
     `\n</body>\n</html>\n`;
 
@@ -227,6 +231,34 @@ function renderFindings(findings, ctx, screenshotsByUrl) {
       }
     }
     out += `</details>\n`;
+  }
+  return out;
+}
+
+/**
+ * @param {ReadonlyArray<Record<string, any>>} incompleteFindings
+ * @returns {string}
+ */
+function renderIncompleteFindings(incompleteFindings) {
+  if (incompleteFindings.length === 0) return '';
+  let out = `<h2>Incomplete results (needs review)</h2>\n`;
+  for (const f of incompleteFindings) {
+    const impactClass = `impact-${typeof f.impact === 'string' ? f.impact : 'null'}`;
+    out += `<details>\n`;
+    out += html`<summary><code>${f.id ?? ''}</code> · <span class="${impactClass}">${f.impact ?? 'n/a'}</span> · ${f.pageCount ?? 0} pages · <em>needs review</em></summary>\n`;
+    out += `<dl>\n`;
+    if (f.help) out += html`<dt>Help</dt><dd>${f.help}</dd>\n`;
+    if (f.helpUrl) {
+      const href = safeUrl(f.helpUrl);
+      out += `<dt>Rule URL</dt><dd>` + html`<a href="${href}">${f.helpUrl}</a></dd>\n`;
+    }
+    if (f.firstTarget) {
+      out += html`<dt>Example target</dt><dd><code>${f.firstTarget}</code></dd>\n`;
+    }
+    if (Array.isArray(f.pages) && f.pages.length) {
+      out += `<dt>Pages</dt><dd>${f.pages.map((/** @type {string} */ p) => html`${p}`).join(', ')}</dd>\n`;
+    }
+    out += `</dl>\n</details>\n`;
   }
   return out;
 }

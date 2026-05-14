@@ -256,6 +256,69 @@ export async function run(ctx) {
     }
   }
 
+  // SECTION: Incomplete grouping (needs-review items for reporters)
+  /** @type {Map<string, any>} */
+  const incompletesByRule = new Map();
+  for (const pageResult of axeResults) {
+    const pageUrl = normalizeUrl(pageResult.url);
+    for (const inc of pageResult.incompleteDetail ?? []) {
+      if (inc.nodesCount === 0) continue;
+      const key = inc.id;
+      if (!incompletesByRule.has(key)) {
+        const meta = withActAndWcagMetadata(inc, { actMap, reportingConfig: config.reporting });
+        incompletesByRule.set(key, {
+          id: inc.id,
+          impact: inc.impact ?? null,
+          help: inc.help ?? null,
+          helpUrl: inc.helpUrl ?? null,
+          tags: inc.tags ?? [],
+          classification: 'needs-review',
+          actRuleIds: meta.actRuleIds,
+          wcagCriteria: meta.wcagCriteria,
+          pages: new Set(),
+          firstTarget: inc.firstTarget ?? null,
+        });
+      }
+      incompletesByRule.get(key).pages.add(pageUrl);
+    }
+  }
+  for (const processResult of processResults) {
+    const processUrl = normalizeUrl(processResult.startUrl);
+    for (const state of processResult.states || []) {
+      for (const inc of state.incompleteDetail ?? []) {
+        if (inc.nodesCount === 0) continue;
+        const key = inc.id;
+        if (!incompletesByRule.has(key)) {
+          const meta = withActAndWcagMetadata(inc, { actMap, reportingConfig: config.reporting });
+          incompletesByRule.set(key, {
+            id: inc.id,
+            impact: inc.impact ?? null,
+            help: inc.help ?? null,
+            helpUrl: inc.helpUrl ?? null,
+            tags: inc.tags ?? [],
+            classification: 'needs-review',
+            actRuleIds: meta.actRuleIds,
+            wcagCriteria: meta.wcagCriteria,
+            pages: new Set(),
+            firstTarget: inc.firstTarget ?? null,
+          });
+        }
+        incompletesByRule.get(key).pages.add(processUrl);
+      }
+    }
+  }
+  const incompleteFindings = [...incompletesByRule.values()]
+    .map((item) => ({
+      ...item,
+      pages: [...item.pages].sort(),
+      pageCount: item.pages.size,
+    }))
+    .sort((a, b) => {
+      /** @type {Record<string, number>} */
+      const impactOrder = { critical: 4, serious: 3, moderate: 2, minor: 1, null: 0 };
+      return (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
+    });
+
   // SECTION: Sort + flatten for emit
   const groupedFindings = [...groupedByRule.values()]
     .map((item) => ({
@@ -319,6 +382,7 @@ export async function run(ctx) {
     groupedComponentCount: groupedComponents.length,
     comparison,
     findings: groupedFindings,
+    incompleteFindings,
     // Surface infra-failure incompletes in the top-level
     // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
     scanWarnings: wcagEmSummary.scanWarnings,
