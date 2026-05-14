@@ -79,6 +79,7 @@ const STATIC_CSS = `
      e2e axe-core self-check at test/e2e/reporters-html-axe.test.mjs.
      .tool-banner inherits the same #555 problem as .impact-minor — both
      are too dark on #121212 (2.5 : 1). */
+  .outcome-notTested { color: #767676; font-style: italic; }
   @media (prefers-color-scheme: dark) {
     .impact-critical { color: #ff5b5b; }
     .impact-serious  { color: #ff8c5b; }
@@ -86,6 +87,7 @@ const STATIC_CSS = `
     .impact-minor    { color: #c8c8c8; }
     .impact-null     { color: #888; }
     .tool-banner     { color: #aaa; }
+    .outcome-notTested { color: #888; }
   }
 `;
 
@@ -179,7 +181,8 @@ function renderCriteriaOutcomes(summary) {
   out += `<tr><th>Criterion</th><th>Outcome</th><th>Related rules</th></tr>\n`;
   out += `</thead>\n<tbody>\n`;
   for (const c of outcomes) {
-    out += html`<tr><td>${c.sc ?? ''}</td><td>${c.outcome ?? ''}</td><td>${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}</td></tr>\n`;
+    const outcomeClass = c.outcome === 'notTested' ? ' class="outcome-notTested"' : '';
+    out += `<tr><td>${html`${c.sc ?? ''}`}</td><td${outcomeClass}>${html`${c.outcome ?? ''}`}</td><td>${html`${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}`}</td></tr>\n`;
   }
   out += `</tbody>\n</table>\n`;
   return out;

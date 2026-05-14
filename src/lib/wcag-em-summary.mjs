@@ -148,7 +148,7 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
  * @typedef {object} CriterionOutcome
  * @property {string} sc - Success Criterion number, e.g. "1.4.3".
  * @property {string | null} level - Conformance level "A" / "AA" / "AAA" / null (if unknown).
- * @property {'passed' | 'failed' | 'cantTell' | 'inapplicable' | 'untested'} outcome - EARL outcome verdict.
+ * @property {'passed' | 'failed' | 'cantTell' | 'inapplicable' | 'untested' | 'notTested'} outcome - EARL outcome verdict.
  * @property {Array<{ pageUrl: string, ruleId: string, impact: string | null }>} examples - Up to 5 example offenders.
  * @property {number} pagesExamined - Number of unique page URLs that contributed to this verdict.
  * @property {string[]} relatedRules - Unique axe rule IDs that reference this SC in the run.
@@ -345,6 +345,24 @@ export function toWcagEmSummary(ctx, rawResults) {
       relatedRules: [...b.relatedRules].sort(),
     });
   }
+
+  const conformanceTarget = wcagEmConfig.conformanceTarget ?? 'AA';
+  /** @type {Record<string, string[]>} */
+  const LEVEL_INCLUDES = { A: ['A'], AA: ['A', 'AA'], AAA: ['A', 'AA', 'AAA'] };
+  const targetLevels = new Set(LEVEL_INCLUDES[conformanceTarget] ?? LEVEL_INCLUDES['AA']);
+  const coveredScs = new Set(buckets.keys());
+  for (const [sc, level] of Object.entries(SC_LEVEL_MAP)) {
+    if (coveredScs.has(sc) || !targetLevels.has(level)) continue;
+    criteriaOutcomes.push({
+      sc,
+      level,
+      outcome: /** @type {const} */ ('notTested'),
+      examples: [],
+      pagesExamined: 0,
+      relatedRules: [],
+    });
+  }
+  criteriaOutcomes.sort((a, b) => compareScs(a.sc, b.sc));
 
   return {
     criteriaOutcomes,
