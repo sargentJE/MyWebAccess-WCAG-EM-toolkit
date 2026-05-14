@@ -29,7 +29,6 @@ test('accepts a minimal valid config', async () => {
 });
 
 test('rejects missing rootUrl', async () => {
-  // eslint-disable-next-line no-unused-vars
   const { rootUrl: _rootUrl, ...broken } = validConfig;
   const result = await validateConfig(broken);
   assert.equal(result.valid, false);

@@ -54,11 +54,13 @@ function expandPattern(processDef) {
 
   if (processDef.pattern === 'partial-submit') {
     const fills = (processDef.fields || []).map(
-      /** @param {any} field */ (field) => ({
-        action: 'fill',
-        selector: field.selector,
-        value: field.value ?? '',
-      }),
+      /** @type {(field: any) => { action: string, selector: string, value: string }} */ (
+        (field) => ({
+          action: 'fill',
+          selector: field.selector,
+          value: field.value ?? '',
+        })
+      ),
     );
     return [
       { action: 'goto', url: processDef.startUrl },

@@ -238,7 +238,7 @@ export async function run(ctx) {
 
   // ANCHOR: ClusterGrouping — Object.groupBy requires Node 21+ (pinned 22.11+)
   const pageClusters = Object.values(
-    Object.groupBy(inventory, /** @param {any} item */ (item) => item.clusterKey),
+    Object.groupBy(inventory, /** @type {(item: any) => string} */ ((item) => item.clusterKey)),
   )
     .filter(
       /** @type {(g: any) => g is any[]} */ ((group) => Array.isArray(group) && group.length > 0),

@@ -68,6 +68,7 @@ program
  *
  * @param {import('commander').Command} cmd
  * @param {{ requirePlaywright?: boolean }} [subOpts]
+ * @returns {Promise<import('../src/lib/context.mjs').RunContext>}
  */
 async function buildCtxFromProgram(cmd, subOpts = {}) {
   const opts = cmd.optsWithGlobals();
@@ -85,6 +86,7 @@ async function buildCtxFromProgram(cmd, subOpts = {}) {
  * raw stack trace.
  *
  * @param {(cmd: import('commander').Command) => Promise<void | number>} fn
+ * @returns {(...args: any[]) => Promise<void>}
  */
 function asHandler(fn) {
   return async function handler(/** @type {unknown} */ _arg, /** @type {any} */ cmd) {

@@ -184,6 +184,7 @@ export async function run(ctx) {
    * @param {import('playwright').Page} page
    * @param {string} url
    * @param {{ id: string, width: number, height: number }} viewport
+   * @returns {Promise<any>}
    */
   async function runForPage(page, url, viewport) {
     await page.goto(url, {

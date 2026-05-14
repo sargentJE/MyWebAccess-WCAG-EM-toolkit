@@ -107,6 +107,7 @@ export function getLogger(options) {
 
 /**
  * For tests: reset the cached singleton.
+ *
  * @returns {void}
  */
 export function _resetLoggerForTests() {
