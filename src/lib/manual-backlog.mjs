@@ -4,9 +4,8 @@
  * @module lib/manual-backlog
  *
  * @description
- * Layer 1 shipped a static markdown template for `output/reports/manual-backlog.md`.
- * Layer 3b replaces it with a pure function that adapts items to what was
- * actually found:
+ * Generates a findings-aware markdown backlog for `output/reports/manual-backlog.md`.
+ * A pure function that adapts items to what was actually found:
  *
  *   - Drops inapplicable reminders (e.g. color-contrast line when no such
  *     violations were found — the automated pass covered it).
@@ -35,7 +34,7 @@
  * Generate the manual-testing backlog markdown, adapted to the findings
  * present in this run.
  *
- * Pure function; no I/O. Callers (summarize.mjs R12) write the result via
+ * Pure function; no I/O. Callers (summarize.mjs) write the result via
  * `writeText(path, buildManualBacklog(...))`.
  *
  * @param {BuildManualBacklogArgs} args

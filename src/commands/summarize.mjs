@@ -8,9 +8,8 @@
  * violations by rule-id and by (rule-id × component-hint), computes the
  * random-vs-structured comparison flags, and writes the full report set.
  *
- * Layer 3b adds per-SC inversion (WCAG-EM Step 5 shape) + findings-aware
- * manual backlog + tool-identity stamp.
- * Layer 4 replaces the inline Markdown emission with pluggable reporters.
+ * Includes per-SC inversion (WCAG-EM Step 5 shape), findings-aware
+ * manual backlog, tool-identity stamp, and pluggable reporter emission.
  *
  * @see docs/adr/0007-wcag-em-summary-shape.md
  * @see docs/adr/0008-pluggable-reporters.md
@@ -84,11 +83,11 @@ export async function run(ctx) {
   await ensurePreflight(ctx);
   const { config, logger, paths } = ctx;
 
-  // ANCHOR: MarkdownReportDeprecated — Layer 4 R2. DEFAULTS no longer injects
+  // ANCHOR: MarkdownReportDeprecated — DEFAULTS no longer inject
   // `reporting.markdownReport`, so the only way this field is truthy post-
   // merge is if the user explicitly set it in their config. Fire once per
   // run; the field is silently ignored either way (it never gated anything
-  // at runtime — see Layer 4 plan adversarial finding #1 + Layer 4 R2 body).
+  // at runtime).
   if (config.reporting?.markdownReport !== undefined) {
     warnLegacyAliasResolved(logger, {
       oldField: 'reporting.markdownReport',
@@ -114,7 +113,7 @@ export async function run(ctx) {
   ]);
 
   // ANCHOR: ActMapFallback — announce degraded enrichment once if map is empty.
-  // R12 wires R2's withActAndWcagMetadata at every classifyRule call site; if
+  // withActAndWcagMetadata is called at every classifyRule call site; if
   // the map is missing/empty, findings carry `actRuleIds: []`. Debug-only —
   // not an error, since the scan is still useful without ACT enrichment.
   const actMapKeys = Object.keys(actMap);
@@ -300,10 +299,10 @@ export async function run(ctx) {
       newRuleIdsOnlyInRandom.length > 0 || newClustersOnlyInRandom.length > 0,
   };
 
-  // ANCHOR: WcagEmSummary — Layer 3b R12 per-SC inversion.
-  // toWcagEmSummary ingests the widened axe artefact (passesDetail etc from R6)
+  // ANCHOR: WcagEmSummary — per-SC inversion.
+  // toWcagEmSummary ingests the widened axe artefact (passesDetail etc.)
   // and emits EARL-aligned criteriaOutcomes. scanWarnings surfaces infra
-  // failures (F8) that did not elevate to SC verdicts.
+  // failures that did not elevate to SC verdicts.
   const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults });
 
   const summary = {
@@ -318,14 +317,14 @@ export async function run(ctx) {
     groupedComponentCount: groupedComponents.length,
     comparison,
     findings: groupedFindings,
-    // Layer 3b R12: surface infra-failure incompletes in the top-level
+    // Surface infra-failure incompletes in the top-level
     // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
     scanWarnings: wcagEmSummary.scanWarnings,
     wcagEmSummary,
   };
 
   // SECTION: Persist artefacts
-  // Layer 4 R3-R4: report emission delegated to the registry. The four
+  // Report emission delegated to the reporter registry. The four
   // `writeJson` calls + `manual-backlog.md` writeText below stay inline —
   // they are analytical side-artefacts that always write regardless of
   // `reporting.reporters` config (per ADR-0008's reporter-vs-side-artefact
@@ -346,15 +345,14 @@ export async function run(ctx) {
     tool: TOOL_IDENTITY,
     ...comparison,
   });
-  // Layer 3b R12 — new WCAG-EM Step 5 artefact. Stamped with tool-identity
-  // as the first property.
+  // WCAG-EM Step 5 artefact. Stamped with tool-identity as the first property.
   await writeJson(path.join(paths.reportsDir, 'wcag-em-summary.json'), {
     tool: TOOL_IDENTITY,
     ...wcagEmSummary,
   });
 
-  // ANCHOR: ManualBacklog — findings-aware (R9). Replaces the Layer 1 static
-  // template. Prepend the markdown tool-identity header per R13 spec.
+  // ANCHOR: ManualBacklog — findings-aware. Replaces the original static
+  // template. Prepend the markdown tool-identity header.
   await writeText(
     path.join(paths.reportsDir, 'manual-backlog.md'),
     toolIdentityMarkdownHeader() +
@@ -365,7 +363,7 @@ export async function run(ctx) {
       }),
   );
 
-  // ANCHOR: MarkdownReport — Layer 4 R4 absorbed the inline string-assembly
+  // ANCHOR: MarkdownReport — the reporter pipeline absorbed the inline string-assembly
   // block into `src/reporters/markdown.mjs`; the `runReporters` call above
   // now writes `summary.md` via the registry when 'markdown' is in the
   // resolved reporter list (default ['json','markdown']).

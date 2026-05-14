@@ -78,7 +78,7 @@ export async function emit(summary, ctx) {
     const pointer = Array.isArray(f.targets) && f.targets.length ? String(f.targets[0]) : '';
     // Treat axe `failed` (the only impact-bearing finding state in
     // summary.findings[]) as the outcome unless the finding row carries
-    // a different state. For the current Layer 3b shape, every grouped
+    // a different state. For the current shape, every grouped
     // finding represents a violation -> earl:failed.
     const outcomeKey = typeof f.outcome === 'string' ? f.outcome : 'failed';
     for (const url of pages) {

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the JUnit XML reporter — Layer 4 R7.
+ * @file Tests for the JUnit XML reporter.
  * @module test/unit/reporters-junit
  */
 
@@ -273,6 +273,6 @@ test('junit reporter: XML 1.0-illegal control bytes are stripped from CDATA payl
 
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
-  assert.ok(names.includes('junit'), 'junit registered after R7');
+  assert.ok(names.includes('junit'), 'junit registered in the registry');
   assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown']);
 });

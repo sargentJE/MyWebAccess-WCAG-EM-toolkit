@@ -12,7 +12,7 @@ engine pin, a structured logger, or a canonical commenting style. Promoting it t
 as a best-in-class WCAG-EM-aligned automated accessibility testing toolkit requires a
 single, codified convention document so every subsequent PR respects the same bar.
 
-This ADR is the **"higher standard of edits"** reference: every commit in every layer
+This ADR is the **"higher standard of edits"** reference: every commit in every phase
 of the promotion plan must conform to it, and every future change to the project
 should cite it.
 
@@ -202,5 +202,5 @@ function and reduces regression risk.
 
 - [ADR-0000](./0000-record-architecture-decisions.md) — why we use ADRs.
 - The v0.3 → v1.0 promotion roadmap is tracked in a working plan outside this
-  repository; progress is recorded in `CHANGELOG.md` and in each layer's
+  repository; progress is recorded in `CHANGELOG.md` and in each phase's
   commit trail.

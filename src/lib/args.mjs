@@ -1,16 +1,12 @@
 // @ts-check
 /**
- * @file Minimal CLI argument parser — superseded by Commander in Layer 1.
+ * @file Fallback argument parser for programmatic `loadConfig()` callers.
  * @module lib/args
  *
  * @description
- * Legacy arg parser retained through Layer 0 for backward compatibility. The
- * Commander CLI introduced in Layer 1 replaces this module; the file is then
- * deleted (plan: Layer 1 step 11).
- *
- * NOTE: keep behaviour identical to the v0.3 implementation — Layer 0 must not
- * change any user-visible behaviour. Lint/type warnings are acceptable here
- * because the file is slated for removal.
+ * This module persists as a fallback argument parser for programmatic
+ * `loadConfig()` callers; the Commander CLI in `bin/wcag-em.mjs` is the
+ * primary entry point.
  *
  * @see docs/adr/0003-commander-cli.md
  */

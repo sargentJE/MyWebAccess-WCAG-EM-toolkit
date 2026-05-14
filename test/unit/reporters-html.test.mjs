@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the HTML reporter — Layer 4 R5.
+ * @file Tests for the HTML reporter.
  * @module test/unit/reporters-html
  *
  * @description
@@ -94,7 +94,7 @@ test('html reporter: empty findings still produces a "No findings." line', async
 
 test('html reporter: registry now lists html', () => {
   const names = listReporters();
-  assert.ok(names.includes('html'), 'html registered after R5');
+  assert.ok(names.includes('html'), 'html registered in the registry');
   assert.ok(names.includes('json'));
   assert.ok(names.includes('markdown'));
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');

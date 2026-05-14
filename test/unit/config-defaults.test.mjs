@@ -1,21 +1,21 @@
 // @ts-check
 /**
- * @file Tests for Layer 3a DEFAULTS and the F3 regression canary.
+ * @file Tests for multi-viewport DEFAULTS and the F3 regression canary.
  * @module test/unit/config-defaults
  *
  * @description
- * Locks the shape of `DEFAULTS` after the Layer 3a overhaul:
+ * Locks the shape of `DEFAULTS` after the multi-viewport overhaul:
  *   - legacy `scan.viewport` key REMOVED (so `resolveViewports` can fall
  *     through to `DEFAULT_VIEWPORTS`),
  *   - `scan.viewports: []` sentinel present,
  *   - `scan.waitUntil: 'domcontentloaded'`,
  *   - default tag profile in `scan.axe.withTags`,
- *   - `crawl.requestDelayMs: 0` (R7 wires it into discover),
- *   - `reporting.failOnFindings` threshold defaults (R8 wires the exit code).
+ *   - `crawl.requestDelayMs: 0` (wired into discover),
+ *   - `reporting.failOnFindings` threshold defaults (wired into the exit code).
  *
  * The F3 regression canary (last test) proves DEFAULT_VIEWPORTS is reachable
  * when a config supplies no viewport or viewports — the exact failure mode
- * the pressure-test caught before R6 landed.
+ * the pressure-test caught before the multi-viewport overhaul landed.
  */
 
 // SECTION: Imports
@@ -81,7 +81,7 @@ test('DEFAULTS ship scan.waitUntil = domcontentloaded for SPA-friendliness', asy
   assert.equal(config.scan.waitUntil, 'domcontentloaded');
 });
 
-test('DEFAULTS ship the Layer 3a axe tag profile', async (t) => {
+test('DEFAULTS ship the default axe tag profile', async (t) => {
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
   t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
   const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
@@ -113,9 +113,9 @@ test('DEFAULTS ship reporting.failOnFindings with impacts=critical,serious and t
 // SECTION: F3 regression canary
 
 test('resolveViewports on a viewport-less DEFAULTS-merged config returns DEFAULT_VIEWPORTS', async (t) => {
-  // Before R6 this branch was unreachable — DEFAULTS shipped a legacy
-  // `scan.viewport` singleton, so the legacy-wrap path always won.
-  // This test would have failed on HEAD pre-R6 and must never regress.
+  // Before the multi-viewport overhaul this branch was unreachable —
+  // DEFAULTS shipped a legacy `scan.viewport` singleton, so the
+  // legacy-wrap path always won. This test must never regress.
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
   t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
   const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
@@ -133,7 +133,7 @@ test('migrated configs/example-site.json supplies explicit viewports and passes 
   assert.equal(result[1].id, 'reflow');
 });
 
-// SECTION: Layer 3b DEFAULTS
+// SECTION: WCAG-EM / pre-scan DEFAULTS
 
 test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technologiesReliedUpon', async (t) => {
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
@@ -147,9 +147,9 @@ test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technolog
   assert.deepEqual(config.wcagEm.evaluator, { name: '', contact: '' });
 });
 
-test('DEFAULTS do NOT ship reporting.markdownReport (Layer 4 R2 dropped the dead field)', async (t) => {
-  // Before Layer 4, DEFAULTS shipped `markdownReport: true` even though no
-  // runtime consumer read it. Layer 4 dropped it so the post-merge detection
+test('DEFAULTS do NOT ship reporting.markdownReport (dropped dead field)', async (t) => {
+  // Before the reporter pipeline, DEFAULTS shipped `markdownReport: true` even
+  // though no runtime consumer read it. The reporter pipeline dropped it so the post-merge detection
   // in summarize.mjs can cleanly distinguish "user explicitly set it" from
   // "DEFAULTS injected it" — the former triggers the deprecation warn, the
   // latter stays silent.
@@ -176,7 +176,7 @@ test('DEFAULTS do NOT ship config.auth (no-auth means absent field)', async (t) 
 });
 
 test('configs/example-site-with-auth.json validates against the schema', async () => {
-  // Sidecar config file introduced in R11 as the F4-fix alternative to
+  // Sidecar config file introduced as the F4-fix alternative to
   // the rejected top-level `_note` approach. It must ship as a
   // schema-valid config demonstrating auth usage.
   const { validateConfig } = await import('../../src/lib/validate-config.mjs');

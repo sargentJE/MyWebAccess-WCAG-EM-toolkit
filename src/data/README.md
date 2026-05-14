@@ -11,13 +11,12 @@ Maps axe-core rule IDs to W3C ACT Rules Community Group rule IDs.
 - **Shape:** `{ axeRuleId: string[] of ACT rule IDs }`, plus a top-level
   `_meta` object recording the axe-core version used to generate the seed
   and a `coverage` field (`"partial"` / `"full"`).
-- **Pinned axe-core version:** `4.11.2` (as of Layer 3b's R1 seed,
-  2026-04-19).
+- **Pinned axe-core version:** `4.11.2` (initial seed, 2026-04-19).
 - **Source:** the ACT Rules CG implementation report at
   <https://act-rules.github.io/implementation/axe-core/>.
 - **Coverage:** `partial`. The seed covers the 30 ACT rules the
   implementation report listed as implemented by axe-core at seed time.
-  Expanding to full coverage is tracked as a Layer 3b follow-up in
+  Expanding to full coverage is tracked as a follow-up in
   `CHANGELOG.md [Unreleased]`.
 
 ### Why this file exists

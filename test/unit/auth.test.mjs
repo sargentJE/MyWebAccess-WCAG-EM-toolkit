@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `applyAuth` + `warnSchemaAcceptedRuntimeIgnored` — Layer 3b's
+ * @file Tests for `applyAuth` + `warnSchemaAcceptedRuntimeIgnored` —
  *   authenticated-scan context builder.
  * @module test/unit/auth
  */
@@ -185,7 +185,7 @@ test('warnSchemaAcceptedRuntimeIgnored: emits a uniform message format', () => {
   });
   warnSchemaAcceptedRuntimeIgnored(/** @type {any} */ (logger), {
     feature: 'reporting.reporters',
-    deferralLayer: 'Layer 4',
+    deferralLayer: 'the reporter pipeline',
   });
   assert.equal(logger.calls.length, 2);
   assert.match(logger.calls[0].msg ?? '', /auth\.setupScript.*schema-accepted but runtime-ignored/);
@@ -198,7 +198,7 @@ test('warnSchemaAcceptedRuntimeIgnored: emits a uniform message format', () => {
   assert.equal(logger.calls[1].obj.feature, 'reporting.reporters');
 });
 
-// SECTION: warnLegacyAliasResolved helper (Layer 4 R2)
+// SECTION: warnLegacyAliasResolved helper
 
 test('warnLegacyAliasResolved: emits oldField → newField pointer with deprecation phrasing', () => {
   const logger = mockLogger();

@@ -4,13 +4,13 @@
 - Date: 2026-04-19
 - Deciders: Jamie Sargent
 - Consulted: ADR-0001 (project conventions; symbol-first citation rule),
-  ADR-0005 (fail fast on config; shares the `defineHidden` mechanism R2
-  and R7 build on), ADR-0006 (multi-viewport axe runs; the scan loop R6
-  widens artefacts for)
+  ADR-0005 (fail fast on config; shares the `defineHidden` mechanism),
+  ADR-0006 (multi-viewport axe runs; the scan loop widens artefacts
+  for this)
 
 ## Context and Problem Statement
 
-Up to Layer 3a this toolkit produced rule-grouped output: findings
+Up to v0.3 this toolkit produced rule-grouped output: findings
 keyed by axe rule id (`image-alt`, `color-contrast`, …) with per-rule
 tallies. That is useful for axe-familiar engineers but not
 well-matched to the WCAG-EM Step 5 workflow, which demands per-**SC**
@@ -22,10 +22,10 @@ not cover it (`untested`). This matches the EARL `earl:outcome` enum
 used as machine-readable verdicts by peer tools (Alfa, Accessibility
 Insights, the W3C WAI-ACT report templates, VPAT/ACR).
 
-Layer 3b R10 ships `toWcagEmSummary` which inverts axe's rule-grouped
+The WCAG-EM summary step ships `toWcagEmSummary` which inverts axe's rule-grouped
 output into criterion-grouped EARL-aligned verdicts. This ADR records
 the decision tree, the scope boundary (what we do and don't count),
-and the F8 refinement that separates reviewable incompletes from
+and the refinement that separates reviewable incompletes from
 infrastructure failures.
 
 ## Decision
@@ -36,8 +36,8 @@ an exhaustive WCAG 2.2 enumeration.
 
 ### 1. Outcome decision tree
 
-For each SC bucket (populated by the R2 `withActAndWcagMetadata` tag
-parse across the R6-widened rule arrays), determine the outcome by
+For each SC bucket (populated by `withActAndWcagMetadata` tag
+parse across the widened rule arrays), determine the outcome by
 checking in order:
 
 | #   | Check                                                              | Verdict        |
@@ -73,7 +73,7 @@ to a `passed` verdict for any SC it happens to share a tag with.
 Otherwise the verdict is misleading — a site could "pass" SC 1.3.1
 purely because its best-practice landmark checks ran.
 
-This is implemented at R10 by tracking a separate
+This is implemented by tracking a separate
 `anyNonBestPracticePass` flag per SC bucket.
 
 ### 4. SC scope — only emit SCs the run touched
@@ -139,9 +139,9 @@ rule pass on large sites.
 - **Honest `untested` scope** — the output does not pretend to have
   covered SCs the configured tag profile excluded. Readers see the
   actual coverage.
-- **Per-SC verdicts depend on R6's widened artefact** — if a future
+- **Per-SC verdicts depend on the widened artefact** — if a future
   refactor narrows `passesDetail`/`incompleteDetail`/`inapplicableDetail`
-  back to counts, R10's verdicts degrade to `failed` + `untested`
+  back to counts, the WCAG-EM verdicts degrade to `failed` + `untested`
   only. The artefact contract is therefore load-bearing for Step 5.
 - **`cantTell` vs `scanWarnings` boundary is documented** — future
   maintainers diagnosing "why did 1.4.3 flip between `cantTell` and
@@ -156,18 +156,18 @@ rule pass on large sites.
 
 - [ADR-0001 — Project conventions](./0001-project-conventions.md)
 - [ADR-0005 — Fail fast on config](./0005-fail-fast-on-config.md) —
-  shares `defineHidden` via R2 + R7.
+  shares `defineHidden`.
 - [ADR-0006 — Multi-viewport axe runs](./0006-multi-viewport-axe-runs.md) —
-  the scan loop whose artefact R6 widens feeds this inversion.
+  the scan loop whose widened artefact feeds this inversion.
 - [ADR-0012 — Extensibility is internal for v1.0](./0012-extensibility-is-internal.md) —
   rationale for marking `guessPageType`/`guessProcessTypes`/
   `selectorComponentHint`/`clusterKeyFor` `@internal`.
 - `src/lib/wcag-em-summary.mjs` — `toWcagEmSummary` implementation.
 - `src/lib/axe-utils.mjs` — `withActAndWcagMetadata` (the SC-tag parser
   the bucket pass leans on).
-- `src/commands/summarize.mjs` — R12 wiring; the summarize run emits
+- `src/commands/summarize.mjs` — the summarize run emits
   `output/reports/wcag-em-summary.json` from this helper.
 - `test/unit/wcag-em-summary.test.mjs` — decision-tree coverage +
-  F8 scan-warnings routing.
+  scan-warnings routing.
 - W3C WCAG-EM 1.0 — <https://www.w3.org/TR/WCAG-EM/>.
 - EARL 1.0 outcome vocabulary — <https://www.w3.org/TR/EARL10-Schema/#outcome>.

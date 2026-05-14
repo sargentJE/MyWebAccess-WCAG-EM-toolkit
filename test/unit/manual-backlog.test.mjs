@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `buildManualBacklog` — Layer 3b R9's findings-aware backlog.
+ * @file Tests for `buildManualBacklog` — findings-aware manual backlog.
  * @module test/unit/manual-backlog
  */
 

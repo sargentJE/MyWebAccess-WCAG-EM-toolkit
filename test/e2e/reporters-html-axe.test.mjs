@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Self-axe regression guard for the HTML reporter — Layer 4 v2 audit.
+ * @file Self-axe regression guard for the HTML reporter — v2 audit.
  * @module test/e2e/reporters-html-axe
  *
  * @description

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `computeExitCode` — Layer 3a's threshold-based exit code.
+ * @file Tests for `computeExitCode` — threshold-based exit code.
  * @module test/unit/summarize-exit-code
  *
  * @description

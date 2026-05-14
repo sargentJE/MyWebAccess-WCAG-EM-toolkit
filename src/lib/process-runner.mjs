@@ -10,12 +10,12 @@
  * with no per-step safety net — a hanging `click` or `waitFor` would stall
  * the whole process indefinitely.
  *
- * Layer 2 pulls the dispatch into this module, wraps every step in a
+ * This module pulls the dispatch into a dedicated file, wraps every step in a
  * `Promise.race` against `config.scan.timeoutMs`, and surfaces a timeout
  * as `{ state: 'step-timeout', ... }` in the returned state array so the
  * process continues to its next step rather than aborting. The screenshot
  * step also finally honours `config.scan.fullPageScreenshots` (the v0.3
- * FIXME hard-coded `fullPage: true`).
+ * previously hard-coded `fullPage: true`).
  *
  * @see docs/adr/0005-fail-fast-on-config.md
  */
@@ -262,10 +262,10 @@ async function runAxe(page) {
 
 /**
  * Project an axe rule result array into a light summary shape for the
- * widened artefact contract (Layer 3b R6). Mirrors the helper in
- * `src/commands/scan.mjs` — duplicated here rather than imported to avoid
- * a cross-command coupling. Both helpers share the same contract
- * documented in the R6 commit body.
+ * widened artefact contract (the scan-artefact widening step). Mirrors the
+ * helper in `src/commands/scan.mjs` — duplicated here rather than imported
+ * to avoid a cross-command coupling. Both helpers share the same contract
+ * documented in the widening commit.
  *
  * @param {Array<{ id?: string, tags?: string[], impact?: string|null, nodes?: any[] }>} rules
  * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>}

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file End-to-end smoke for the reporter pipeline — Layer 4 R9.
+ * @file End-to-end smoke for the reporter pipeline.
  * @module test/e2e/reporters-smoke
  *
  * @description

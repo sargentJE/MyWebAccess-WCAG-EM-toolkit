@@ -6,11 +6,11 @@
  * @description
  * Reads this package's `name` + `version` from its own `package.json` and
  * axe-core's `version` from `@axe-core/playwright/package.json`. Consumed
- * by Layer 3b R13's artefact stamping — every emitted JSON/markdown file
+ * by artefact stamping — every emitted JSON/markdown file
  * carries a `tool: { name, version, axeCore }` header so downstream
  * consumers (CI dashboards, compliance audits) can trace provenance.
  *
- * Reading at import time means Layer 5's `npm version 1.0.0` bump flows
+ * Reading at import time means the `npm version` bump flows
  * through mechanically — no hardcoded constants to update.
  *
  * The `@axe-core/playwright` package's `exports` map does NOT publish

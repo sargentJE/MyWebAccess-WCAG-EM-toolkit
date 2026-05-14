@@ -1,18 +1,18 @@
 // @ts-check
 /**
- * @file Descriptor-contract tests for `compileActionUrlPatterns` — Layer 3b R7.
+ * @file Descriptor-contract tests for `compileActionUrlPatterns` — pre-scan actions.
  * @module test/unit/context-compile-actions
  *
  * @description
- * Mirrors `context-compile-regex.test.mjs` (Layer 2) and
- * `context-overrides-compiled.test.mjs` (Layer 3a) for the three action-level
+ * Mirrors `context-compile-regex.test.mjs` (config validation overhaul) and
+ * `context-overrides-compiled.test.mjs` (compile-at-load) for the three action-level
  * consumer sites: `scan.beforeScan.actions[]`,
  * `scan.axe.overrides[].actions[]`, and `processes[].steps[]`.
  *
  * Five invariants:
  *   1. `regex` attached non-enumerably at every consumer site.
  *   2. `regex` is a real RegExp that matches the pattern.
- *   3. hasOwnProperty-preserved on action objects (Layer 3a parity).
+ *   3. hasOwnProperty-preserved on action objects (compile-at-load parity).
  *   4. `JSON.stringify(config)` does NOT leak `regex`.
  *   5. F9: actions without `urlPattern` are untouched; overrides without
  *      `actions` key get no phantom `actions: []`.

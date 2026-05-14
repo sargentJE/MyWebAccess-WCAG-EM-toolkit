@@ -14,8 +14,8 @@
  *   ```
  *
  * STABILITY: the programmatic API is exposed but not stability-guaranteed
- * until v2.0 (ADR-0013, forthcoming). The CLI at `bin/wcag-em.mjs` is the
- * blessed surface for end-users.
+ * until v2.0 (ADR-0012). The CLI at `bin/wcag-em.mjs` is the blessed
+ * surface for end-users.
  */
 
 // SECTION: Re-exports

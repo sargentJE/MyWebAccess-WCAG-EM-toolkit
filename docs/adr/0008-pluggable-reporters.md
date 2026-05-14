@@ -11,15 +11,15 @@
 
 ## Context and Problem Statement
 
-Since Layer 2, `schemas/config.schema.json` (`reporting.reporters`,
+Since the config validation overhaul, `schemas/config.schema.json` (`reporting.reporters`,
 `reporting.includePasses`, `reporting.screenshotFormat`,
 `reporting.screenshotQuality`) has promised a five-format reporter
 selection (`json | markdown | html | earl-jsonld | junit`) but the
 runtime in `src/commands/summarize.mjs` hard-coded inline emission of
 `summary.json` + `summary.md` and emitted a one-shot
 `warnSchemaAcceptedRuntimeIgnored` for `reporters`. The `// ANCHOR:
-MarkdownReport — replaced by pluggable reporter in Layer 4` marker at
-`summarize.mjs` was the seam; Layer 4 closes it.
+MarkdownReport — replaced by pluggable reporter` marker at
+`summarize.mjs` was the seam; the reporter pipeline closes it.
 
 Several open design questions had to be settled in one place rather
 than rediscovered each time a future reporter is added:
@@ -52,7 +52,7 @@ unreachable.
 
 `package.json:exports` drops the `./reporters/*` entry that was
 scaffolded earlier. The remaining `./commands/*` and `./lib/*`
-exports stay (they pre-date Layer 4 and the cost of removing them
+exports stay (they pre-date the reporter pipeline and the cost of removing them
 is bigger than the surface they leak). Future ADRs may revisit those
 under the same ADR-0012 lens.
 
@@ -223,7 +223,7 @@ listed above for HTML escaping is overlapping but not identical.
 - Schema-runtime gap closed: `reporting.reporters` finally honoured.
 - Zero new runtime dependencies. Total surface added: ~1500 LOC of
   reporter modules + ~600 LOC of unit tests, all hand-rolled.
-- Three CHANGELOG carry-forwards triaged by R9: 1 closed
+- Three CHANGELOG carry-forwards triaged during the reporter pipeline: 1 closed
   (authenticated-scan), 2 deferred behind a documented Crawlee
   localhost-fixture hang — both since resolved by D2 / commit `468f5c1`
   and un-skipped (see `docs/adr/0013-crawlee-localhost-investigation.md`).
@@ -237,7 +237,7 @@ listed above for HTML escaping is overlapping but not identical.
   custom format must (a) raise an issue, or (b) fork. The v2.0
   story revisits this under ADR-0012's deferral.
 - `markdownReport: true` from v0.3 configs is now a deprecation
-  warning, not an error. Documented in R2's commit body.
+  warning, not an error. Documented in the relevant commit body.
 - Adding `<a href>` anchor tags requires three calls (`safeUrl` to
   validate scheme, `attr()` via the `html\`\`` tag to escape the
   result). The verbosity is intentional — the tagged-template hides

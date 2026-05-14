@@ -19,7 +19,7 @@
  * against the identity of the input array (`sortFindings(findings) !==
  * findings` always).
  *
- * @see docs/adr/0008-pluggable-reporters.md (Layer 4 sort contract)
+ * @see docs/adr/0008-pluggable-reporters.md (sort contract)
  */
 
 /**

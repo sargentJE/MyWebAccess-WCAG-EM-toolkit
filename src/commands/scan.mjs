@@ -8,8 +8,8 @@
  * and scans each URL with the AxeBuilder chain configured in `config.scan.axe`.
  * Supports retries (default 1) and per-page full-page screenshots.
  *
- * Layer 3a adds multi-viewport support (`config.scan.viewports`) and per-URL
- * axe overrides (`config.scan.axe.overrides[]`). Layer 3b integrates
+ * Adds multi-viewport support (`config.scan.viewports`) and per-URL
+ * axe overrides (`config.scan.axe.overrides[]`). Integrates
  * `applyAuth()` for storageState + httpCredentials.
  *
  * @see docs/adr/0006-multi-viewport-axe-runs.md
@@ -41,8 +41,8 @@ import { buildContext, ensurePreflight } from '../lib/context.mjs';
  * viewports. ADR-0006 documents the low-likelihood collision risk when a
  * URL path itself contains the substring `__<vp.id>`.
  *
- * Layer 4 R8 adds the optional `format` parameter so the file extension
- * matches `config.reporting.screenshotFormat`. Default `'png'` preserves
+ * The optional `format` parameter allows the file extension to
+ * match `config.reporting.screenshotFormat`. Default `'png'` preserves
  * call-site compatibility for callers that don't care about format.
  *
  * @param {string} screenshotsDir
@@ -58,8 +58,8 @@ export function buildScreenshotPath(screenshotsDir, url, viewport, format = 'png
 
 /**
  * Project an axe rule result array into a light summary shape for the
- * widened artefact contract introduced in Layer 3b R6. Keeps only the
- * fields `toWcagEmSummary` (R10) needs — id, tags, impact, nodesCount —
+ * widened artefact contract. Keeps only the
+ * fields `toWcagEmSummary` needs — id, tags, impact, nodesCount —
  * and drops the `nodes` bulk that would blow up `axe-results.json` on
  * large sites. Pure function.
  *
@@ -157,11 +157,10 @@ export async function run(ctx) {
   const { config, logger, paths } = ctx;
   const sampleUrls = JSON.parse(await fs.readFile(paths.sampleJsonPath, 'utf8'));
 
-  // ANCHOR: PreScanActionsReady — Layer 3b R8 replaces the Layer 3a
-  // OverrideActionsWarn block. beforeScan.actions[] and override.actions[]
-  // are now executed per-URL (URL-matching via compiled action.regex from R7).
+  // ANCHOR: PreScanActionsReady — beforeScan.actions[] and override.actions[]
+  // are executed per-URL (URL-matching via compiled action.regex).
   // The companion `reporting.reporters` warn in summarize.mjs was retired
-  // when Layer 4 shipped the runReporters runtime; only `auth.setupScript`
+  // when the reporter pipeline shipped; only `auth.setupScript`
   // still uses warnSchemaAcceptedRuntimeIgnored today.
 
   const viewports = resolveViewports(config, logger);
@@ -177,7 +176,7 @@ export async function run(ctx) {
   /** @type {any[]} */
   const allResults = [];
   let pagesFailed = 0;
-  // Layer 4 R8: one-shot warn flag — fires the first time a (png + quality)
+  // One-shot warn flag — fires the first time a (png + quality)
   // mismatch is observed, then stays quiet for the rest of the scan.
   let pngQualityWarnFired = false;
 
@@ -192,7 +191,7 @@ export async function run(ctx) {
       timeout: config.scan.timeoutMs,
     });
 
-    // Layer 4 R8: honour reporting.screenshotFormat + screenshotQuality.
+    // Honour reporting.screenshotFormat + screenshotQuality.
     // Playwright's page.screenshot rejects `quality` when type is png, so
     // we conditionally include it. The schema permits both fields
     // independently, so we also warn (once per process) when a user sets
@@ -262,7 +261,7 @@ export async function run(ctx) {
       builder = builder.withTags(axeConfig.withTags);
     if (isValidRunOnly(axeConfig.runOnly)) {
       // NOTE: schema enforces the { type, values } shape; this runtime guard
-      // protects against stale configs produced before Layer 1 AND against
+      // protects against stale configs produced before the CLI migration AND against
       // an override whose runOnly is malformed.
       // LINK: src/lib/axe-utils.mjs → isValidRunOnly
       builder = builder.options({ runOnly: axeConfig.runOnly });
@@ -277,13 +276,13 @@ export async function run(ctx) {
       passes: axeResults.passes.length,
       incomplete: axeResults.incomplete.length,
       inapplicable: axeResults.inapplicable.length,
-      // Detail arrays (Layer 3b R6): light shape for Layer 3b R10's per-SC
+      // Detail arrays: light shape for the per-SC WCAG-EM
       // inversion. Omits `nodes` bulk to keep artefact size bounded —
-      // nodesCount retains the reviewable-vs-infra-failure signal R10 needs.
+      // nodesCount retains the reviewable-vs-infra-failure signal.
       passesDetail: liftRuleSummaries(axeResults.passes),
       incompleteDetail: liftRuleSummaries(axeResults.incomplete),
       inapplicableDetail: liftRuleSummaries(axeResults.inapplicable),
-      // _preScanStates (Layer 3b R8): underscore-prefix signals debug-only;
+      // _preScanStates: underscore-prefix signals debug-only;
       // not part of the stable artefact contract. Empty array when no pre-scan
       // actions are configured (or when none match the URL).
       _preScanStates: preScanStates,

@@ -15,11 +15,11 @@ let the crawler run in a nonsense mode and emit empty results. Every case
 cost the user time they didn't need to spend — "why did the scan die"
 instead of "fix your config".
 
-Layer 2 **narrows** this class of failure for the v0.3 bug list —
+The config validation overhaul **narrows** this class of failure for the v0.3 bug list —
 mechanism 2 below documents which regex-bearing schema fields are fully
-compile-at-load today and which are only validated (Layer 3 completes
+compile-at-load today and which are only validated (subsequent work completes
 the story). We want one coherent story — a principle, not a grab-bag of
-checks — that future maintainers can extend in Layer 3+ without
+checks — that future maintainers can extend in subsequent versions without
 re-deciding the philosophy.
 
 ## Decision
@@ -36,7 +36,7 @@ alternative. Runs in `src/lib/validate-config.mjs:assertValidConfig` via
 `src/lib/context.mjs:buildContext` before any command's `run()` body
 touches the filesystem.
 
-Layer 2 also tightens the `name` field to `"pattern": "\\S"` so
+The config validation overhaul also tightens the `name` field to `"pattern": "\\S"` so
 whitespace-only names (`"   "`) are rejected at load — closing the one
 gap where the retired v0.3 imperative validator was stricter than Ajv.
 
@@ -51,18 +51,18 @@ reach the crawl path.
 Currently attached at three schema fields (symbol-first — line numbers
 drift; the schema location is authoritative):
 
-| Schema location (symbol-first)                          | Compiled at load?                                   |
-| ------------------------------------------------------- | --------------------------------------------------- |
-| `crawl.excludeUrlPatterns[]` — `validRegex: true`       | **yes** (mechanism 3; ANCHOR: CompileRuntimeFields) |
-| `scan.axe.overrides[].urlPattern` — `validRegex: true`  | **yes** (Layer 3a; ANCHOR: CompileOverrides)        |
-| `processes[].actions[].urlPattern` — `validRegex: true` | no (deferred; no runtime consumer yet)              |
+| Schema location (symbol-first)                          | Compiled at load?                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| `crawl.excludeUrlPatterns[]` — `validRegex: true`       | **yes** (mechanism 3; ANCHOR: CompileRuntimeFields)          |
+| `scan.axe.overrides[].urlPattern` — `validRegex: true`  | **yes** (the compile-at-load step; ANCHOR: CompileOverrides) |
+| `processes[].actions[].urlPattern` — `validRegex: true` | no (deferred; no runtime consumer yet)                       |
 
 All three are _validated_ on load; the first two are also _compiled_ on
 load. The `processes[].actions[].urlPattern` field has no runtime
 consumer today, so compile-at-load would attach a `RegExp[]` nothing
 reads — tracked as a `CHANGELOG.md [Unreleased]` entry under
-"Layer 3 follow-ups" that will be picked up when the first consumer
-lands (likely Layer 3b's `beforeScan` action filtering).
+"follow-ups" that will be picked up when the first consumer
+lands (likely the pre-scan action filtering step's `beforeScan` action filtering).
 
 ### 3. Compile-at-load attachment (this ADR's new work)
 
@@ -90,7 +90,7 @@ From ADR-0003 and `src/lib/preflight.mjs`. Checks: config file readable,
 output directory writable, Playwright browsers installed (when required).
 Runs inside `buildContext` before returning.
 
-Layer 2 also adds `ensurePreflight(ctx)` (co-located in
+The config validation overhaul also adds `ensurePreflight(ctx)` (co-located in
 `src/lib/context.mjs`) and wires it as the first line of every command's
 `run(ctx)` body. This is defence-in-depth for programmatic API callers
 who construct a `RunContext` by hand rather than via `buildContext`.
@@ -115,7 +115,7 @@ double-running.
   `ensurePreflight` is idempotent — the flag short-circuits after the
   first check.
 
-- **Layer 3 watch-mode constraint.** `writable: false` on the compiled
+- **Watch-mode constraint.** `writable: false` on the compiled
   array means any future watch-mode (hot-reload on schema change) must
   `delete ctx.config.crawl.excludeUrlPatternsCompiled` followed by a
   fresh `Object.defineProperty`. The descriptor is `configurable: true`
@@ -137,8 +137,8 @@ double-running.
   schema ↔ dispatch invariant locked by
   `test/unit/process-runner-invariant.test.mjs`
 - `src/lib/preflight.mjs` — preflight check implementation
-- `CHANGELOG.md [Unreleased]` — Layer 3 follow-ups (updated in Layer
-  3a's R2: `scan.axe.overrides[].urlPattern` is now compiled at load;
+- `CHANGELOG.md [Unreleased]` — follow-ups (updated in the
+  compile-at-load commit: `scan.axe.overrides[].urlPattern` is now compiled at load;
   `processes[].actions[].urlPattern` remains deferred pending a
   runtime consumer)
 - [ADR-0006 — Multi-viewport axe runs](./0006-multi-viewport-axe-runs.md)

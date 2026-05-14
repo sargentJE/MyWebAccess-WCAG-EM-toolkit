@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `buildRequestDelayHook` — Layer 3a's crawl throttle.
+ * @file Tests for `buildRequestDelayHook` — crawl throttle.
  * @module test/unit/discover-throttle
  *
  * @description

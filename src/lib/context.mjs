@@ -35,8 +35,8 @@ import { runPreflight } from './preflight.mjs';
  * prevents accidental mutation.
  *
  * Used for `config.crawl.excludeUrlPatternsCompiled` (compiled at load),
- * `config.scan.axe.overridesCompiled` (Layer 3a), action-level regex fields
- * at three sites (Layer 3b R7), and `ctx.preflightRan` (set after preflight
+ * `config.scan.axe.overridesCompiled` (the compile-at-load step), action-level regex fields
+ * at three sites (the action-regex compile step), and `ctx.preflightRan` (set after preflight
  * succeeds). The single source of truth for the descriptor shape these
  * fields rely on.
  *
@@ -60,7 +60,7 @@ export function defineHidden(obj, key, value) {
  * The schema reuses `$defs/action` (with `validRegex: true` on `urlPattern`)
  * at three sites: `scan.beforeScan.actions[]`, `scan.axe.overrides[].actions[]`,
  * and `processes[].steps[]`. For each action object that has a truthy
- * `urlPattern`, attach a non-enumerable `regex` property so the R8 runtime
+ * `urlPattern`, attach a non-enumerable `regex` property so the scan runtime
  * dispatcher can `.test(url)` without re-compiling per URL.
  *
  * F9 invariants (locked by `test/unit/context-compile-actions.test.mjs`):

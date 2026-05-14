@@ -5,7 +5,7 @@
  *
  * @description
  * Generalises the `createServer`/`listen(0)`/`once(server,'listening')`
- * pattern that `test/unit/sitemap.test.mjs` has used since Layer 2 into a
+ * pattern that `test/unit/sitemap.test.mjs` has used since the config validation overhaul into a
  * reusable harness for reporter smoke tests, reporter XSS tests, the
  * discover-timeout behavioural test, and the authenticated-scan
  * integration test.
@@ -14,7 +14,7 @@
  * shared state; ephemeral `listen(0)` ports mean parallel `node --test`
  * runs never collide. The caller is responsible for `await stop()`.
  *
- * @see docs/adr/0008-pluggable-reporters.md (Layer 4 test-infrastructure notes)
+ * @see docs/adr/0008-pluggable-reporters.md (reporter pipeline test-infrastructure notes)
  */
 
 // SECTION: Imports

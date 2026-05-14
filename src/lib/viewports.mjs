@@ -7,7 +7,7 @@
  * Single authoritative helper for resolving which viewports a scan should
  * iterate. Consumed by `scan.mjs` and `scan-processes.mjs` so both commands
  * agree on the "defaults ∨ legacy-singleton ∨ user-array" precedence. Future
- * changes to viewport defaults (e.g. Layer 5's opt-in tablet / mobile)
+ * changes to viewport defaults (e.g. a future version's opt-in tablet / mobile)
  * touch only this file.
  *
  * Resolution order:
@@ -65,7 +65,7 @@ export function resolveViewports(config, logger) {
   }
 
   // 2. Legacy singleton — wrap + warn once.
-  //    Layer 5 deprecation policy: warn for one minor version, then remove.
+  //    Deprecated since v1.0; removal planned for v2.0.
   if (scan.viewport && typeof scan.viewport === 'object') {
     const { width, height } = scan.viewport;
     if (typeof width === 'number' && typeof height === 'number') {

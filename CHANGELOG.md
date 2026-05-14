@@ -126,16 +126,16 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 - `auth.setupScript` runtime execution — deferred pending an explicit
   security review. Schema validates the field and the runtime emits a
   one-shot `warnSchemaAcceptedRuntimeIgnored` via the shared helper in
-  `src/lib/auth.mjs`. Target: a later layer that scopes the trust model
+  `src/lib/auth.mjs`. Target: a future release that scopes the trust model
   for executing user-supplied scripts in a Playwright context.
-- `src/data/act-rule-map.json` exhaustive coverage — the R1 seed covers
+- `src/data/act-rule-map.json` exhaustive coverage — the initial seed covers
   the 30 ACT rules most commonly implemented by axe-core 4.11.2; full
   coverage (70+ rules) requires either the ACT CG to publish a JSON
   feed or a DOM-parser dev dep on their HTML implementation report.
   `scripts/refresh-rule-maps.mjs` is scaffolded for the regeneration
   path.
 - `tool-identity` propagation into Pino log records — currently the
-  stamp appears on emitted artefacts (R13) only. Future enhancement:
+  stamp appears on emitted artefacts only. Future enhancement:
   inject `tool: TOOL_IDENTITY` into every log-line's base bindings so
   downstream log aggregators can filter by tool version without
   re-parsing the artefact.

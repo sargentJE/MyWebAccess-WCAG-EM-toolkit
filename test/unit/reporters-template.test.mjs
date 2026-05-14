@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the XSS-safe HTML template helpers — Layer 4 R5.
+ * @file Tests for the XSS-safe HTML template helpers.
  * @module test/unit/reporters-template
  *
  * @description

@@ -1,11 +1,11 @@
 // @ts-check
 /**
- * @file Tests for the markdown reporter — Layer 4 R4.
+ * @file Tests for the markdown reporter.
  * @module test/unit/reporters-markdown
  *
  * @description
  * Locks the markdown reporter's output shape after the extraction from
- * `summarize.mjs`'s inline ANCHOR block. The golden body is the Layer 3b
+ * `summarize.mjs`'s inline ANCHOR block. The golden body is the WCAG-EM summary
  * `abd7339` markdown shape with one deliberate change: findings are now
  * routed through `sortFindings` so cross-reporter ordering is consistent
  * (see ADR-0008's sort contract).
@@ -156,6 +156,6 @@ test('markdown reporter: registry now lists json + markdown', async () => {
   const { listReporters } = await import('../../src/reporters/index.mjs');
   const names = listReporters();
   assert.ok(names.includes('json'), 'json still registered');
-  assert.ok(names.includes('markdown'), 'markdown registered after R4');
+  assert.ok(names.includes('markdown'), 'markdown registered in the registry');
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');
 });

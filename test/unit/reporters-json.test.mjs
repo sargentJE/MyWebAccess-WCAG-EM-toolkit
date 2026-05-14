@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the JSON reporter + reporter registry — Layer 4 R3.
+ * @file Tests for the JSON reporter + reporter registry.
  * @module test/unit/reporters-json
  *
  * @description
@@ -110,8 +110,8 @@ test('json reporter: wcagEmSummary propagates evaluator and metadata to summary.
 // SECTION: Registry
 
 test('registry: listReporters reports the registered names alphabetically', () => {
-  // R3 registers exactly one reporter ('json'). R4-R7 will add markdown,
-  // html, earl-jsonld, junit. This test will need extending as those land.
+  // The initial reporter pipeline registers 'json'; subsequent reporters add
+  // markdown, html, earl-jsonld, junit. This test will need extending as those land.
   const names = listReporters();
   assert.ok(names.includes('json'), 'json must be registered');
   assert.deepEqual(names, [...names].sort(), 'list must be sorted');

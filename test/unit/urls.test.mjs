@@ -6,7 +6,7 @@
  * @description
  * Covers the full urls.mjs surface: normalisation, filesystem-safe name
  * derivation, path-segment extraction, scope enforcement, and the
- * Layer-2 `RegExp[]` shape of `urlExcludedByPatterns`.
+ * `RegExp[]` shape of `urlExcludedByPatterns`.
  */
 
 // SECTION: Imports

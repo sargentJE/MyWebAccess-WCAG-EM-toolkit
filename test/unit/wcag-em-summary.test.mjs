@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `toWcagEmSummary` — Layer 3b R10's per-SC inversion.
+ * @file Tests for `toWcagEmSummary` — WCAG-EM per-SC inversion.
  * @module test/unit/wcag-em-summary
  *
  * @description
@@ -27,7 +27,7 @@ function buildCtx(wcagEm = {}, processes = []) {
 }
 
 /**
- * Build an axeResults page-result stub with the R6 widened shape.
+ * Build an axeResults page-result stub with the widened shape.
  *
  * @param {string} url
  * @param {{

@@ -4,7 +4,7 @@
  * @module test/unit/sample-missing
  *
  * @description
- * Layer 1 added a `ctx.logger.warn(...)` call in `src/commands/sample.mjs`
+ * The CLI migration added a `ctx.logger.warn(...)` call in `src/commands/sample.mjs`
  * when the user's `config.sample.structuredManual` names a URL that doesn't
  * appear in the discovered inventory. This test locks the warn in place so
  * future refactors can't silently re-drop it.

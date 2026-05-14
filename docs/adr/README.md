@@ -26,7 +26,7 @@ rejected_.
 ## Numbering convention
 
 ADR numbers are append-only. **0010** and **0011** are reserved for
-the Layer 5 docs/release sprint (project layout + box-to-docs
+the v1.0 docs/release sprint (project layout + box-to-docs
 migration per the canonical roadmap). They are not gaps — they are
 held seats; do not reuse them out of order.
 
@@ -39,8 +39,8 @@ references survive refactors that line numbers don't. See commit
 
 ## Adding a new ADR
 
-1. Pick the next available number (post-Layer-5 sequence resumes at
-   0013 unless an earlier reserved number is filled).
+1. Pick the next available number (sequence resumes at
+   0015 unless an earlier reserved number is filled).
 2. Copy the template from any recent ADR (0007 / 0008 / 0009 are
    current-style references).
 3. Fill `Status`, `Date`, `Deciders`, `Consulted`, then the
@@ -49,4 +49,4 @@ references survive refactors that line numbers don't. See commit
 4. Add the entry to the table above. Update any cross-referencing
    ADRs to mention the new one.
 5. Land the ADR in the same commit as the code that implements the
-   decision (or in a follow-up commit during the same layer).
+   decision (or in a follow-up commit during the same release).

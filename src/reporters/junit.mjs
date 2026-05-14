@@ -60,9 +60,8 @@ export async function emit(summary, ctx) {
     const firstTarget = Array.isArray(f.targets) && f.targets.length ? String(f.targets[0]) : '';
     const exampleHtml =
       Array.isArray(f.examples) && f.examples[0]?.html ? String(f.examples[0].html) : '';
-    // Treat findings as failures unless they declare otherwise. Layer 3b's
-    // grouped findings are violation-only by construction; future layers
-    // may extend.
+    // Treat findings as failures unless they declare otherwise. Grouped
+    // findings are violation-only by construction; future versions may extend.
     const outcome = typeof f.outcome === 'string' ? f.outcome : 'failed';
     if (outcome === 'inapplicable') continue;
     if (outcome === 'passed' && !includePasses) continue;

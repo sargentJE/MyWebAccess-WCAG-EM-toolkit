@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the EARL JSON-LD reporter — Layer 4 R6.
+ * @file Tests for the EARL JSON-LD reporter.
  * @module test/unit/reporters-earl
  *
  * @description
@@ -161,7 +161,7 @@ test('earl reporter: includePasses=true emits earl:passed for each passed criter
 
 test('earl reporter: registry now lists earl-jsonld', () => {
   const names = listReporters();
-  assert.ok(names.includes('earl-jsonld'), 'earl-jsonld registered after R6');
+  assert.ok(names.includes('earl-jsonld'), 'earl-jsonld registered in the registry');
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');
 });
 

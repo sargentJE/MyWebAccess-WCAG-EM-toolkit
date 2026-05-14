@@ -33,7 +33,7 @@ Exit codes (Pa11y-compatible):
 - `0` — clean; no findings above threshold.
 - `1` — runtime error (bad config, preflight failure, crash).
 - `2` — findings exceeded `reporting.failOnFindings` threshold. **Policy
-  lands in Layer 3b**; Layer 1 only exits 0 or 1.
+  lands in WCAG-EM summary**; v0.3 only exits 0 or 1.
 
 Engine guard: refuses to run on Node <22.11.0 with an actionable message
 before any ES2023-requiring module is loaded.

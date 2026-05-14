@@ -10,13 +10,13 @@
  * `untested`). Industry-standard per Alfa / Accessibility Insights / VPAT.
  *
  * Input shape is the widened `axe-results.json` and `process-results.json`
- * from R6: each page-result carries
+ * from the scan stage: each page-result carries
  *   - `violations`: full rule objects with tags.
  *   - `passesDetail`: light `{id, tags, impact, nodesCount}` per pass.
  *   - `incompleteDetail`: same, per incomplete.
  *   - `inapplicableDetail`: same, per inapplicable.
  *
- * Output shape (stable contract documented in ADR-0007 at R14):
+ * Output shape (stable contract documented in ADR-0007):
  *   {
  *     criteriaOutcomes: [{ sc, level, outcome, examples, pagesExamined, relatedRules }],
  *     evaluationDate: ISO-8601 string,
@@ -232,9 +232,9 @@ export function toWcagEmSummary(ctx, rawResults) {
    *
    * @param {string} pageUrl
    * @param {any[]} violations - Full rule objects (with nodes).
-   * @param {any[]} passesDetail - Light summaries from R6.
-   * @param {any[]} incompleteDetail - Light summaries from R6.
-   * @param {any[]} inapplicableDetail - Light summaries from R6.
+   * @param {any[]} passesDetail - Light summaries from the scan stage.
+   * @param {any[]} incompleteDetail - Light summaries from the scan stage.
+   * @param {any[]} inapplicableDetail - Light summaries from the scan stage.
    */
   function ingestPage(pageUrl, violations, passesDetail, incompleteDetail, inapplicableDetail) {
     for (const v of violations ?? []) {

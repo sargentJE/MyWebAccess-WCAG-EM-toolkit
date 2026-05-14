@@ -171,9 +171,9 @@ EARL consumers to identify both the tool that produced the assertions
 and the human evaluator who configured and reviewed the audit.
 
 `doap:homepage` is **omitted** at v1.0. The package.json doesn't
-ship a `homepage` field yet (Layer 5 will, alongside the
+ship a `homepage` field yet (v2.0 will, alongside the
 README rewrite). Adding it now would mean a version-bump path that
-adds a transient field; cleaner to defer to Layer 5.
+adds a transient field; cleaner to defer to v2.0.
 
 The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). The
 `foaf:` prefix follows the same informal pattern as `doap:` — no
@@ -199,10 +199,10 @@ follow-up), `@context` becomes a multi-vocab object embedding
   Acknowledged + tracked above; not a blocker because real-world
   consumers accept plain strings.
 - Per-violation × N-pages can produce a large `@graph` for big
-  audits. Not a v1.0 problem (default sample is 80 pages); Layer 5+
+  audits. Not a v1.0 problem (default sample is 80 pages); v2.0+
   may add an `earl:Assertion`-deduplication mode that aggregates
   rule-on-page tuples.
-- `doap:homepage` deferred until Layer 5 — minor; the
+- `doap:homepage` deferred until v2.0 — minor; the
   current Assertor identifies the tool unambiguously via `name +
 release`.
 

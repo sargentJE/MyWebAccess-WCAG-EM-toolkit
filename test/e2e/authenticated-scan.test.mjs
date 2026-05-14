@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Integration test for storageState-based auth — Layer 4 R9.
+ * @file Integration test for storageState-based auth.
  * @module test/e2e/authenticated-scan
  *
  * @description
@@ -11,8 +11,7 @@
  * Playwright keeps this test fast (~5s) and lets the assertions be
  * specific about HTTP status codes rather than parsing axe output.
  *
- * Closes the Layer 3b follow-up CHANGELOG entry "Integration-level
- * authenticated-scan test".
+ * Closes the CHANGELOG entry "Integration-level authenticated-scan test".
  */
 
 // SECTION: Imports

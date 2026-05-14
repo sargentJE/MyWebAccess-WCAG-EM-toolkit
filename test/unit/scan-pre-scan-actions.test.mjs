@@ -1,13 +1,13 @@
 // @ts-check
 /**
- * @file Tests for `filterActionsForUrl` — Layer 3b R8's pre-scan action filter.
+ * @file Tests for `filterActionsForUrl` — pre-scan action filter.
  * @module test/unit/scan-pre-scan-actions
  *
  * @description
  * `runPreScanActions` is tied to Playwright (uses `runProcessSteps` with a
  * live `Page`), so the unit layer exercises the PURE filter helper only.
  * Full integration coverage (actual beforeScan execution against a page)
- * lands alongside Layer 4's fixture harness (documented in CHANGELOG).
+ * lands alongside the reporter pipeline's fixture harness (documented in CHANGELOG).
  *
  * The filter invariants this file locks:
  *   - Actions WITHOUT `regex` (no `urlPattern`) run unconditionally.

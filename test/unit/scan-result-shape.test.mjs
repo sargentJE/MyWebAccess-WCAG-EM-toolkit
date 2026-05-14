@@ -1,15 +1,13 @@
 // @ts-check
 /**
- * @file Tests for `buildScreenshotPath` — Layer 3a's screenshot-filename
- *   helper.
+ * @file Tests for `buildScreenshotPath` — screenshot-filename helper.
  * @module test/unit/scan-result-shape
  *
  * @description
- * `buildScreenshotPath` is the only Layer 3a scan-loop logic that's
+ * `buildScreenshotPath` is the only multi-viewport scan-loop logic that's
  * testable without Playwright. The rest of the outer-viewport-loop shape
  * (findings tagged `viewport: vp.id`, per-viewport logging) is exercised
- * end-to-end in Layer 4's deterministic-output fixture harness — tracked in
- * CHANGELOG [Unreleased] Layer 3 follow-ups.
+ * end-to-end in the reporter pipeline's deterministic-output fixture harness.
  */
 
 // SECTION: Imports
@@ -42,7 +40,7 @@ test('buildScreenshotPath is pure — same inputs yield same output', () => {
   assert.equal(a, b);
 });
 
-// SECTION: Layer 4 R8 — format-aware extension
+// SECTION: Format-aware extension
 
 test('buildScreenshotPath defaults to .png extension when format is omitted', () => {
   const result = buildScreenshotPath('/out', 'https://example.com/p', { id: 'desktop' });

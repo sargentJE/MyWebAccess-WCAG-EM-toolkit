@@ -6,13 +6,13 @@
  * @description
  * Shared logic for interpreting axe-core rule metadata. Exports:
  *   - `classifyRule` — bucket a rule into "primary-automated-finding" vs
- *     "best-practice-or-manual-review" (Layer 1).
- *   - `isValidRunOnly` — defence-in-depth shape guard (Layer 1).
+ *     "best-practice-or-manual-review".
+ *   - `isValidRunOnly` — defence-in-depth shape guard.
  *   - `findMatchingOverride` + `applyAxeOverride` — per-URL axe override
- *     lookup and replace-if-defined merge (Layer 3a).
+ *     lookup and replace-if-defined merge.
  *   - `withActAndWcagMetadata` — enrich a rule with ACT IDs (from the
  *     static map at `src/data/act-rule-map.json`) and WCAG SC numbers
- *     (parsed at runtime from `violation.tags`) (Layer 3b).
+ *     (parsed at runtime from `violation.tags`).
  *
  * @see docs/adr/0007-wcag-em-summary-shape.md
  * @see https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md
@@ -81,7 +81,7 @@ export function classifyRule(rule, reportingConfig = {}) {
 /**
  * Is an `axe.runOnly` value structurally valid?
  *
- * Layer 1's Ajv schema rejects malformed `runOnly` at config-load, but stale
+ * The Ajv schema rejects malformed `runOnly` at config-load, but stale
  * v0.3 configs constructed programmatically may still reach `scan.mjs` with
  * the wrong shape. This defence-in-depth predicate keeps the builder call
  * off a clearly-bad value rather than letting axe throw a cryptic error.
@@ -124,8 +124,8 @@ export function findMatchingOverride(url, overridesCompiled) {
 
 // ANCHOR: withActAndWcagMetadata — enrich a rule with ACT IDs + WCAG SC numbers.
 /**
- * Extend `classifyRule`'s output with the two richer metadata fields Layer 3b
- * needs for the WCAG-EM Step 5 shape:
+ * Extend `classifyRule`'s output with the two richer metadata fields needed
+ * for the WCAG-EM Step 5 shape:
  *
  * - `actRuleIds`: looked up in the caller-supplied `actMap` (the JSON loaded
  *   from `src/data/act-rule-map.json`). Empty array when the rule is absent

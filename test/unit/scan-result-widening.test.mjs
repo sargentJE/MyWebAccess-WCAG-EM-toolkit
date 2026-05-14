@@ -1,11 +1,11 @@
 // @ts-check
 /**
- * @file Tests for `liftRuleSummaries` — Layer 3b R6's scan-artefact widening.
+ * @file Tests for `liftRuleSummaries` — scan-artefact widening for WCAG-EM summary.
  * @module test/unit/scan-result-widening
  *
  * @description
- * R6 widens `axe-results.json` and `process-results.json` with per-rule
- * `*Detail` arrays so R10's `toWcagEmSummary` can compute `passed` /
+ * Widens `axe-results.json` and `process-results.json` with per-rule
+ * `*Detail` arrays so `toWcagEmSummary` can compute `passed` /
  * `cantTell` / `inapplicable` SC verdicts. The contract:
  *   - Count keys preserved (backward compat).
  *   - New Detail arrays have shape `{id, tags, impact, nodesCount}`.
@@ -53,7 +53,7 @@ test('liftRuleSummaries: violation with impact preserved', () => {
   assert.equal(out[0].nodesCount, 1);
 });
 
-test('liftRuleSummaries: incomplete with zero nodes (infra failure signal for R10 F8)', () => {
+test('liftRuleSummaries: incomplete with zero nodes (infra failure signal)', () => {
   const out = liftRuleSummaries([
     {
       id: 'color-contrast',

@@ -16,7 +16,7 @@ failures. A single-viewport pass cannot find defects that only manifest
 below a particular width. The WCAG-EM "structured sample" practice
 explicitly names viewport variety as a sampling dimension.
 
-Layer 3a introduces a viewports dimension. The open design question is
+This version introduces a viewports dimension. The open design question is
 **how much concurrency the toolkit should attempt across that
 dimension**. axe-core is CPU-bound; Playwright contexts are cheap per
 viewport but share browser process memory; CI runners commonly cap at
@@ -56,7 +56,7 @@ Four aspects of the decision, in dependency order:
 Mobile (e.g. 375×667) and tablet (768×1024) are **not** default — a real
 WCAG-EM audit should sample them explicitly via `scan.viewports`, and
 adding them by default would silently double or triple scan time for
-users who want only desktop + reflow. Layer 5 may revisit this once the
+users who want only desktop + reflow. A future version may revisit this once the
 reporter-side determinism contract is settled.
 
 ### 2. Loop ordering — outer viewport × inner URL
@@ -104,7 +104,7 @@ retry budget for viewport 2 before the next URL gets a chance.
 
 ### 4. Per-URL overrides stay out of this ADR — deliberately
 
-Per-URL axe overrides (`scan.axe.overrides[]`) landed in the same layer
+Per-URL axe overrides (`scan.axe.overrides[]`) landed in the same release
 and mutate the same `scan.mjs` file, but they are **a separate design
 concern**: overrides affect **AxeBuilder chain construction**, not
 viewport concurrency. Conflating the two in one ADR would blur the
@@ -123,7 +123,7 @@ ADR).
 
 ## Consequences
 
-- **Behaviour change v0.3 → Layer 3a**: the default scan for users with
+- **Behaviour change v0.3 → v1.0**: the default scan for users with
   no explicit viewport config shifts from the legacy
   1440×900 singleton to the 1280×800 + 320×800 cross-product. Scan time
   approximately doubles for those users. Users with an explicit
@@ -136,10 +136,10 @@ ADR).
   rather than mitigated in v1.0. Future work could move to a non-
   collidable separator.
 - **CI runtime budget**: doubled wall-clock scan time is the main cost.
-  `crawl.requestDelayMs` (Layer 3a) gives a throttle lever if the
+  `crawl.requestDelayMs` gives a throttle lever if the
   target site's rate limits need respecting; concurrency tuning stays a
-  Layer 5 agenda item.
-- **Future viewport-level parallelism** (Layer 5 candidate): would
+  v2.0 agenda item.
+- **Future viewport-level parallelism** (v2.0 candidate): would
   require a reporter-side determinism contract (stable ordering
   independent of completion order) and a per-viewport browser-context
   pool. Out of scope for v1.0; the sequential-viewport rule is the
@@ -156,7 +156,7 @@ ADR).
   (symbol-first citation rule used throughout this ADR)
 - [ADR-0005 — Fail fast on config](./0005-fail-fast-on-config.md)
   (shares the `defineHidden` mechanism attached to
-  `scan.axe.overridesCompiled` in Layer 3a's R2 commit)
+  `scan.axe.overridesCompiled` in the compile-at-load commit)
 - `src/lib/viewports.mjs` — `DEFAULT_VIEWPORTS` and `resolveViewports`.
 - `src/commands/scan.mjs` — `ScanLoop` anchor, `buildScreenshotPath`
   helper, `AxeBuilderChain` anchor (per-URL override integration).
@@ -166,5 +166,5 @@ ADR).
   screenshot dispatch case's filename suffix.
 - `src/lib/axe-utils.mjs` — `findMatchingOverride`, `applyAxeOverride`
   (deliberately out-of-scope for this ADR; design detail inline).
-- `CHANGELOG.md [Unreleased]` — Layer 3 + Layer 4 follow-ups updated in
-  R2 and R3.
+- `CHANGELOG.md [Unreleased]` — follow-ups updated in the
+  compile-at-load and multi-viewport commits.

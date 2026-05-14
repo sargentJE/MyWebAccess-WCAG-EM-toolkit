@@ -48,13 +48,13 @@ to v2.0.
   `eslint-plugin-jsdoc` but not enforced at lint level today; enforced
   by convention + future-v2.0 codemod that strips `@internal` symbols
   from the published `.d.ts` (when we ship type declarations in
-  Layer 5).
+  v2.0).
 - **No stability guarantee across minor versions.** Downstream code
   that depends on these classifiers does so at its own risk; a future
   minor release may change behaviour without the changelog treating
   it as a breaking change (because it's not — these are internal).
 - **Still exported.** They remain in the module's export surface
-  because (a) removing them would require a Layer-5-sized refactor to
+  because (a) removing them would require a major refactor to
   collapse the helper-pipeline shape, and (b) they're genuinely useful
   as programmatic-API entry points for advanced users who accept the
   internal-ness.
@@ -64,14 +64,14 @@ to v2.0.
 - **Cleaner v1.0 surface area.** The public contract is the CLI +
   `runAudit()` programmatic entry point + the config schema + the
   artefact JSON shapes. Not a plugin API; not a classifier contract.
-- **Future refactor headroom.** Layer 5 (or v2.0) can rewrite any
+- **Future refactor headroom.** v2.0 can rewrite any
   classifier without a semver-major bump. Users who depend on the
   internal symbols accept that.
 - **Plugin API deferred to v2.0.** The v2.0 agenda includes a proper
   extension-point interface for classifiers — likely a registry
   pattern where users register a `{ pageType(url) }` object via the
   config. Out of scope for v1.0.
-- **Type declarations respect the boundary.** When Layer 5 ships
+- **Type declarations respect the boundary.** When v2.0 ships
   `.d.ts` generation via `tsc --emitDeclarationOnly`, a codemod (or
   hand-curation) strips `@internal` symbols from the public surface.
   Consumers of `import('wcag-em-a11y-toolkit')` do not see the

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Reporter registry + dispatcher (internal — Layer 4).
+ * @file Reporter registry + dispatcher (internal).
  * @module reporters/index
  *
  * @description
@@ -10,7 +10,7 @@
  * This satisfies ADR-0012's "extensibility is internal for v1.0" stance.
  *
  * `package.json` separately drops the `./reporters/*` export entry as part
- * of R3 so the deep-import path is unavailable too. Layered defence:
+ * so the deep-import path is unavailable too. Layered defence:
  * narrow exports + private registry.
  *
  * `runReporters` is fail-resilient: each reporter runs in its own try/catch
@@ -57,12 +57,11 @@ import * as junitReporter from './junit.mjs';
  * @property {ReporterError[]} errors - Per-reporter failures collected during the run.
  */
 
-// SECTION: Private registry — additions land in subsequent R-commits
+// SECTION: Private registry
 
 /**
  * Module-private. NOT exported. Each reporter lands a new entry as it
- * arrives: R3 adds 'json'; R4 adds 'markdown'; R5 'html'; R6 'earl-jsonld';
- * R7 'junit'.
+ * Registered reporters: json, markdown, html, earl-jsonld, junit.
  *
  * @type {Map<string, ReporterModule>}
  */

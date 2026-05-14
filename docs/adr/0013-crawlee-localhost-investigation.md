@@ -5,13 +5,13 @@
 - Deciders: Jamie Sargent
 - Consulted: ADR-0001 (project conventions; symbol-first citation rule),
   ADR-0008 (pluggable reporter runtime — the e2e fixture work that surfaced
-  the hang during R9), ADR-0012 (extensibility-internal stance; relevant
+  the hang during reporter pipeline development), ADR-0012 (extensibility-internal stance; relevant
   because the `discover-no-locator-invariant` source-text guard added in
   commit `df16649` is now load-bearing as the regression backstop)
 
 ## Context and Problem Statement
 
-During R9 (Layer 4) development of the pluggable-reporter runtime, two e2e
+During development of the pluggable-reporter runtime, two e2e
 tests were authored and immediately deferred behind a Crawlee-related hang:
 
 - `test/e2e/reporters-smoke.test.mjs` — full-audit reporter pipeline smoke.
@@ -68,7 +68,7 @@ options.
 
 The investigation spanned three sessions:
 
-**Session 1 (R9, Layer 4 development):** First observed; hand-rolled
+**Session 1 (reporter pipeline development):** First observed; hand-rolled
 mitigations ruled out (`CRAWLEE_STORAGE_DIR` isolation, `Connection: close`,
 scope strategy, sitemap seeding). e2e tests deferred as `test.skip`.
 
@@ -135,9 +135,9 @@ future session.
 ### Positive
 
 - `reporters-smoke.test.mjs` un-skipped with a real spawn-based body —
-  closes the larger half of Layer 4's deferred work. `discover-timeout.test.mjs`
+  closes the larger half of the reporter pipeline's deferred work. `discover-timeout.test.mjs`
   remains skipped pending a separate v1.1 config addition (see Decision).
-- The bisect intellectual capital from R9 / v2 audit / 2026-05-09 is preserved
+- The bisect intellectual capital from the reporter pipeline / v2 audit / 2026-05-09 is preserved
   in this single canonical home, not scattered across CHANGELOG and e2e
   file-level comments.
 - v1.0 release narrative gains a concrete win: a real-world dogfood (AU)

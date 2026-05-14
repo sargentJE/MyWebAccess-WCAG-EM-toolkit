@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `TOOL_IDENTITY` + `toolIdentityMarkdownHeader` — Layer 3b R13.
+ * @file Tests for `TOOL_IDENTITY` + `toolIdentityMarkdownHeader`.
  * @module test/unit/version
  *
  * @description
