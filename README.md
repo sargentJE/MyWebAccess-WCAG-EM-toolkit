@@ -1,65 +1,76 @@
-# WCAG-EM Accessibility Toolkit V2 Recommended
+# WCAG-EM Accessibility Toolkit
 
-> **Status: work in progress.** This toolkit is mid-migration from v0.3 to
-> v1.0.0. Architecture, conventions, and feature set are converging:
-> [`docs/adr/`](./docs/adr/) captures current decisions and
-> [`CHANGELOG.md`](./CHANGELOG.md) tracks deferred work. Most of the README
-> below still reflects the v0.3 starting point (with references to the old
-> `box/` + `scripts/` directories) and will be rewritten in the final
-> release layer — **except** the "Configuring for SPAs" and "Configuring
-> for client audits" sections below, which reflect current v0.3.0
-> behaviour with all recent fixes applied (D1+D2+D3+P2+P3 plus the smoke
-> e2e un-skip in commit `ba37fad`). For the current CLI surface see
-> `node bin/wcag-em.mjs --help`.
+Automated layer of a [WCAG-EM](https://www.w3.org/TR/WCAG-EM/)-aligned
+accessibility audit workflow. Discovers pages, builds a structured
+sample, runs [axe-core](https://github.com/dequelabs/axe-core) scans,
+evaluates interactive processes, and produces WCAG-EM Step 5 conformance
+summaries — without over-claiming what automation can prove.
 
-This package is the **recommended V2 build** based on the V1 and V2 decision points.
+## What it does
 
-It is designed to help you run the **automated layer** of a WCAG-EM-aligned audit workflow without over-claiming what automation can prove.
+The toolkit runs a five-stage pipeline:
 
-## Recommended operating model
+1. **Discover** — crawl from a root URL (optionally seeded from a
+   sitemap) to build a page inventory with metadata and clusters.
+2. **Sample** — select a structured + random sample from the inventory
+   per WCAG-EM Step 3.
+3. **Scan** — run axe-core over every sample page at each configured
+   viewport, with optional pre-scan actions and per-URL overrides.
+4. **Scan-processes** — exercise interactive processes (form submissions,
+   search, navigation states) via a step DSL and scan the resulting
+   states.
+5. **Summarize** — aggregate findings into per-SC outcomes, produce
+   reports (Markdown, HTML, EARL JSON-LD, JUnit), and generate the
+   WCAG-EM Step 5 summary.
 
-1. define scope in config
-2. discover URLs from the root URL
-3. build a structured sample plus a recorded random sample
-4. run automated page scans
-5. run separate process/state scans
-6. summarize findings, compare random vs structured sample, and prepare the manual testing backlog
-
-## What this build adds over the earlier starter
-
-- stronger config defaults and validation
-- optional sitemap seeding
-- richer inventory metadata and page clusters
-- process candidate detection during discovery
-- hybrid sample building (manual + auto-suggest)
-- process expansion hooks
-- grouped findings by rule and component-ish selector pattern
-- random-sample comparison flags
-- cleaner Markdown and JSON report outputs
-- decision records and recommended checklist files in `box/`
-
-## Install
+## Quick start
 
 ```bash
 npm install
 npx playwright install
+npx wcag-em audit --config configs/example-site.json
 ```
 
-## Example usage
+## CLI commands
 
-```bash
-npm run discover -- --config configs/legacy-events.json
-npm run sample -- --config configs/legacy-events.json
-npm run scan:sample -- --config configs/legacy-events.json
-npm run scan:processes -- --config configs/legacy-events.json
-npm run summarize -- --config configs/legacy-events.json
-```
+| Command                  | Stage | Description                                  |
+| ------------------------ | ----- | -------------------------------------------- |
+| `wcag-em discover`       | 1     | Crawl and build the URL inventory            |
+| `wcag-em sample`         | 2     | Select the structured + random sample        |
+| `wcag-em scan`           | 3     | Run axe-core over sample pages               |
+| `wcag-em scan-processes` | 3b    | Exercise and scan interactive processes      |
+| `wcag-em summarize`      | 4     | Aggregate findings and produce reports       |
+| `wcag-em audit`          | All   | Run the full pipeline (discover → summarize) |
 
-Or run the full chain:
+All commands accept `--config <path>`, `--out-dir <path>`,
+`--log-level <level>`, `--quiet`, and `--verbose` flags.
 
-```bash
-npm run audit -- --config configs/legacy-events.json
-```
+## Configuration
+
+Start from [`configs/example-site.json`](./configs/example-site.json)
+and adapt to your site. Key fields:
+
+| Field                         | Purpose                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `rootUrl`                     | Starting URL for the crawler                                       |
+| `crawl.maxPages`              | Maximum pages to discover                                          |
+| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                        |
+| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)          |
+| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit` |
+| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                         |
+
+See [`schemas/config.schema.json`](./schemas/config.schema.json) for
+the full configuration reference.
+
+## Reporters
+
+| Reporter      | Output file          | Description                           |
+| ------------- | -------------------- | ------------------------------------- |
+| `json`        | `axe-results.json`   | Raw axe results per page × viewport   |
+| `markdown`    | `report.md`          | Human-readable Markdown summary       |
+| `html`        | `report.html`        | Standalone HTML report with dark mode |
+| `earl-jsonld` | `earl-report.jsonld` | W3C EARL JSON-LD assertions           |
+| `junit`       | `junit.xml`          | JUnit XML for CI integration          |
 
 ## Configuring for SPAs
 
@@ -179,8 +190,29 @@ After copying the sidecar, the four most important per-site overrides:
 
 ## Folder guide
 
-- `configs/` site configs
-- `scripts/` execution scripts
-- `schemas/` config schema
-- `output/` generated inventory, scan results, screenshots, and reports
-- `box/` explanation, decision records, and checklists
+| Path                 | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `bin/`               | CLI entry point                              |
+| `src/commands/`      | Pipeline stages                              |
+| `src/lib/`           | Shared utilities                             |
+| `src/reporters/`     | Report generators                            |
+| `src/data/`          | Static data (ACT rule map, WCAG SC metadata) |
+| `schemas/`           | JSON Schema for config validation            |
+| `configs/`           | Example site configurations                  |
+| `docs/adr/`          | Architecture decision records                |
+| `docs/design-notes/` | Original design framework                    |
+| `test/`              | Unit, e2e, and fixture tests                 |
+
+## Architecture decisions
+
+See [`docs/adr/`](./docs/adr/) for the full list of architecture
+decision records.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development setup,
+coding conventions, and the pull request process.
+
+## License
+
+MIT
