@@ -4,9 +4,8 @@
  * @module lib/manual-backlog
  *
  * @description
- * Layer 1 shipped a static markdown template for `output/reports/manual-backlog.md`.
- * Layer 3b replaces it with a pure function that adapts items to what was
- * actually found:
+ * Generates a findings-aware markdown backlog for `output/reports/manual-backlog.md`.
+ * A pure function that adapts items to what was actually found:
  *
  *   - Drops inapplicable reminders (e.g. color-contrast line when no such
  *     violations were found — the automated pass covered it).
@@ -35,7 +34,7 @@
  * Generate the manual-testing backlog markdown, adapted to the findings
  * present in this run.
  *
- * Pure function; no I/O. Callers (summarize.mjs R12) write the result via
+ * Pure function; no I/O. Callers (summarize.mjs) write the result via
  * `writeText(path, buildManualBacklog(...))`.
  *
  * @param {BuildManualBacklogArgs} args
@@ -43,9 +42,7 @@
  */
 export function buildManualBacklog({ findings, inventory = [], processes = [] }) {
   const findingIds = new Set(
-    (Array.isArray(findings) ? findings : []).map((f) =>
-      typeof f?.id === 'string' ? f.id : '',
-    ),
+    (Array.isArray(findings) ? findings : []).map((f) => (typeof f?.id === 'string' ? f.id : '')),
   );
   const hasColorContrast = findingIds.has('color-contrast');
   const hasRegion = findingIds.has('region') || findingIds.has('landmark-one-main');
@@ -88,6 +85,18 @@ export function buildManualBacklog({ findings, inventory = [], processes = [] })
     '- [ ] Zoom/reflow at 320 CSS px equivalent',
     '- [ ] Text spacing and clipping checks',
     '- [ ] Name/role/value review for custom controls',
+    // Items below close 5 gaps surfaced by the AU dogfood Lane B verdict
+    // (output/au-run-1/AU-DOGFOOD-REPORT.md). All five are ALWAYS-INCLUDED
+    // — axe-core has partial mechanical-presence overlap with three of them
+    // (audio-caption/video-caption, image-alt/area-alt, focus-* rules)
+    // but the SEMANTIC judgment ("is this alt truly meaningful? is the focus
+    // indicator visible to a sighted user?") remains an auditor responsibility.
+    // Multi-SC coverage is folded into a single line where wording permits.
+    '- [ ] Alt text semantics: decorative images use empty alt; informative images have meaningful descriptions',
+    '- [ ] Captions and transcripts: audio/video has synchronized captions or full transcript',
+    '- [ ] Color-only information: confirm no information is conveyed by color alone',
+    '- [ ] Focus indicator visibility: every interactive element has a visible focus indicator that is not obscured by overlapping content',
+    '- [ ] CAPTCHA alternative: if CAPTCHA is present, verify an accessible alternative (text, audio) is available AND keyboard-operable',
   );
 
   // Region findings → explicit landmarks review.

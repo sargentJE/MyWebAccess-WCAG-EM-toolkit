@@ -26,12 +26,35 @@ import { parseArgs } from './args.mjs';
 
 // SECTION: Constants
 
+// ANCHOR: DEFAULT_DOCUMENT_LINK_PATTERNS — pathname-anchored regex sources matching
+// non-HTML document/archive/installer/media/e-book/design-binary/data-file URLs.
+// Wired into discover.mjs's transformRequestFunction (and sitemap-seed loop) via
+// `config.crawl.documentLinkPatternsCompiled`; matching links are dropped before
+// Crawlee enqueues them. Each entry is one regex per logical filetype family so the
+// compiled `RegExp[]` stays compact and the source list reads as a taxonomy.
+//
+// AU dogfood (2026-05-02) showed Crawlee retrying 7 broken document links 3× each
+// before dropping (~27s wasted). On real client sites with hundreds of document
+// references this could 10× the discover stage. Power users override via
+// `crawl.documentLinkPatterns: [...]` (e.g. set to `[]` to crawl PDFs as page-
+// equivalents on a docs-site audit).
+export const DEFAULT_DOCUMENT_LINK_PATTERNS = [
+  '\\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf)$', // documents
+  '\\.(zip|tar|tar\\.gz|tgz|gz|bz2|xz|7z|rar)$', // archives
+  '\\.(dmg|exe|iso|pkg|deb|rpm|msi)$', // installers
+  '\\.(mp4|mov|avi|mkv|webm|flv|m4v)$', // video
+  '\\.(mp3|wav|flac|ogg|m4a|aac)$', // audio
+  '\\.(epub|mobi|azw3?)$', // e-books
+  '\\.(psd|ai|sketch|fig|xd)$', // design binaries
+  '\\.(sqlite|db)$', // data files
+];
+
 // ANCHOR: DEFAULTS — every key the toolkit understands, with a shippable default.
-// Layer 3a landed `scan.viewports` (sentinel), `crawl.requestDelayMs`, the
-// default axe tag profile, `reporting.failOnFindings`, and deleted the legacy
+// Multi-viewport support landed `scan.viewports` (sentinel), `crawl.requestDelayMs`,
+// the default axe tag profile, `reporting.failOnFindings`, and deleted the legacy
 // `scan.viewport` singleton so DEFAULT_VIEWPORTS becomes reachable via
-// `resolveViewports`. Layer 3b adds `auth`, `wcagEm`. Layer 4 adds
-// `reporting.reporters`.
+// `resolveViewports`. Authenticated scans added `auth`, `wcagEm`. The reporter
+// pipeline added `reporting.reporters`.
 const DEFAULTS = {
   scope: {
     mode: 'same-hostname',
@@ -41,8 +64,9 @@ const DEFAULTS = {
     maxPages: 80,
     maxConcurrency: 5,
     requestTimeoutSecs: 90,
+    navigationTimeoutSecs: 60,
     // Crawl throttle in ms; wired into the Crawlee crawler's
-    // `preNavigationHooks` in `src/commands/discover.mjs` (R7). 0 = no delay.
+    // `preNavigationHooks` in `src/commands/discover.mjs`. 0 = no delay.
     requestDelayMs: 0,
     sitemapSeeding: {
       enabled: true,
@@ -51,6 +75,7 @@ const DEFAULTS = {
       maxUrls: 500,
     },
     excludeUrlPatterns: [],
+    documentLinkPatterns: DEFAULT_DOCUMENT_LINK_PATTERNS,
   },
   discovery: {
     captureH1: true,
@@ -85,21 +110,21 @@ const DEFAULTS = {
       include: [],
       exclude: [],
       withRules: [],
-      // Layer 3a default tag profile — WCAG 2.0/2.1/2.2 A + AA. ACT tag
-      // lands in Layer 3b alongside the ACT rule map.
+      // Default tag profile — WCAG 2.0/2.1/2.2 A + AA. ACT tag
+      // lands in a future version alongside the ACT rule map.
       withTags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
       runOnly: null,
     },
   },
   reporting: {
     groupBestPracticeSeparately: true,
-    // Layer 4 R2: `markdownReport` dropped from DEFAULTS (it was schema-
-    // accepted but never read at runtime). `reporters` intentionally absent
+    // `markdownReport` dropped from DEFAULTS (it was schema-accepted but
+    // never read at runtime). `reporters` intentionally absent
     // from DEFAULTS too — summarize.mjs applies `?? ['json','markdown']`
     // inline so that absence in user config means "default set," while
     // presence of `markdownReport` in user config triggers a one-shot
     // deprecation warning via `warnLegacyAliasResolved`.
-    // Threshold-based exit code 2 wiring lives in summarize.mjs (R8).
+    // Threshold-based exit code 2 wiring lives in summarize.mjs.
     // `impacts` matches any axe impact; `classifications` matches the
     // classifyRule buckets; count ≥ threshold → exit 2.
     failOnFindings: {
@@ -108,7 +133,7 @@ const DEFAULTS = {
       threshold: 1,
     },
   },
-  // WCAG-EM Step 5 report metadata. Layer 3b's `toWcagEmSummary` (R10)
+  // WCAG-EM Step 5 report metadata. `toWcagEmSummary`
   // reads these fields into the emitted `wcag-em-summary.json` alongside
   // auto-computed `evaluationDate` and `processesEvaluated`. Sensible
   // defaults so users without explicit wcagEm config still get a valid
@@ -152,8 +177,7 @@ const DEFAULTS = {
 export async function loadConfig(overridePath) {
   const args = parseArgs();
   const configPath =
-    overridePath ??
-    (typeof args.config === 'string' ? args.config : 'configs/example-site.json');
+    overridePath ?? (typeof args.config === 'string' ? args.config : 'configs/example-site.json');
   const resolved = path.resolve(configPath);
   const raw = await fs.readFile(resolved, 'utf8');
   const config = deepMerge(DEFAULTS, JSON.parse(raw));

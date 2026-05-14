@@ -11,15 +11,15 @@
 
 ## Context and Problem Statement
 
-Since Layer 2, `schemas/config.schema.json` (`reporting.reporters`,
+Since the config validation overhaul, `schemas/config.schema.json` (`reporting.reporters`,
 `reporting.includePasses`, `reporting.screenshotFormat`,
 `reporting.screenshotQuality`) has promised a five-format reporter
 selection (`json | markdown | html | earl-jsonld | junit`) but the
 runtime in `src/commands/summarize.mjs` hard-coded inline emission of
 `summary.json` + `summary.md` and emitted a one-shot
 `warnSchemaAcceptedRuntimeIgnored` for `reporters`. The `// ANCHOR:
-MarkdownReport — replaced by pluggable reporter in Layer 4` marker at
-`summarize.mjs` was the seam; Layer 4 closes it.
+MarkdownReport — replaced by pluggable reporter` marker at
+`summarize.mjs` was the seam; the reporter pipeline closes it.
 
 Several open design questions had to be settled in one place rather
 than rediscovered each time a future reporter is added:
@@ -52,9 +52,10 @@ unreachable.
 
 `package.json:exports` drops the `./reporters/*` entry that was
 scaffolded earlier. The remaining `./commands/*` and `./lib/*`
-exports stay (they pre-date Layer 4 and the cost of removing them
+exports stay (they pre-date the reporter pipeline and the cost of removing them
 is bigger than the surface they leak). Future ADRs may revisit those
-under the same ADR-0012 lens.
+under the same ADR-0012 lens. **Update:** `./commands/*` and `./lib/*`
+removed by ADR-0014.
 
 ### 2. Reporter module interface
 
@@ -68,7 +69,9 @@ export const name = 'html'; // matches the registry key + the schema enum
  * @param {{ paths: { reportsDir: string, resultsDir?: string }, config?: any }} ctx
  * @returns {Promise<{ path: string, bytes: number }>}
  */
-export async function emit(summary, ctx) { /* ... */ }
+export async function emit(summary, ctx) {
+  /* ... */
+}
 ```
 
 The `summary` argument is the same object `summarize.mjs` writes as
@@ -80,24 +83,26 @@ on-disk byte count — for the dispatch caller's logging.
 
 ### 3. Reporter outputs vs side-artefacts (the split)
 
-| File | Owner | Reasoning |
-|---|---|---|
-| `summary.json` | `json` reporter | Swappable summary view |
-| `summary.md` | `markdown` reporter | Swappable summary view |
-| `summary.html` | `html` reporter | Swappable summary view |
-| `earl.jsonld` | `earl-jsonld` reporter | Swappable summary view |
-| `junit.xml` | `junit` reporter | Swappable summary view |
-| `grouped-by-rule.json` | `summarize.mjs` inline | Analytical artefact |
-| `grouped-by-component.json` | `summarize.mjs` inline | Analytical artefact |
-| `random-vs-structured-comparison.json` | `summarize.mjs` inline | Analytical artefact |
-| `wcag-em-summary.json` | `summarize.mjs` inline | ADR-0007 output |
-| `manual-backlog.md` | `summarize.mjs` inline | Always-on backlog |
+| File                                   | Owner                  | Reasoning              |
+| -------------------------------------- | ---------------------- | ---------------------- |
+| `summary.json`                         | `json` reporter        | Swappable summary view |
+| `summary.md`                           | `markdown` reporter    | Swappable summary view |
+| `summary.html`                         | `html` reporter        | Swappable summary view |
+| `earl.jsonld`                          | `earl-jsonld` reporter | Swappable summary view |
+| `junit.xml`                            | `junit` reporter       | Swappable summary view |
+| `grouped-by-rule.json`                 | `summarize.mjs` inline | Analytical artefact    |
+| `grouped-by-component.json`            | `summarize.mjs` inline | Analytical artefact    |
+| `random-vs-structured-comparison.json` | `summarize.mjs` inline | Analytical artefact    |
+| `wcag-em-summary.json`                 | `summarize.mjs` inline | ADR-0007 output        |
+| `manual-backlog.md`                    | `summarize.mjs` inline | Always-on backlog      |
 
 Test: a user setting `reporting.reporters: []` gets only the side-
 artefacts on disk. A user setting `reporting.reporters: ['html']`
 gets `summary.html` + all five side-artefacts. The split is
-covered by `test/e2e/reporters-smoke.test.mjs` (currently skipped
-behind the Crawlee hang documented in `CHANGELOG.md [Unreleased]`).
+covered by `test/e2e/reporters-smoke.test.mjs` (un-skipped after the
+Crawlee localhost-fixture hang resolution — see
+`docs/adr/0013-crawlee-localhost-investigation.md`; resolved by D2 /
+commit `468f5c1`).
 
 ### 4. Deterministic-sort contract
 
@@ -105,13 +110,13 @@ behind the Crawlee hang documented in `CHANGELOG.md [Unreleased]`).
 **2-key contract** `[impact desc, ruleId asc]`. The impact ordering
 is `IMPACT_ORDER`:
 
-| impact | priority |
-|---|---|
-| `critical` | 4 |
-| `serious` | 3 |
-| `moderate` | 2 |
-| `minor` | 1 |
-| `null` | 0 (sorts last) |
+| impact     | priority       |
+| ---------- | -------------- |
+| `critical` | 4              |
+| `serious`  | 3              |
+| `moderate` | 2              |
+| `minor`    | 1              |
+| `null`     | 0 (sorts last) |
 
 Inner arrays (`urls`, `targets`, `pageTypes`, `clusters`) are sorted
 upstream in `summarize.mjs` (the existing post-grouping
@@ -147,7 +152,7 @@ composes the exit code:
 
 ```js
 const exitCode = Math.max(
-  computeExitCode(summary, failOnFindings),  // 0 or 2
+  computeExitCode(summary, failOnFindings), // 0 or 2
   reporterOutcome.errors.length > 0 ? 1 : 0,
 );
 ```
@@ -175,12 +180,12 @@ findings only, matching v0.3 behaviour.
 
 `src/reporters/_template.mjs` exports four helpers:
 
-| helper | context | escape set |
-|---|---|---|
-| `text(s)` | element text | `&` `<` `>` `"` `'` |
-| `attr(s)` | attribute value | text set + backtick + ASCII control chars 0x00-0x08, 0x0b-0x0c, 0x0e-0x1f, 0x7f, plus Unicode C1 controls 0x80-0x9f (HTML 5 forbids the C1 range in attribute context). Both `text(s)` and `attr(s)` additionally STRIP Unicode bidi-override / isolate formatting characters (U+202A-U+202E, U+2066-U+2069) before the escape pass — defends against Trojan Source-style visual spoofing (CVE-2021-42574). |
-| `safeUrl(s)` | `<a href>` / `<img src>` | http / https / relative pass through; everything else (`javascript:`, `data:`, `file:`, `vbscript:`) is quarantined to `'#'` |
-| `html\`...\`` | tagged template | applies `attr()` (strict superset of text-context) to every interpolation |
+| helper        | context                  | escape set                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text(s)`     | element text             | `&` `<` `>` `"` `'`                                                                                                                                                                                                                                                                                                                                                                                         |
+| `attr(s)`     | attribute value          | text set + backtick + ASCII control chars 0x00-0x08, 0x0b-0x0c, 0x0e-0x1f, 0x7f, plus Unicode C1 controls 0x80-0x9f (HTML 5 forbids the C1 range in attribute context). Both `text(s)` and `attr(s)` additionally STRIP Unicode bidi-override / isolate formatting characters (U+202A-U+202E, U+2066-U+2069) before the escape pass — defends against Trojan Source-style visual spoofing (CVE-2021-42574). |
+| `safeUrl(s)`  | `<a href>` / `<img src>` | http / https / relative pass through; everything else (`javascript:`, `data:`, `file:`, `vbscript:`) is quarantined to `'#'`                                                                                                                                                                                                                                                                                |
+| `html\`...\`` | tagged template          | applies `attr()` (strict superset of text-context) to every interpolation                                                                                                                                                                                                                                                                                                                                   |
 
 **No `raw()` export**; minimal attack surface. Authors can't slip
 unescaped strings through accidentally — the API forces secure-by-
@@ -219,8 +224,10 @@ listed above for HTML escaping is overlapping but not identical.
 - Schema-runtime gap closed: `reporting.reporters` finally honoured.
 - Zero new runtime dependencies. Total surface added: ~1500 LOC of
   reporter modules + ~600 LOC of unit tests, all hand-rolled.
-- Three CHANGELOG carry-forwards triaged by R9: 1 closed
-  (authenticated-scan), 2 deferred behind a documented Crawlee hang.
+- Three CHANGELOG carry-forwards triaged during the reporter pipeline: 1 closed
+  (authenticated-scan), 2 deferred behind a documented Crawlee
+  localhost-fixture hang — both since resolved by D2 / commit `468f5c1`
+  and un-skipped (see `docs/adr/0013-crawlee-localhost-investigation.md`).
 - Future reporters land by adding one file under `src/reporters/`,
   one entry in the registry import block, and one test file. The
   shape is small enough to memorise.
@@ -231,7 +238,7 @@ listed above for HTML escaping is overlapping but not identical.
   custom format must (a) raise an issue, or (b) fork. The v2.0
   story revisits this under ADR-0012's deferral.
 - `markdownReport: true` from v0.3 configs is now a deprecation
-  warning, not an error. Documented in R2's commit body.
+  warning, not an error. Documented in the relevant commit body.
 - Adding `<a href>` anchor tags requires three calls (`safeUrl` to
   validate scheme, `attr()` via the `html\`\`` tag to escape the
   result). The verbosity is intentional — the tagged-template hides

@@ -6,16 +6,12 @@
  * @description
  * Re-exports the public surface so embedders can run audits in-process:
  *   ```js
- *   import { run as runDiscover } from 'wcag-em-a11y-toolkit/commands/discover';
- *   ```
- * or at the top level:
- *   ```js
  *   import { runAudit } from 'wcag-em-a11y-toolkit';
  *   ```
  *
  * STABILITY: the programmatic API is exposed but not stability-guaranteed
- * until v2.0 (ADR-0013, forthcoming). The CLI at `bin/wcag-em.mjs` is the
- * blessed surface for end-users.
+ * until v2.0 (ADR-0012). The CLI at `bin/wcag-em.mjs` is the blessed
+ * surface for end-users.
  */
 
 // SECTION: Re-exports

@@ -6,11 +6,11 @@
  * @description
  * Reads this package's `name` + `version` from its own `package.json` and
  * axe-core's `version` from `@axe-core/playwright/package.json`. Consumed
- * by Layer 3b R13's artefact stamping — every emitted JSON/markdown file
+ * by artefact stamping — every emitted JSON/markdown file
  * carries a `tool: { name, version, axeCore }` header so downstream
  * consumers (CI dashboards, compliance audits) can trace provenance.
  *
- * Reading at import time means Layer 5's `npm version 1.0.0` bump flows
+ * Reading at import time means the `npm version` bump flows
  * through mechanically — no hardcoded constants to update.
  *
  * The `@axe-core/playwright` package's `exports` map does NOT publish
@@ -62,7 +62,7 @@ export const TOOL_IDENTITY = Object.freeze({
  * from TOOL_IDENTITY so the markdown formatting can evolve without
  * affecting JSON consumers.
  *
- * @returns {string} e.g. `**Tool:** wcag-em-a11y-toolkit 0.3.0 (axe-core 4.11.2)\n\n`
+ * @returns {string} e.g. `**Tool:** wcag-em-a11y-toolkit 1.0.0 (axe-core 4.11.2)\n\n`
  */
 export function toolIdentityMarkdownHeader() {
   return `**Tool:** ${TOOL_IDENTITY.name} ${TOOL_IDENTITY.version} (axe-core ${TOOL_IDENTITY.axeCore})\n\n`;

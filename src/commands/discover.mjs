@@ -30,6 +30,7 @@ import {
   guessProcessTypes,
   urlAllowedByScope,
   urlExcludedByPatterns,
+  urlSkippedByExtension,
 } from '../lib/urls.mjs';
 import { getSitemapSeeds } from '../lib/sitemap.mjs';
 import { TOOL_IDENTITY } from '../lib/version.mjs';
@@ -58,6 +59,49 @@ export function buildRequestDelayHook(requestDelayMs) {
   };
 }
 
+/**
+ * Capture per-page discovery metadata using plain DOM API. Designed to be
+ * passed to `page.evaluate` so it executes in the browser context (Playwright
+ * serializes the function source over CDP). Pure with respect to the
+ * `document` global + `flags` arg — no closures over Node-side state.
+ *
+ * Replaces the previous locator-based capture chain that auto-waited on each
+ * missing element up to the page default timeout, hanging the handler on any
+ * page lacking `<h1>` or `<link rel=canonical>` (the toolkit's exact target
+ * population — sites being audited for accessibility issues). plain
+ * `document.querySelector*` returns null/0 immediately for missing elements.
+ *
+ * Tested in Node by stubbing `globalThis.document` before invocation.
+ *
+ * @param {{ captureH1: boolean, captureCanonical: boolean, captureForms: boolean, captureLandmarks: boolean, captureSearchInputs: boolean }} flags
+ * @returns {{ h1: string|null, canonical: string|null, formCount: number, landmarkCount: number, searchInputCount: number }}
+ */
+export function captureDiscoveryMetadata(flags) {
+  /* global document */
+  const text = (/** @type {string} */ sel) => {
+    const el = document.querySelector(sel);
+    return el ? (el.textContent ?? null) : null;
+  };
+  const attr = (/** @type {string} */ sel, /** @type {string} */ name) => {
+    const el = document.querySelector(sel);
+    return el ? el.getAttribute(name) : null;
+  };
+  const count = (/** @type {string} */ sel) => document.querySelectorAll(sel).length;
+  return {
+    h1: flags.captureH1 ? text('h1') : null,
+    canonical: flags.captureCanonical ? attr('link[rel="canonical"]', 'href') : null,
+    formCount: flags.captureForms ? count('form') : 0,
+    landmarkCount: flags.captureLandmarks
+      ? count(
+          'main, nav, header, footer, aside, [role="main"], [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]',
+        )
+      : 0,
+    searchInputCount: flags.captureSearchInputs
+      ? count('input[type="search"], input[role="searchbox"], form[role="search"] input')
+      : 0,
+  };
+}
+
 // SECTION: Public API
 
 /**
@@ -76,20 +120,28 @@ export async function run(ctx) {
   const excludedOutOfScope = new Set();
   /** @type {Set<string>} */
   const excludedByPattern = new Set();
+  /** @type {Set<string>} */
+  const excludedByExtension = new Set();
   const seeds = [normalizeUrl(config.rootUrl)];
 
-  // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap
+  // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap.
+  // Filters early-exit per check (mirrors the per-filter return-false pattern in
+  // transformRequestFunction below) so the extension-skip counter only fires for
+  // URLs that would otherwise have been seeded — out-of-scope and pattern-excluded
+  // URLs are silently dropped (matches existing sitemap-loop behaviour, which
+  // tracks neither in telemetry).
   for (const url of await getSitemapSeeds(
     config.rootUrl,
     config.crawl.sitemapSeeding,
     config.scope,
   )) {
-    if (
-      urlAllowedByScope(url, config.rootUrl, config.scope) &&
-      !urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])
-    ) {
-      seeds.push(url);
+    if (!urlAllowedByScope(url, config.rootUrl, config.scope)) continue;
+    if (urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])) continue;
+    if (urlSkippedByExtension(url, config.crawl.documentLinkPatternsCompiled ?? [])) {
+      excludedByExtension.add(url);
+      continue;
     }
+    seeds.push(url);
   }
 
   // ANCHOR: Crawler — PlaywrightCrawler with bounded maxPages + concurrency
@@ -97,52 +149,36 @@ export async function run(ctx) {
     maxRequestsPerCrawl: config.crawl.maxPages,
     maxConcurrency: config.crawl.maxConcurrency,
     requestHandlerTimeoutSecs: config.crawl.requestTimeoutSecs,
+    navigationTimeoutSecs: config.crawl.navigationTimeoutSecs,
     // ANCHOR: RequestDelayHook — per-navigation throttle honouring
     // `config.crawl.requestDelayMs`. Zero (the DEFAULT) is a no-op.
     preNavigationHooks: [buildRequestDelayHook(config.crawl.requestDelayMs)],
 
     async requestHandler({ page, request, enqueueLinks }) {
-      // NOTE: Crawlee's requestHandlerTimeoutSecs bounds the whole handler;
-      // page.setDefaultTimeout also bounds per-locator ops (click, waitFor…)
-      // so a single slow element can't stall the handler up to the outer cap.
+      // NOTE: Crawlee's requestHandlerTimeoutSecs caps the whole handler at
+      // requestTimeoutSecs. page.setDefaultTimeout below configures the
+      // per-method default that bounds waitForLoadState (slow-network
+      // safety) and any future interactive locator work; per-element
+      // metadata capture has been moved to a single page.evaluate (no
+      // auto-wait — see captureDiscoveryMetadata).
+      //
+      // INVARIANT: this handler must NOT use Playwright locator queries —
+      // use page.evaluate instead. The 90s default would couple per-call
+      // auto-wait to the handler budget and re-cause the AU dogfood hang.
+      // Enforced by test/unit/discover-no-locator-invariant.test.mjs.
       page.setDefaultTimeout(config.crawl.requestTimeoutSecs * 1000);
       await page.waitForLoadState('domcontentloaded');
 
       const currentUrl = normalizeUrl(page.url());
       const title = await page.title().catch(() => '');
-      const h1 = config.discovery.captureH1
-        ? await page
-            .locator('h1')
-            .first()
-            .textContent()
-            .catch(() => null)
-        : null;
-      const canonical = config.discovery.captureCanonical
-        ? await page
-            .locator('link[rel="canonical"]')
-            .getAttribute('href')
-            .catch(() => null)
-        : null;
-      const formCount = config.discovery.captureForms
-        ? await page
-            .locator('form')
-            .count()
-            .catch(() => 0)
-        : 0;
-      const landmarkCount = config.discovery.captureLandmarks
-        ? await page
-            .locator(
-              'main, nav, header, footer, aside, [role="main"], [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]',
-            )
-            .count()
-            .catch(() => 0)
-        : 0;
-      const searchInputCount = config.discovery.captureSearchInputs
-        ? await page
-            .locator('input[type="search"], input[role="searchbox"], form[role="search"] input')
-            .count()
-            .catch(() => 0)
-        : 0;
+      const probe = await page.evaluate(captureDiscoveryMetadata, config.discovery).catch(() => ({
+        h1: null,
+        canonical: null,
+        formCount: 0,
+        landmarkCount: 0,
+        searchInputCount: 0,
+      }));
+      const { h1, canonical, formCount, landmarkCount, searchInputCount } = probe;
 
       const pageType = guessPageType(currentUrl);
       const clusterKey = clusterKeyFor(currentUrl, pageType);
@@ -180,6 +216,10 @@ export async function run(ctx) {
             excludedByPattern.add(normalized);
             return false;
           }
+          if (urlSkippedByExtension(normalized, config.crawl.documentLinkPatternsCompiled ?? [])) {
+            excludedByExtension.add(normalized);
+            return false;
+          }
           req.url = normalized;
           return req;
         },
@@ -198,7 +238,7 @@ export async function run(ctx) {
 
   // ANCHOR: ClusterGrouping — Object.groupBy requires Node 21+ (pinned 22.11+)
   const pageClusters = Object.values(
-    Object.groupBy(inventory, /** @param {any} item */ (item) => item.clusterKey),
+    Object.groupBy(inventory, /** @type {(item: any) => string} */ ((item) => item.clusterKey)),
   )
     .filter(
       /** @type {(g: any) => g is any[]} */ ((group) => Array.isArray(group) && group.length > 0),
@@ -239,6 +279,7 @@ export async function run(ctx) {
     discoveredCount: inventory.length,
     outOfScopeLinkCount: excludedOutOfScope.size,
     excludedByPatternCount: excludedByPattern.size,
+    excludedByExtensionCount: excludedByExtension.size,
     generatedAt: new Date().toISOString(),
   });
 

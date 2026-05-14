@@ -51,17 +51,17 @@ const ajv = new Ajv2020({
 addFormats(ajv);
 
 // ANCHOR: validRegex — custom keyword; compiles user regex at validation time
-// NOTE(Layer 3): the validRegex keyword is attached to TWO schema fields and
+// NOTE: the validRegex keyword is attached to TWO schema fields and
 // shared across three consumer sites:
 //   1. `crawl.excludeUrlPatterns[]` — compiled at load via
-//      context.mjs → defineHidden (ANCHOR: CompileRuntimeFields, Layer 2).
+//      context.mjs → defineHidden (ANCHOR: CompileRuntimeFields).
 //   2. `scan.axe.overrides[].urlPattern` — compiled at load via
-//      context.mjs → defineHidden (ANCHOR: CompileOverrides, Layer 3a R2).
+//      context.mjs → defineHidden (ANCHOR: CompileOverrides, the overrides compile step).
 //   3. `$defs/action.urlPattern` — compiled at load via
 //      context.mjs → compileActionUrlPatterns (ANCHOR: CompileActionUrlPatterns,
-//      Layer 3b R7) at three consumer sites: scan.beforeScan.actions[],
+//      the action-regex compile step) at three consumer sites: scan.beforeScan.actions[],
 //      scan.axe.overrides[].actions[], processes[].steps[].
-// All validRegex fields are now compile-at-load — the Layer 3 follow-up
+// All validRegex fields are now compile-at-load — a follow-up
 // tracked in CHANGELOG `[Unreleased]` is cleared by this commit.
 // LINK: docs/adr/0005-fail-fast-on-config.md
 ajv.addKeyword({

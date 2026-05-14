@@ -8,7 +8,7 @@
  * the import itself doesn't throw. Catches typos, broken relative imports, and
  * top-level side effects that should not exist in library modules.
  *
- * This is the first test committed to the repo (Layer 0b). Per ADR-0001, every
+ * This is the first test committed to the repo (initial implementation). Per ADR-0001, every
  * commit from here on must leave `npm test` green.
  */
 

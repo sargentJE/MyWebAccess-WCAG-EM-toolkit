@@ -5,7 +5,7 @@
  *
  * @description
  * Migrated from the inline `// ANCHOR: MarkdownReport` block in
- * `summarize.mjs` (Layer 3b HEAD `abd7339`). Body sections preserved
+ * `summarize.mjs` (pre-reporter-pipeline implementation). Body sections preserved
  * verbatim:
  *   - tool-identity HTML comment header (via `toolIdentityMarkdownHeader`).
  *   - Site/Generated metadata.

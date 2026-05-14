@@ -1,8 +1,7 @@
 // @ts-check
 /**
- * @file Tests for axe-utils helpers — Layer 1's `classifyRule` / `isValidRunOnly`,
- *   Layer 3a's `findMatchingOverride` / `applyAxeOverride`, and Layer 3b's
- *   `withActAndWcagMetadata`.
+ * @file Tests for axe-utils helpers — `classifyRule` / `isValidRunOnly`,
+ *   `findMatchingOverride` / `applyAxeOverride`, and `withActAndWcagMetadata`.
  * @module test/unit/axe-utils
  */
 
@@ -38,10 +37,7 @@ test('findMatchingOverride returns null for empty overridesCompiled', () => {
 });
 
 test('findMatchingOverride returns null when array is not an array', () => {
-  assert.equal(
-    findMatchingOverride('https://example.com/admin', /** @type {any} */ (null)),
-    null,
-  );
+  assert.equal(findMatchingOverride('https://example.com/admin', /** @type {any} */ (null)), null);
 });
 
 test('findMatchingOverride returns the matching entry', () => {
@@ -59,10 +55,7 @@ test('findMatchingOverride: first match wins when multiple overrides match', () 
     withTags: ['wcag2a'],
   };
   // broader appears first — should win even though overrideAdmin also matches.
-  const result = findMatchingOverride('https://example.com/admin/users', [
-    broader,
-    overrideAdmin,
-  ]);
+  const result = findMatchingOverride('https://example.com/admin/users', [broader, overrideAdmin]);
   assert.equal(result, broader);
 });
 
@@ -76,10 +69,7 @@ test('findMatchingOverride returns null when no override matches', () => {
 
 test('findMatchingOverride skips entries with a non-RegExp regex', () => {
   const malformed = /** @type {any} */ ({ urlPattern: '^/admin', regex: null });
-  const result = findMatchingOverride('https://example.com/admin', [
-    malformed,
-    overrideAdmin,
-  ]);
+  const result = findMatchingOverride('https://example.com/admin', [malformed, overrideAdmin]);
   assert.equal(result, overrideAdmin, 'falls through to the next valid entry');
 });
 
@@ -136,17 +126,17 @@ test('applyAxeOverride ignores non-replaceable keys (urlPattern, actions, regex)
   assert.deepEqual(result.withTags, ['wcag22aa'], 'withTags IS a replaceable key');
   assert.ok(!('urlPattern' in result), 'urlPattern is metadata, not axe-config');
   assert.ok(!('regex' in result), 'regex is an internal detail');
-  assert.ok(!('actions' in result), 'actions are Layer 3b — not surfaced here');
+  assert.ok(!('actions' in result), 'actions are deferred — not surfaced here');
 });
 
-test('isValidRunOnly still functions after R3 additions', () => {
-  // Regression guard — R3 added constants above this function's location.
+test('isValidRunOnly still functions after override additions', () => {
+  // Regression guard — the override constants added above this function's location.
   assert.equal(isValidRunOnly({ type: 'tag', values: ['wcag2aa'] }), true);
   assert.equal(isValidRunOnly(null), false);
   assert.equal(isValidRunOnly({ type: 'tag' }), false);
 });
 
-// SECTION: withActAndWcagMetadata tests (Layer 3b R2)
+// SECTION: withActAndWcagMetadata tests
 
 test('withActAndWcagMetadata: wcag111 tag parses to 1.1.1', () => {
   const result = withActAndWcagMetadata({ id: 'image-alt', tags: ['wcag111'] });

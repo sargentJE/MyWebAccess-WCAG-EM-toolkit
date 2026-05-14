@@ -13,7 +13,7 @@
  * The union of the three buckets is written to `sample.json` at repo root —
  * the single handoff file consumed by `scan`.
  *
- * NOTE (Layer 2): this command warns on `structuredMissingFromInventory` —
+ * NOTE: this command warns on `structuredMissingFromInventory` —
  * silent in v0.3, now surfaced via `ctx.logger.warn`.
  *
  * @see https://www.w3.org/TR/WCAG-EM/#step3
@@ -70,7 +70,7 @@ export async function run(ctx) {
   /** @type {string[]} */
   const structuredMissingFromInventory = structured.filter((url) => !allUrls.includes(url));
   if (structuredMissingFromInventory.length > 0) {
-    // Layer 2 fix: surface silent config error via structured log event.
+    // Fix: surface silent config error via structured log event.
     logger.warn(
       { missing: structuredMissingFromInventory },
       'structured sample contains URLs not found in inventory',

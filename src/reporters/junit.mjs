@@ -58,12 +58,10 @@ export async function emit(summary, ctx) {
     const ruleId = String(f.id ?? '');
     const pages = Array.isArray(f.pages) ? f.pages : [];
     const firstTarget = Array.isArray(f.targets) && f.targets.length ? String(f.targets[0]) : '';
-    const exampleHtml = Array.isArray(f.examples) && f.examples[0]?.html
-      ? String(f.examples[0].html)
-      : '';
-    // Treat findings as failures unless they declare otherwise. Layer 3b's
-    // grouped findings are violation-only by construction; future layers
-    // may extend.
+    const exampleHtml =
+      Array.isArray(f.examples) && f.examples[0]?.html ? String(f.examples[0].html) : '';
+    // Treat findings as failures unless they declare otherwise. Grouped
+    // findings are violation-only by construction; future versions may extend.
     const outcome = typeof f.outcome === 'string' ? f.outcome : 'failed';
     if (outcome === 'inapplicable') continue;
     if (outcome === 'passed' && !includePasses) continue;
@@ -72,7 +70,11 @@ export async function emit(summary, ctx) {
       const caseName = firstTarget ? `${url}#${firstTarget}` : url;
       testsCount += 1;
       const failureType =
-        outcome === 'incomplete' ? 'incomplete' : (typeof f.impact === 'string' ? f.impact : 'failed');
+        outcome === 'incomplete'
+          ? 'incomplete'
+          : typeof f.impact === 'string'
+            ? f.impact
+            : 'failed';
       if (outcome === 'passed') {
         // No failure child for clean passes (only emitted when includePasses=true).
         cases.push(

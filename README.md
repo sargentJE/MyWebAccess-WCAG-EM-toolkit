@@ -1,62 +1,185 @@
-# WCAG-EM Accessibility Toolkit V2 Recommended
+# WCAG-EM Accessibility Toolkit
 
-> **Status: work in progress.** This toolkit is mid-migration from v0.3 to
-> v1.0.0. Architecture, conventions, and feature set are converging:
-> [`docs/adr/`](./docs/adr/) captures current decisions and
-> [`CHANGELOG.md`](./CHANGELOG.md) tracks deferred work. The README content
-> below still reflects the v0.3 starting point (with references to the old
-> `box/` + `scripts/` directories) and will be rewritten in the final
-> release layer. For the current CLI surface see
-> `node bin/wcag-em.mjs --help`.
+Automated layer of a [WCAG-EM](https://www.w3.org/TR/WCAG-EM/)-aligned
+accessibility audit workflow. Discovers pages, builds a structured
+sample, runs [axe-core](https://github.com/dequelabs/axe-core) scans,
+evaluates interactive processes, and produces WCAG-EM Step 5 conformance
+summaries — without over-claiming what automation can prove.
 
-This package is the **recommended V2 build** based on the V1 and V2 decision points.
+## What it does
 
-It is designed to help you run the **automated layer** of a WCAG-EM-aligned audit workflow without over-claiming what automation can prove.
+The toolkit runs a five-stage pipeline:
 
-## Recommended operating model
+1. **Discover** — crawl from a root URL (optionally seeded from a
+   sitemap) to build a page inventory with metadata and clusters.
+2. **Sample** — select a structured + random sample from the inventory
+   per WCAG-EM Step 3.
+3. **Scan** — run axe-core over every sample page at each configured
+   viewport, with optional pre-scan actions and per-URL overrides.
+4. **Scan-processes** — exercise interactive processes (form submissions,
+   search, navigation states) via a step DSL and scan the resulting
+   states.
+5. **Summarize** — aggregate findings into per-SC outcomes, produce
+   reports (Markdown, HTML, EARL JSON-LD, JUnit), and generate the
+   WCAG-EM Step 5 summary.
 
-1. define scope in config
-2. discover URLs from the root URL
-3. build a structured sample plus a recorded random sample
-4. run automated page scans
-5. run separate process/state scans
-6. summarize findings, compare random vs structured sample, and prepare the manual testing backlog
-
-## What this build adds over the earlier starter
-
-- stronger config defaults and validation
-- optional sitemap seeding
-- richer inventory metadata and page clusters
-- process candidate detection during discovery
-- hybrid sample building (manual + auto-suggest)
-- process expansion hooks
-- grouped findings by rule and component-ish selector pattern
-- random-sample comparison flags
-- cleaner Markdown and JSON report outputs
-- decision records and recommended checklist files in `box/`
-
-## Install
+## Quick start
 
 ```bash
 npm install
 npx playwright install
+npx wcag-em audit --config configs/example-site.json
 ```
 
-## Example usage
+## CLI commands
 
-```bash
-npm run discover -- --config configs/legacy-events.json
-npm run sample -- --config configs/legacy-events.json
-npm run scan:sample -- --config configs/legacy-events.json
-npm run scan:processes -- --config configs/legacy-events.json
-npm run summarize -- --config configs/legacy-events.json
+| Command                  | Stage | Description                                  |
+| ------------------------ | ----- | -------------------------------------------- |
+| `wcag-em discover`       | 1     | Crawl and build the URL inventory            |
+| `wcag-em sample`         | 2     | Select the structured + random sample        |
+| `wcag-em scan`           | 3     | Run axe-core over sample pages               |
+| `wcag-em scan-processes` | 3b    | Exercise and scan interactive processes      |
+| `wcag-em summarize`      | 4     | Aggregate findings and produce reports       |
+| `wcag-em audit`          | All   | Run the full pipeline (discover → summarize) |
+
+All commands accept `--config <path>`, `--out-dir <path>`,
+`--log-level <level>`, `--quiet`, and `--verbose` flags.
+
+## Configuration
+
+Start from [`configs/example-site.json`](./configs/example-site.json)
+and adapt to your site. Key fields:
+
+| Field                         | Purpose                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `rootUrl`                     | Starting URL for the crawler                                       |
+| `crawl.maxPages`              | Maximum pages to discover                                          |
+| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                        |
+| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)          |
+| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit` |
+| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                         |
+
+See [`schemas/config.schema.json`](./schemas/config.schema.json) for
+the full configuration reference.
+
+## Reporters
+
+| Reporter      | Output file          | Description                           |
+| ------------- | -------------------- | ------------------------------------- |
+| `json`        | `axe-results.json`   | Raw axe results per page × viewport   |
+| `markdown`    | `report.md`          | Human-readable Markdown summary       |
+| `html`        | `report.html`        | Standalone HTML report with dark mode |
+| `earl-jsonld` | `earl-report.jsonld` | W3C EARL JSON-LD assertions           |
+| `junit`       | `junit.xml`          | JUnit XML for CI integration          |
+
+## Configuring for SPAs
+
+Single-page applications (React, Vue, Angular, Svelte, etc.) typically
+hydrate their DOM AFTER `domcontentloaded` fires. The toolkit's default
+`scan.waitUntil: "domcontentloaded"` is SPA-friendly for sites that
+render server-side and then hydrate, but client-rendered SPAs that
+build the DOM entirely in JavaScript need different tuning to ensure
+axe-core scans the fully-rendered tree.
+
+Three knobs cover most cases:
+
+```json
+{
+  "scan": {
+    "waitUntil": "networkidle",
+    "timeoutMs": 90000,
+    "beforeScan": {
+      "actions": [
+        { "action": "waitFor", "selector": "[data-hydrated]" },
+        { "action": "click", "selector": "button[data-cookie-accept]" }
+      ]
+    }
+  },
+  "crawl": {
+    "maxConcurrency": 2,
+    "requestTimeoutSecs": 90
+  }
+}
 ```
 
-Or run the full chain:
+- **`scan.waitUntil: "networkidle"`** waits for 500ms of network
+  silence before axe runs. Adds 1-3s per page versus
+  `"domcontentloaded"` but ensures lazy-loaded content is in the DOM.
+- **`scan.timeoutMs: 90000`** (default 60000) gives heavy hydration
+  more headroom; raise further for SPAs with slow third-party
+  dependencies (analytics, chat widgets, etc.).
+- **`scan.beforeScan.actions[]`** runs pre-axe hooks: `waitFor` polls
+  for a hydration marker (a data attribute the SPA sets after first
+  render), `click` dismisses cookie banners or modals that overlay
+  the page. Per-URL matching via `urlPattern` is also supported.
+- **`crawl.maxConcurrency: 2`** (default 5) prevents SPA scanning
+  from saturating the auditor's CPU when JavaScript hydration is
+  expensive.
+- **`scan.axe.overrides[]`** lets specific SPA routes use different
+  rule/tag sets — for example, disabling `region` on a single-pane
+  application shell that intentionally has no landmarks.
 
-```bash
-npm run audit -- --config configs/legacy-events.json
+## Configuring for client audits
+
+For paid client work, start from
+[`configs/example-site-best-practice.json`](./configs/example-site-best-practice.json)
+rather than the bare-bones `example-site.json`. The sidecar opts in to
+axe-core's `best-practice` tag (covers `landmark-one-main`, `region`,
+`heading-order`, `page-has-heading-one` — universally-expected auditor
+concerns), enables all 5 reporters, and stamps WCAG 2.2 AA conformance
+fields for proper WCAG-EM Step 5 reporting.
+
+After copying the sidecar, the four most important per-site overrides:
+
+```json
+{
+  "sample": {
+    "structuredManual": [
+      "https://client.example/",
+      "https://client.example/contact",
+      "https://client.example/checkout",
+      "https://client.example/accessibility-statement"
+    ]
+  },
+  "reporting": {
+    "failOnFindings": {
+      "impacts": ["critical", "serious"],
+      "threshold": 1
+    }
+  },
+  "crawl": { "requestDelayMs": 500 },
+  "wcagEm": {
+    "evaluator": { "name": "Your Name", "contact": "you@firm.example" },
+    "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
+    "samplingMethodNotes": "Sample covers homepage, primary user journeys, and the accessibility statement; supplemented by toolkit auto-suggest and a 10% random pool."
+  }
+}
 ```
+
+- **`sample.structuredManual`** is the WCAG-EM Step 3a curated sample.
+  Replace the placeholder URLs above with the client's actual critical
+  paths: homepage, primary user journeys (contact, checkout, sign-up,
+  search), policy pages (privacy, terms, accessibility statement), and
+  any known pain-points the client flagged at scoping. The sidecar
+  deliberately ships this field empty so a copy-paste user can't
+  accidentally inherit `example.com` URLs.
+- **`reporting.failOnFindings`** controls CI exit codes. Threshold `1`
+  with impacts `["critical", "serious"]` fails the build on any
+  high-severity finding — appropriate for sites with a baseline. For a
+  first-time audit on a site with known issues, raise the threshold or
+  scope to `["critical"]` only so the run produces a report rather than
+  a hard fail.
+- **`crawl.requestDelayMs`** sets per-request politeness. Default
+  `250` ms in the sidecar; production sites under traffic load may
+  benefit from `500-1000` ms. Always honour the site's robots.txt
+  manually before running.
+- **`wcagEm.evaluator`** is required for WCAG-EM Step 5 conformance
+  reporting — fill in your name and contact so the EARL JSON-LD and
+  `wcag-em-summary.json` artefacts carry proper provenance.
+- **`crawl.documentLinkPatterns`** defaults to skipping
+  `.pdf` / `.docx` / `.zip` / etc. (saves ~27s on document-heavy
+  sites). For docs-site audits where PDFs are the deliverables under
+  review, set this to `[]` to crawl them as page-equivalents.
 
 ## What this toolkit does not claim
 
@@ -67,8 +190,29 @@ npm run audit -- --config configs/legacy-events.json
 
 ## Folder guide
 
-- `configs/` site configs
-- `scripts/` execution scripts
-- `schemas/` config schema
-- `output/` generated inventory, scan results, screenshots, and reports
-- `box/` explanation, decision records, and checklists
+| Path                 | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `bin/`               | CLI entry point                              |
+| `src/commands/`      | Pipeline stages                              |
+| `src/lib/`           | Shared utilities                             |
+| `src/reporters/`     | Report generators                            |
+| `src/data/`          | Static data (ACT rule map, WCAG SC metadata) |
+| `schemas/`           | JSON Schema for config validation            |
+| `configs/`           | Example site configurations                  |
+| `docs/adr/`          | Architecture decision records                |
+| `docs/design-notes/` | Original design framework                    |
+| `test/`              | Unit, e2e, and fixture tests                 |
+
+## Architecture decisions
+
+See [`docs/adr/`](./docs/adr/) for the full list of architecture
+decision records.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development setup,
+coding conventions, and the pull request process.
+
+## License
+
+MIT

@@ -1,9 +1,9 @@
 {
-  "name": "wcag-em-a11y-toolkit-v2-recommended",
-  "version": "0.3.0",
+  "name": "wcag-em-a11y-toolkit",
+  "version": "1.0.0",
   "type": "module",
-  "private": true,
-  "description": "Recommended V2 toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
+  "private": false,
+  "description": "CLI toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
   "engines": {
     "node": ">=22.11.0"
   },
@@ -14,10 +14,17 @@
     ".": {
       "types": "./src/types/index.d.ts",
       "default": "./src/index.mjs"
-    },
-    "./commands/*": "./src/commands/*.mjs",
-    "./lib/*": "./src/lib/*.mjs"
+    }
   },
+  "files": [
+    "bin/",
+    "src/",
+    "schemas/",
+    "configs/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "discover": "node src/commands/discover.mjs",
     "sample": "node src/commands/sample.mjs",

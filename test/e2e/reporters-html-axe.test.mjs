@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Self-axe regression guard for the HTML reporter — Layer 4 v2 audit.
+ * @file Self-axe regression guard for the HTML reporter — v2 audit.
  * @module test/e2e/reporters-html-axe
  *
  * @description
@@ -130,22 +130,26 @@ async function axeContrast(browser, filePath, colorScheme) {
 
 // SECTION: Tests
 
-test('html reporter self-axe: zero color-contrast violations in light + dark color schemes', { timeout: 60_000 }, async (t) => {
-  const filePath = await renderToFile(t);
-  const browser = await chromium.launch({ headless: true });
-  t.after(() => browser.close());
+test(
+  'html reporter self-axe: zero color-contrast violations in light + dark color schemes',
+  { timeout: 60_000 },
+  async (t) => {
+    const filePath = await renderToFile(t);
+    const browser = await chromium.launch({ headless: true });
+    t.after(() => browser.close());
 
-  const lightViolations = await axeContrast(browser, filePath, 'light');
-  assert.deepEqual(
-    lightViolations,
-    [],
-    `light-mode color-contrast violations: ${JSON.stringify(lightViolations)}`,
-  );
+    const lightViolations = await axeContrast(browser, filePath, 'light');
+    assert.deepEqual(
+      lightViolations,
+      [],
+      `light-mode color-contrast violations: ${JSON.stringify(lightViolations)}`,
+    );
 
-  const darkViolations = await axeContrast(browser, filePath, 'dark');
-  assert.deepEqual(
-    darkViolations,
-    [],
-    `dark-mode color-contrast violations: ${JSON.stringify(darkViolations)}`,
-  );
-});
+    const darkViolations = await axeContrast(browser, filePath, 'dark');
+    assert.deepEqual(
+      darkViolations,
+      [],
+      `dark-mode color-contrast violations: ${JSON.stringify(darkViolations)}`,
+    );
+  },
+);

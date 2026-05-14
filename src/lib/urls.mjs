@@ -214,3 +214,36 @@ export function urlAllowedByScope(targetUrl, rootUrl, scope) {
 export function urlExcludedByPatterns(urlString, compiledPatterns = []) {
   return compiledPatterns.some((rx) => rx.test(urlString));
 }
+
+/**
+ * Skip a URL if its pathname matches any of the compiled document-link patterns.
+ *
+ * Pathname-only check is a deliberate departure from `urlExcludedByPatterns`'s
+ * full-URL matching: extensions are pathname-properties (`file.pdf?download=1`'s
+ * pathname is `/file.pdf`), and matching against pathname sidesteps querystring
+ * + fragment gotchas without coupling regex sources to URL syntax.
+ *
+ * Defensive try/catch mirrors `normalizeUrl`'s style — bad URL strings return
+ * `false` (safe default: don't skip; let downstream handlers surface the
+ * malformation).
+ *
+ * Wired into `src/commands/discover.mjs`'s `transformRequestFunction` and
+ * sitemap-seed loop. Compiled patterns live at
+ * `config.crawl.documentLinkPatternsCompiled` (set in `context.mjs` post-Ajv
+ * validation, mirroring the `excludeUrlPatternsCompiled` discipline).
+ *
+ * @param {string} urlString
+ * @param {RegExp[]} [compiledPatterns]
+ * @returns {boolean}
+ * @see docs/adr/0005-fail-fast-on-config.md
+ */
+export function urlSkippedByExtension(urlString, compiledPatterns = []) {
+  if (!compiledPatterns.length) return false;
+  let pathname;
+  try {
+    pathname = new URL(urlString).pathname;
+  } catch {
+    return false;
+  }
+  return compiledPatterns.some((rx) => rx.test(pathname));
+}

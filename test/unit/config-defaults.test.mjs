@@ -1,21 +1,21 @@
 // @ts-check
 /**
- * @file Tests for Layer 3a DEFAULTS and the F3 regression canary.
+ * @file Tests for multi-viewport DEFAULTS and the F3 regression canary.
  * @module test/unit/config-defaults
  *
  * @description
- * Locks the shape of `DEFAULTS` after the Layer 3a overhaul:
+ * Locks the shape of `DEFAULTS` after the multi-viewport overhaul:
  *   - legacy `scan.viewport` key REMOVED (so `resolveViewports` can fall
  *     through to `DEFAULT_VIEWPORTS`),
  *   - `scan.viewports: []` sentinel present,
  *   - `scan.waitUntil: 'domcontentloaded'`,
  *   - default tag profile in `scan.axe.withTags`,
- *   - `crawl.requestDelayMs: 0` (R7 wires it into discover),
- *   - `reporting.failOnFindings` threshold defaults (R8 wires the exit code).
+ *   - `crawl.requestDelayMs: 0` (wired into discover),
+ *   - `reporting.failOnFindings` threshold defaults (wired into the exit code).
  *
  * The F3 regression canary (last test) proves DEFAULT_VIEWPORTS is reachable
  * when a config supplies no viewport or viewports — the exact failure mode
- * the pressure-test caught before R6 landed.
+ * the pressure-test caught before the multi-viewport overhaul landed.
  */
 
 // SECTION: Imports
@@ -81,7 +81,7 @@ test('DEFAULTS ship scan.waitUntil = domcontentloaded for SPA-friendliness', asy
   assert.equal(config.scan.waitUntil, 'domcontentloaded');
 });
 
-test('DEFAULTS ship the Layer 3a axe tag profile', async (t) => {
+test('DEFAULTS ship the default axe tag profile', async (t) => {
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
   t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
   const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
@@ -113,9 +113,9 @@ test('DEFAULTS ship reporting.failOnFindings with impacts=critical,serious and t
 // SECTION: F3 regression canary
 
 test('resolveViewports on a viewport-less DEFAULTS-merged config returns DEFAULT_VIEWPORTS', async (t) => {
-  // Before R6 this branch was unreachable — DEFAULTS shipped a legacy
-  // `scan.viewport` singleton, so the legacy-wrap path always won.
-  // This test would have failed on HEAD pre-R6 and must never regress.
+  // Before the multi-viewport overhaul this branch was unreachable —
+  // DEFAULTS shipped a legacy `scan.viewport` singleton, so the
+  // legacy-wrap path always won. This test must never regress.
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
   t.after(() => fs.rm(tmpdir, { recursive: true, force: true }));
   const { config } = await loadConfig(await writeMinimalConfig(tmpdir));
@@ -133,7 +133,7 @@ test('migrated configs/example-site.json supplies explicit viewports and passes 
   assert.equal(result[1].id, 'reflow');
 });
 
-// SECTION: Layer 3b DEFAULTS
+// SECTION: WCAG-EM / pre-scan DEFAULTS
 
 test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technologiesReliedUpon', async (t) => {
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'config-defaults-'));
@@ -142,19 +142,14 @@ test('DEFAULTS ship wcagEm with wcagVersion=2.2, conformanceTarget=AA, technolog
   assert.equal(config.wcagEm.wcagVersion, '2.2');
   assert.equal(config.wcagEm.conformanceTarget, 'AA');
   assert.deepEqual(config.wcagEm.atBaseline, []);
-  assert.deepEqual(config.wcagEm.technologiesReliedUpon, [
-    'HTML',
-    'CSS',
-    'JavaScript',
-    'WAI-ARIA',
-  ]);
+  assert.deepEqual(config.wcagEm.technologiesReliedUpon, ['HTML', 'CSS', 'JavaScript', 'WAI-ARIA']);
   assert.equal(config.wcagEm.samplingMethodNotes, '');
   assert.deepEqual(config.wcagEm.evaluator, { name: '', contact: '' });
 });
 
-test('DEFAULTS do NOT ship reporting.markdownReport (Layer 4 R2 dropped the dead field)', async (t) => {
-  // Before Layer 4, DEFAULTS shipped `markdownReport: true` even though no
-  // runtime consumer read it. Layer 4 dropped it so the post-merge detection
+test('DEFAULTS do NOT ship reporting.markdownReport (dropped dead field)', async (t) => {
+  // Before the reporter pipeline, DEFAULTS shipped `markdownReport: true` even
+  // though no runtime consumer read it. The reporter pipeline dropped it so the post-merge detection
   // in summarize.mjs can cleanly distinguish "user explicitly set it" from
   // "DEFAULTS injected it" — the former triggers the deprecation warn, the
   // latter stays silent.
@@ -181,7 +176,7 @@ test('DEFAULTS do NOT ship config.auth (no-auth means absent field)', async (t) 
 });
 
 test('configs/example-site-with-auth.json validates against the schema', async () => {
-  // Sidecar config file introduced in R11 as the F4-fix alternative to
+  // Sidecar config file introduced as the F4-fix alternative to
   // the rejected top-level `_note` approach. It must ship as a
   // schema-valid config demonstrating auth usage.
   const { validateConfig } = await import('../../src/lib/validate-config.mjs');
@@ -198,5 +193,40 @@ test('configs/example-site-with-auth.json includes auth and beforeScan examples'
   assert.ok(
     Array.isArray(config.scan?.beforeScan?.actions) && config.scan.beforeScan.actions.length > 0,
     'demonstrates beforeScan cookie-consent dismissal',
+  );
+});
+
+test('configs/example-site-best-practice.json validates against the schema', async () => {
+  // Sidecar introduced in B2 (2026-05-11) to give client-audit configs an
+  // explicit best-practice opt-in. The AU dogfood Lane A flagged that
+  // axe's best-practice tag (covering landmark-one-main, region,
+  // heading-order, page-has-heading-one — universally-expected auditor
+  // concerns) is OFF in DEFAULTS.scan.axe.withTags; this sidecar
+  // demonstrates the opt-in path.
+  const { validateConfig } = await import('../../src/lib/validate-config.mjs');
+  const { config } = await loadConfig('configs/example-site-best-practice.json');
+  const result = await validateConfig(config);
+  assert.equal(result.valid, true, `expected valid; errors: ${JSON.stringify(result.errors)}`);
+});
+
+test('configs/example-site-best-practice.json opts in to best-practice + all 5 reporters + CI failOnFindings', async () => {
+  const { config } = await loadConfig('configs/example-site-best-practice.json');
+  assert.ok(
+    config.scan.axe.withTags.includes('best-practice'),
+    'withTags must include best-practice for the AU dogfood Lane A gap',
+  );
+  assert.deepEqual(
+    config.reporting.reporters,
+    ['json', 'markdown', 'html', 'earl-jsonld', 'junit'],
+    'all 5 reporters explicitly enabled (DEFAULTS would only ship json+markdown)',
+  );
+  assert.equal(config.reporting.failOnFindings.threshold, 1, 'CI-gating threshold of 1');
+  assert.deepEqual(config.reporting.failOnFindings.impacts, ['critical', 'serious']);
+  assert.equal(config.wcagEm.wcagVersion, '2.2');
+  assert.equal(config.wcagEm.conformanceTarget, 'AA');
+  assert.deepEqual(
+    config.sample.structuredManual,
+    [],
+    'structuredManual deliberately omitted from sidecar (footgun avoidance: copying example.com URLs into a real audit); users add per-site',
   );
 });

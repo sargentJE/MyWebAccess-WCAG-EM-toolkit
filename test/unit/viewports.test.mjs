@@ -83,10 +83,7 @@ test('resolveViewports: user viewports[] wins over legacy viewport singleton', (
 
 test('resolveViewports wraps legacy viewport singleton as [{id:"legacy",...}] and warns', () => {
   const logger = mockLogger();
-  const result = resolveViewports(
-    { scan: { viewport: { width: 1440, height: 900 } } },
-    logger,
-  );
+  const result = resolveViewports({ scan: { viewport: { width: 1440, height: 900 } } }, logger);
   assert.equal(result.length, 1);
   assert.equal(result[0].id, 'legacy');
   assert.equal(result[0].width, 1440);

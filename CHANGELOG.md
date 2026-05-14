@@ -6,50 +6,148 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
-### Layer 4 follow-ups
+### Roadmap
 
-- **Crawlee/PlaywrightCrawler hang on localhost fixtures** — first
-  investigated during R9; revisited during the v2 audit with refined
-  diagnosis. Raw Playwright `page.goto` against the fixture server
-  loads in <250 ms but `PlaywrightCrawler.requestHandler` consistently
-  times out at the configured `requestHandlerTimeoutSecs` × retries on
-  the same URL — even though instrumented probes confirm the handler
-  enters and passes `page.title()` successfully. Mitigations ruled out:
-  `CRAWLEE_STORAGE_DIR` per-test isolation; `Connection: close`
-  server-side; scope strategy (`same-origin` vs `same-hostname`);
-  sitemap seeding; and (v2 audit) `useSessionPool: false`,
-  `browserPoolOptions.retireBrowserAfterPageCount: Infinity`,
-  `persistCookiesPerSession: false`. v2 bisect: a hand-rolled standalone
-  `PlaywrightCrawler` with the EXACT discover.mjs handler logic copied
-  verbatim crawls all 5 fixture pages in 991 ms — so the hang is
-  somewhere in `discover.run`'s invocation path (not Crawlee itself,
-  not the handler, not the fixture). Closest upstream symptom match:
-  apify/crawlee#2785. Next experiment is to progressively replace
-  `discover.run`'s wrapping code with the working standalone setup
-  until the boundary that triggers the hang is identified. Two e2e
-  tests blocked behind this hang ship as `test.skip` placeholders:
-  - `test/e2e/reporters-smoke.test.mjs` — full-audit reporter pipeline
-    smoke (still validated end-to-end via R3-R7 unit tests against
-    synthetic summary inputs and via `test/e2e/reporters-html-axe.
-    test.mjs` for the HTML reporter's own a11y).
-  - `test/e2e/discover-timeout.test.mjs` — behavioural replacement for
-    the deleted `test/unit/discover-timeout.test.mjs` source-text test.
+- Baseline/regression mode — diff successive audits to surface new and
+  resolved findings between runs.
+- Plugin API — public extension surface for custom reporters and crawl
+  strategies (ADR-0012 scopes the internal-only v1.0 boundary).
+- Authenticated SPA crawler — `auth.setupScript` runtime execution
+  pending security review (see carry-forward below).
+- Localisation — i18n for CLI output and reporter artefacts.
+
+## [1.0.0] - 2026-05-14
+
+### Added
+
+- **EARL evaluator identity** — `earl:assertedBy` now includes `foaf:name`
+  and `foaf:mbox` from `wcagEm.evaluator` config when non-empty. Toolkit
+  identity (`doap:name`, `doap:release`) is preserved alongside. Allows
+  EARL consumers to identify both the automated tool and the human
+  evaluator who configured the audit. ADR-0009 §5 amended.
+- **`crawl.navigationTimeoutSecs`** — integer config field (5–300, default 60) wired to Crawlee's `PlaywrightCrawler.navigationTimeoutSecs`.
+  Bounds `page.goto` independently from the request-handler budget
+  (`requestTimeoutSecs`). Client sites with slow CDN endpoints or heavy
+  server-side rendering can tighten the navigation cap without affecting
+  the handler's page-evaluation budget. Default 60 matches Crawlee's
+  prior implicit value — zero behaviour change for existing configs.
+- **`crawl.documentLinkPatterns`** — regex array (validated by the existing
+  `validRegex` Ajv keyword) matched against `URL.pathname`. Matching links
+  are skipped at enqueue time inside `discover.mjs`'s
+  `transformRequestFunction` and the sitemap-seed loop, so non-HTML
+  document URLs never reach Crawlee's `page.goto` (which would otherwise
+  spend the full `requestHandlerTimeoutSecs` budget rendering a binary
+  before retrying 3× and dropping it). Default ships strict — covers
+  document / archive / installer / media / e-book / design-binary /
+  data-file extensions across 8 regex families. Skipped count surfaces
+  alongside `outOfScopeLinkCount` and `excludedByPatternCount` in
+  `inventory-metadata.json` as `excludedByExtensionCount`.
+
+### Changed
+
+- **Behaviour change (DEFAULTS-only, schema-additive)**: existing audit
+  configs that previously crawled `.pdf` / `.docx` / `.zip` / `.mp4` etc.
+  URLs as page-equivalents now silently exclude them. To restore prior
+  behaviour, set `crawl.documentLinkPatterns: []` in the site config.
+  Driven by the AU dogfood (2026-05-02) where 7 broken document links
+  cost ~27s of wall time per audit before being dropped from inventory.
+  On large client sites with hundreds of document references this could
+  10× the discover stage; the strict default is the safer ship for the
+  v1.0 toolkit's primary auditor population.
+
+### Fixed
+
+- **Crawlee/PlaywrightCrawler hang on remote pages lacking `<h1>` or
+  `<link rel="canonical">`** — root-caused via 2026-05-02 dogfood against
+  UW's Accessible University demo
+  (`projects.accesscomputing.uw.edu/au/before.html`). The previous CHANGELOG
+  framing as "localhost fixtures only" was partially falsified: the dogfood
+  surfaced a distinct second hang in `discover.mjs` where
+  `page.setDefaultTimeout(requestTimeoutSecs * 1000)` coupled per-locator
+  auto-wait to the outer 90s handler budget, so each
+  `.first().textContent()` (h1) and `.getAttribute()` (canonical) on a
+  missing element burned the full budget; Crawlee reclaimed the request as
+  failed and retried infinitely. Bites the toolkit's exact target population
+  — sites being audited for accessibility issues, often missing one or
+  more of those elements. Fix in `src/commands/discover.mjs`: replaced the
+  six locator-based capture queries with a single `page.evaluate` running
+  `document.querySelector*` in-browser (no auto-wait; one CDP round-trip
+  per page). Confirmed via the 2026-05-09 commit-bisect (recorded in
+  `docs/adr/0013-crawlee-localhost-investigation.md`), this same fix also
+  resolved the previously-deferred localhost-fixture hang — see the
+  separate Fixed bullet below. See `output/au-run-1/AU-DOGFOOD-REPORT.md`
+  for the AU-dogfood diagnostic.
+- **`wcag-em-summary.json` `examples[]` mislabelled cantTell entries as
+  failure offenders** — when an SC's outcome was `failed`, the bucket
+  surfaced `incompleteDetail` entries from negative-control pages (or from
+  the same page) inside the same `examples[]` array as real violations,
+  making clean pages look like they had a finding they did not. Fix in
+  `src/lib/wcag-em-summary.mjs`: bucket now tracks `violationExamples`
+  and `incompleteExamples` separately and the emitter composes the
+  output `examples[]` based on outcome (`failed` → violations;
+  `cantTell` → incompletes). Output shape is unchanged; semantics are
+  now correct per EARL outcome and consistent with ADR-0007's
+  documented strict per-outcome contract.
+- **Stale `warnSchemaAcceptedRuntimeIgnored` warning for
+  `reporting.reporters`** — the guard was never removed when Layer 4
+  shipped the `runReporters` runtime, so every audit emitted a misleading
+  `warn` entry. Removed from `summarize.mjs`; companion narrative comment
+  in `scan.mjs` updated.
+- **Crawlee/PlaywrightCrawler hang on localhost fixtures (long-deferred,
+  now resolved)** — first observed during R9 (Layer 4) and revisited
+  during the v2 audit; documented under `Layer 4 follow-ups` while two
+  e2e tests (`test/e2e/reporters-smoke.test.mjs`,
+  `test/e2e/discover-timeout.test.mjs`) shipped as `test.skip`
+  placeholders. The 2026-05-09 commit-bisect (Phase 2 of the P1
+  investigation; harness at `p1-bisect.mjs`, untracked) flipped the
+  verdict on the 2026-05-03 update note that claimed D2 didn't unblock
+  these tests: pre-D2 (`32f27cd`) reproducibly hangs at 60s × 3 runs;
+  D2 (`468f5c1`) onwards completes in <2s. The original update note was
+  wrong because the test bodies were empty — re-running them passed
+  trivially without exercising the hang. D2 (commit `468f5c1`)
+  inadvertently fixed both surfaces while addressing the AU-dogfood
+  remote-pages hang. Mechanism (CDP message-queue interaction with
+  Crawlee's session/queue management when the handler issues many small
+  awaits in series) is hypothesised in
+  `docs/adr/0013-crawlee-localhost-investigation.md` § Mechanism;
+  framework-internals confirmation is Phase 3 work for a future session.
+  `test/e2e/reporters-smoke.test.mjs` un-skipped in the same release with
+  a real async-spawn-based body exercising all 5 reporters end-to-end (the
+  test uses async `child_process.spawn` rather than `spawnSync` to sidestep
+  a Node-level deadlock between sync waitpid and the CLI's subprocess
+  tree). `test/e2e/discover-timeout.test.mjs` un-skipped with a real
+  assertion body; the `crawl.navigationTimeoutSecs` config addition
+  (see Added above) provides the missing config surface that the
+  original test premise required.
+  Bisect intellectual capital migrated from CHANGELOG and the e2e
+  file-level comments into the ADR's Bisect history section.
+- **`wcagEm.*` config not propagated to `summary.json`** — `summarize.mjs`
+  computed the WCAG-EM summary (wcagVersion, conformanceTarget, evaluator,
+  criteriaOutcomes) but never attached it to the summary object passed to
+  reporters. `summary.json` now includes a `wcagEmSummary` property; EARL
+  and HTML reporters can also read `criteriaOutcomes` (previously silently
+  `undefined`, breaking `includePasses` and the HTML criteria table).
+- **`criteriaOutcomes` field-name mismatch in EARL and HTML reporters** —
+  reporters read `c.criterion` but `toWcagEmSummary()` returns entries
+  keyed by `sc` (per ADR-0007 §5). Latent bug masked because
+  `criteriaOutcomes` never reached reporters until the above fix. Now
+  aligned to `sc` in both `earl-jsonld.mjs` and `html.mjs`.
 
 ### Layer 3b follow-ups (carry-forward)
 
 - `auth.setupScript` runtime execution — deferred pending an explicit
   security review. Schema validates the field and the runtime emits a
   one-shot `warnSchemaAcceptedRuntimeIgnored` via the shared helper in
-  `src/lib/auth.mjs`. Target: a later layer that scopes the trust model
+  `src/lib/auth.mjs`. Target: a future release that scopes the trust model
   for executing user-supplied scripts in a Playwright context.
-- `src/data/act-rule-map.json` exhaustive coverage — the R1 seed covers
+- `src/data/act-rule-map.json` exhaustive coverage — the initial seed covers
   the 30 ACT rules most commonly implemented by axe-core 4.11.2; full
   coverage (70+ rules) requires either the ACT CG to publish a JSON
   feed or a DOM-parser dev dep on their HTML implementation report.
   `scripts/refresh-rule-maps.mjs` is scaffolded for the regeneration
   path.
 - `tool-identity` propagation into Pino log records — currently the
-  stamp appears on emitted artefacts (R13) only. Future enhancement:
+  stamp appears on emitted artefacts only. Future enhancement:
   inject `tool: TOOL_IDENTITY` into every log-line's base bindings so
   downstream log aggregators can filter by tool version without
   re-parsing the artefact.
@@ -77,14 +175,14 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 - HTML reporter impact-color classes (and the `.tool-banner` subtitle)
   meet WCAG 2.1 AA 4.5:1 contrast in both light and dark `prefers-color-
-  scheme` modes. Pre-fix, 5 of 10 (impact × scheme) combinations failed
+scheme` modes. Pre-fix, 5 of 10 (impact × scheme) combinations failed
   — most severely `.impact-minor` on dark background at 2.5:1, with
   `.tool-banner` failing identically. The dark-mode `@media` block now
   overrides the four impact-color classes plus `.tool-banner` with
   brighter hues that pass 4.5:1 on `#121212`; `.impact-null` shifts
   from `#888` (3.6:1 on white) to `#767676` (4.5:1 on white). Locked
   by a new e2e regression guard at `test/e2e/reporters-html-axe.test.
-  mjs` that runs `@axe-core/playwright` against the rendered reporter
+mjs` that runs `@axe-core/playwright` against the rendered reporter
   in both color schemes.
 
 ### Added
@@ -152,5 +250,5 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Deferred
 
-- See `[Unreleased] / Layer 4 follow-ups` above for the Crawlee hang
-  blocking the smoke + discover-timeout e2e tests.
+- ~~Crawlee hang blocking smoke + discover-timeout e2e tests~~ — resolved
+  in [1.0.0]; see Fixed bullets above.

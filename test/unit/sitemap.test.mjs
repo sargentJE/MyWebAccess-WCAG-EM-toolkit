@@ -6,7 +6,7 @@
  * @description
  * v0.3 bypassed the hostname filter whenever `scope.mode === 'allowed-hosts'`,
  * so a sitemap listing an unrelated host would seed inventory with URLs that
- * the rest of the crawler refused to visit. Layer 2 replaces the bypass with
+ * the rest of the crawler refused to visit. The config validation overhaul replaces the bypass with
  * a call into `urlAllowedByScope`; these tests prove the bypass is dead.
  *
  * The suite boots a real `http.createServer` on an ephemeral port so the

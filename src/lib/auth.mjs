@@ -13,7 +13,7 @@
  *
  * `auth.setupScript` is schema-validated but runtime execution is
  * deferred pending a security review; a one-shot `logger.warn` announces
- * the deferral. Same discipline as `override.actions` in Layer 3a.
+ * the deferral. Same discipline as `override.actions` in the compile-at-load step.
  *
  * Synchronous by design — called once per scan run, not per URL, so
  * `fs.statSync` + `spawnSync` are trivially cheap and callers can
@@ -118,7 +118,7 @@ export function applyAuth(config) {
 
   // ANCHOR: SetupScriptDeferred — warn-only; runtime execution lands later.
   if (typeof auth.setupScript === 'string' && auth.setupScript.length > 0) {
-    warnings.push(buildWarnSchemaAcceptedMessage('auth.setupScript', 'a later layer'));
+    warnings.push(buildWarnSchemaAcceptedMessage('auth.setupScript', 'a future release'));
   }
 
   return { contextOptions, warnings };
@@ -128,7 +128,7 @@ export function applyAuth(config) {
  * Uniform warn message for "schema accepts this field but runtime ignores it
  * until layer X". Extracted so all such warnings share one phrasing — used
  * by `applyAuth` for `setupScript` and by `summarize.mjs` for
- * `reporting.reporters` (R8 swaps the inline warn to this helper).
+ * `reporting.reporters`.
  *
  * @param {import('pino').Logger} logger
  * @param {{ feature: string, deferralLayer: string }} args

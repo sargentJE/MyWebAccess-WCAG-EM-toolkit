@@ -28,7 +28,13 @@ import { fileURLToPath } from 'node:url';
 // SECTION: Paths
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(__filename, '../..');
-const AXE_PKG_PATH = path.join(REPO_ROOT, 'node_modules', '@axe-core', 'playwright', 'package.json');
+const AXE_PKG_PATH = path.join(
+  REPO_ROOT,
+  'node_modules',
+  '@axe-core',
+  'playwright',
+  'package.json',
+);
 const MAP_PATH = path.join(REPO_ROOT, 'src', 'data', 'act-rule-map.json');
 const REPORT_URL = 'https://act-rules.github.io/implementation/axe-core/';
 

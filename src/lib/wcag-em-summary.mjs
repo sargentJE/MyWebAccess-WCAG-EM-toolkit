@@ -10,13 +10,13 @@
  * `untested`). Industry-standard per Alfa / Accessibility Insights / VPAT.
  *
  * Input shape is the widened `axe-results.json` and `process-results.json`
- * from R6: each page-result carries
+ * from the scan stage: each page-result carries
  *   - `violations`: full rule objects with tags.
  *   - `passesDetail`: light `{id, tags, impact, nodesCount}` per pass.
  *   - `incompleteDetail`: same, per incomplete.
  *   - `inapplicableDetail`: same, per inapplicable.
  *
- * Output shape (stable contract documented in ADR-0007 at R14):
+ * Output shape (stable contract documented in ADR-0007):
  *   {
  *     criteriaOutcomes: [{ sc, level, outcome, examples, pagesExamined, relatedRules }],
  *     evaluationDate: ISO-8601 string,
@@ -50,28 +50,96 @@ import { withActAndWcagMetadata } from './axe-utils.mjs';
 // WCAG version than 2.2), the verdict is still emitted with `level: null`.
 const SC_LEVEL_MAP = /** @type {const} */ ({
   // Principle 1 — Perceivable
-  '1.1.1': 'A', '1.2.1': 'A', '1.2.2': 'A', '1.2.3': 'A', '1.2.4': 'AA',
-  '1.2.5': 'AA', '1.2.6': 'AAA', '1.2.7': 'AAA', '1.2.8': 'AAA', '1.2.9': 'AAA',
-  '1.3.1': 'A', '1.3.2': 'A', '1.3.3': 'A', '1.3.4': 'AA', '1.3.5': 'AA', '1.3.6': 'AAA',
-  '1.4.1': 'A', '1.4.2': 'A', '1.4.3': 'AA', '1.4.4': 'AA', '1.4.5': 'AA',
-  '1.4.6': 'AAA', '1.4.7': 'AAA', '1.4.8': 'AAA', '1.4.9': 'AAA',
-  '1.4.10': 'AA', '1.4.11': 'AA', '1.4.12': 'AA', '1.4.13': 'AA',
+  '1.1.1': 'A',
+  '1.2.1': 'A',
+  '1.2.2': 'A',
+  '1.2.3': 'A',
+  '1.2.4': 'AA',
+  '1.2.5': 'AA',
+  '1.2.6': 'AAA',
+  '1.2.7': 'AAA',
+  '1.2.8': 'AAA',
+  '1.2.9': 'AAA',
+  '1.3.1': 'A',
+  '1.3.2': 'A',
+  '1.3.3': 'A',
+  '1.3.4': 'AA',
+  '1.3.5': 'AA',
+  '1.3.6': 'AAA',
+  '1.4.1': 'A',
+  '1.4.2': 'A',
+  '1.4.3': 'AA',
+  '1.4.4': 'AA',
+  '1.4.5': 'AA',
+  '1.4.6': 'AAA',
+  '1.4.7': 'AAA',
+  '1.4.8': 'AAA',
+  '1.4.9': 'AAA',
+  '1.4.10': 'AA',
+  '1.4.11': 'AA',
+  '1.4.12': 'AA',
+  '1.4.13': 'AA',
   // Principle 2 — Operable
-  '2.1.1': 'A', '2.1.2': 'A', '2.1.3': 'AAA', '2.1.4': 'A',
-  '2.2.1': 'A', '2.2.2': 'A', '2.2.3': 'AAA', '2.2.4': 'AAA', '2.2.5': 'AAA', '2.2.6': 'AAA',
-  '2.3.1': 'A', '2.3.2': 'AAA', '2.3.3': 'AAA',
-  '2.4.1': 'A', '2.4.2': 'A', '2.4.3': 'A', '2.4.4': 'A', '2.4.5': 'AA',
-  '2.4.6': 'AA', '2.4.7': 'AA', '2.4.8': 'AAA', '2.4.9': 'AAA', '2.4.10': 'AAA',
-  '2.4.11': 'AA', '2.4.12': 'AAA', '2.4.13': 'AAA',
-  '2.5.1': 'A', '2.5.2': 'A', '2.5.3': 'A', '2.5.4': 'A',
-  '2.5.5': 'AAA', '2.5.6': 'AAA', '2.5.7': 'AA', '2.5.8': 'AA',
+  '2.1.1': 'A',
+  '2.1.2': 'A',
+  '2.1.3': 'AAA',
+  '2.1.4': 'A',
+  '2.2.1': 'A',
+  '2.2.2': 'A',
+  '2.2.3': 'AAA',
+  '2.2.4': 'AAA',
+  '2.2.5': 'AAA',
+  '2.2.6': 'AAA',
+  '2.3.1': 'A',
+  '2.3.2': 'AAA',
+  '2.3.3': 'AAA',
+  '2.4.1': 'A',
+  '2.4.2': 'A',
+  '2.4.3': 'A',
+  '2.4.4': 'A',
+  '2.4.5': 'AA',
+  '2.4.6': 'AA',
+  '2.4.7': 'AA',
+  '2.4.8': 'AAA',
+  '2.4.9': 'AAA',
+  '2.4.10': 'AAA',
+  '2.4.11': 'AA',
+  '2.4.12': 'AAA',
+  '2.4.13': 'AAA',
+  '2.5.1': 'A',
+  '2.5.2': 'A',
+  '2.5.3': 'A',
+  '2.5.4': 'A',
+  '2.5.5': 'AAA',
+  '2.5.6': 'AAA',
+  '2.5.7': 'AA',
+  '2.5.8': 'AA',
   // Principle 3 — Understandable
-  '3.1.1': 'A', '3.1.2': 'AA', '3.1.3': 'AAA', '3.1.4': 'AAA', '3.1.5': 'AAA', '3.1.6': 'AAA',
-  '3.2.1': 'A', '3.2.2': 'A', '3.2.3': 'AA', '3.2.4': 'AA', '3.2.5': 'AAA', '3.2.6': 'A',
-  '3.3.1': 'A', '3.3.2': 'A', '3.3.3': 'AA', '3.3.4': 'AA', '3.3.5': 'AAA',
-  '3.3.6': 'AAA', '3.3.7': 'A', '3.3.8': 'AA', '3.3.9': 'AAA',
+  '3.1.1': 'A',
+  '3.1.2': 'AA',
+  '3.1.3': 'AAA',
+  '3.1.4': 'AAA',
+  '3.1.5': 'AAA',
+  '3.1.6': 'AAA',
+  '3.2.1': 'A',
+  '3.2.2': 'A',
+  '3.2.3': 'AA',
+  '3.2.4': 'AA',
+  '3.2.5': 'AAA',
+  '3.2.6': 'A',
+  '3.3.1': 'A',
+  '3.3.2': 'A',
+  '3.3.3': 'AA',
+  '3.3.4': 'AA',
+  '3.3.5': 'AAA',
+  '3.3.6': 'AAA',
+  '3.3.7': 'A',
+  '3.3.8': 'AA',
+  '3.3.9': 'AAA',
   // Principle 4 — Robust
-  '4.1.1': 'A', '4.1.2': 'A', '4.1.3': 'AA',
+  '4.1.1': 'A',
+  '4.1.2': 'A',
+  '4.1.3': 'AA',
 });
 
 // SECTION: Public API
@@ -114,9 +182,7 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
 export function toWcagEmSummary(ctx, rawResults) {
   const wcagEmConfig = ctx?.config?.wcagEm ?? {};
   const axeResults = Array.isArray(rawResults?.axeResults) ? rawResults.axeResults : [];
-  const processResults = Array.isArray(rawResults?.processResults)
-    ? rawResults.processResults
-    : [];
+  const processResults = Array.isArray(rawResults?.processResults) ? rawResults.processResults : [];
 
   /** @type {string[]} */
   const scanWarnings = [];
@@ -132,7 +198,8 @@ export function toWcagEmSummary(ctx, rawResults) {
    * @property {boolean} anyReviewableIncomplete - At least one incomplete with `nodesCount > 0` tagged this SC.
    * @property {boolean} anyInapplicable - At least one rule was inapplicable at this SC.
    * @property {Set<string>} relatedRules - All axe rule IDs that touch this SC in the run.
-   * @property {Array<{ pageUrl: string, ruleId: string, impact: string | null }>} examples - Up to 5 example offenders.
+   * @property {Array<{ pageUrl: string, ruleId: string, impact: string | null }>} violationExamples - Up to 5 violation offenders (surfaced when outcome=failed).
+   * @property {Array<{ pageUrl: string, ruleId: string, impact: string | null }>} incompleteExamples - Up to 5 reviewable-incomplete offenders (surfaced when outcome=cantTell).
    * @property {Set<string>} pages - Unique page URLs that contributed to this bucket.
    */
   /** @type {Map<string, ScBucket>} */
@@ -151,7 +218,8 @@ export function toWcagEmSummary(ctx, rawResults) {
         anyReviewableIncomplete: false,
         anyInapplicable: false,
         relatedRules: new Set(),
-        examples: [],
+        violationExamples: [],
+        incompleteExamples: [],
         pages: new Set(),
       };
       buckets.set(sc, b);
@@ -164,9 +232,9 @@ export function toWcagEmSummary(ctx, rawResults) {
    *
    * @param {string} pageUrl
    * @param {any[]} violations - Full rule objects (with nodes).
-   * @param {any[]} passesDetail - Light summaries from R6.
-   * @param {any[]} incompleteDetail - Light summaries from R6.
-   * @param {any[]} inapplicableDetail - Light summaries from R6.
+   * @param {any[]} passesDetail - Light summaries from the scan stage.
+   * @param {any[]} incompleteDetail - Light summaries from the scan stage.
+   * @param {any[]} inapplicableDetail - Light summaries from the scan stage.
    */
   function ingestPage(pageUrl, violations, passesDetail, incompleteDetail, inapplicableDetail) {
     for (const v of violations ?? []) {
@@ -176,8 +244,8 @@ export function toWcagEmSummary(ctx, rawResults) {
         b.anyViolation = true;
         b.relatedRules.add(v.id);
         b.pages.add(pageUrl);
-        if (b.examples.length < 5) {
-          b.examples.push({ pageUrl, ruleId: v.id, impact: v.impact ?? null });
+        if (b.violationExamples.length < 5) {
+          b.violationExamples.push({ pageUrl, ruleId: v.id, impact: v.impact ?? null });
         }
       }
     }
@@ -207,8 +275,8 @@ export function toWcagEmSummary(ctx, rawResults) {
         b.anyReviewableIncomplete = true;
         b.relatedRules.add(inc.id);
         b.pages.add(pageUrl);
-        if (b.examples.length < 5) {
-          b.examples.push({ pageUrl, ruleId: inc.id, impact: inc.impact ?? null });
+        if (b.incompleteExamples.length < 5) {
+          b.incompleteExamples.push({ pageUrl, ruleId: inc.id, impact: inc.impact ?? null });
         }
       }
     }
@@ -252,6 +320,18 @@ export function toWcagEmSummary(ctx, rawResults) {
   const sortedScs = [...buckets.keys()].sort(compareScs);
   for (const sc of sortedScs) {
     const b = /** @type {ScBucket} */ (buckets.get(sc));
+    const outcome = decideOutcome(b);
+    // ANCHOR: ExamplesByOutcome — partition by EARL outcome to stop cantTell
+    // entries appearing in failed-SC examples (and vice versa). cantTell SCs
+    // surface their incomplete examples; failed SCs surface their violations.
+    // Other outcomes (passed/inapplicable/untested) carry no examples by
+    // construction since neither array gets populated for those arms.
+    const examples =
+      outcome === 'failed'
+        ? [...b.violationExamples]
+        : outcome === 'cantTell'
+          ? [...b.incompleteExamples]
+          : [];
     criteriaOutcomes.push({
       sc,
       level: /** @type {string | null} */ (
@@ -259,8 +339,8 @@ export function toWcagEmSummary(ctx, rawResults) {
           ? SC_LEVEL_MAP[/** @type {keyof typeof SC_LEVEL_MAP} */ (sc)]
           : null
       ),
-      outcome: decideOutcome(b),
-      examples: [...b.examples],
+      outcome,
+      examples,
       pagesExamined: b.pages.size,
       relatedRules: [...b.relatedRules].sort(),
     });
@@ -270,9 +350,7 @@ export function toWcagEmSummary(ctx, rawResults) {
     criteriaOutcomes,
     evaluationDate: new Date().toISOString(),
     processesEvaluated: Array.isArray(ctx?.config?.processes)
-      ? ctx.config.processes
-          .map((p) => (typeof p?.name === 'string' ? p.name : ''))
-          .filter(Boolean)
+      ? ctx.config.processes.map((p) => (typeof p?.name === 'string' ? p.name : '')).filter(Boolean)
       : [],
     scanWarnings,
     wcagVersion: wcagEmConfig.wcagVersion ?? '2.2',

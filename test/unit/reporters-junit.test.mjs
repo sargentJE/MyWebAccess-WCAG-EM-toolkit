@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the JUnit XML reporter — Layer 4 R7.
+ * @file Tests for the JUnit XML reporter.
  * @module test/unit/reporters-junit
  */
 
@@ -134,9 +134,7 @@ test('junit reporter: includePasses=true emits clean-pass <testcase> with no fai
   assert.match(xml, /tests="2" failures="1"/);
   // The pass case is self-closing or open-without-failure; it must NOT
   // contain a <failure>.
-  const passLine = xml
-    .split('\n')
-    .find((line) => line.includes('classname="rule-pass"'));
+  const passLine = xml.split('\n').find((line) => line.includes('classname="rule-pass"'));
   assert.ok(passLine, 'expected a testcase for rule-pass');
   assert.ok(passLine && passLine.includes('/>'), 'rule-pass must be self-closed');
 });
@@ -275,6 +273,6 @@ test('junit reporter: XML 1.0-illegal control bytes are stripped from CDATA payl
 
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
-  assert.ok(names.includes('junit'), 'junit registered after R7');
+  assert.ok(names.includes('junit'), 'junit registered in the registry');
   assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown']);
 });

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the JSON reporter + reporter registry — Layer 4 R3.
+ * @file Tests for the JSON reporter + reporter registry.
  * @module test/unit/reporters-json
  *
  * @description
@@ -69,9 +69,7 @@ test('json reporter: findings are sorted by [impact desc, ruleId asc]', async (t
     ],
   };
   await jsonReporter.emit(summary, ctx);
-  const parsed = JSON.parse(
-    await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8'),
-  );
+  const parsed = JSON.parse(await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8'));
   assert.deepEqual(
     parsed.findings.map((/** @type {any} */ f) => `${f.impact}:${f.id}`),
     ['critical:b', 'serious:alpha', 'serious:zebra', 'minor:a'],
@@ -87,11 +85,33 @@ test('json reporter: returned bytes count matches the file size on disk', async 
   assert.ok(result.path.endsWith('summary.json'));
 });
 
+test('json reporter: wcagEmSummary propagates evaluator and metadata to summary.json (D4)', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: { name: 'wcag-em-toolkit', version: '0.3.0' },
+    findings: [],
+    wcagEmSummary: {
+      wcagVersion: '2.1',
+      conformanceTarget: 'AAA',
+      evaluator: { name: 'D4-regression-evaluator', contact: 'test@d4.example' },
+      criteriaOutcomes: [{ sc: '1.1.1', outcome: 'passed' }],
+    },
+  };
+  await jsonReporter.emit(summary, ctx);
+  const raw = await fs.readFile(path.join(reportsDir, 'summary.json'), 'utf8');
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.wcagEmSummary.evaluator.name, 'D4-regression-evaluator');
+  assert.equal(parsed.wcagEmSummary.evaluator.contact, 'test@d4.example');
+  assert.equal(parsed.wcagEmSummary.wcagVersion, '2.1');
+  assert.equal(parsed.wcagEmSummary.conformanceTarget, 'AAA');
+  assert.equal(parsed.wcagEmSummary.criteriaOutcomes[0].sc, '1.1.1');
+});
+
 // SECTION: Registry
 
 test('registry: listReporters reports the registered names alphabetically', () => {
-  // R3 registers exactly one reporter ('json'). R4-R7 will add markdown,
-  // html, earl-jsonld, junit. This test will need extending as those land.
+  // The initial reporter pipeline registers 'json'; subsequent reporters add
+  // markdown, html, earl-jsonld, junit. This test will need extending as those land.
   const names = listReporters();
   assert.ok(names.includes('json'), 'json must be registered');
   assert.deepEqual(names, [...names].sort(), 'list must be sorted');
@@ -109,10 +129,7 @@ test('runReporters: unknown reporter name throws BEFORE any reporter runs', asyn
   );
   // Even though 'json' was first in the list, fail-fast means it must NOT
   // have been emitted before the unknown name was rejected.
-  await assert.rejects(
-    () => fs.access(path.join(reportsDir, 'summary.json')),
-    /ENOENT/,
-  );
+  await assert.rejects(() => fs.access(path.join(reportsDir, 'summary.json')), /ENOENT/);
 });
 
 test('runReporters: success path returns { results, errors:[] } and writes the file', async (t) => {
@@ -131,8 +148,5 @@ test('runReporters: success path returns { results, errors:[] } and writes the f
 });
 
 test('runReporters: non-array names throws TypeError', async () => {
-  await assert.rejects(
-    () => runReporters(/** @type {any} */ (null), {}, {}),
-    /must be an array/,
-  );
+  await assert.rejects(() => runReporters(/** @type {any} */ (null), {}, {}), /must be an array/);
 });

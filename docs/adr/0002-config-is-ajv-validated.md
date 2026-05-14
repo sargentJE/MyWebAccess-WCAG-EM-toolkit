@@ -10,7 +10,7 @@ The v0.3 toolkit validated configs with a hand-written imperative function that
 only checked top-level keys and a few types. Users could provide a malformed
 regex in `crawl.excludeUrlPatterns` and the error would only surface mid-crawl
 as an opaque `SyntaxError: Invalid regular expression`. Silent validation gaps
-are also why Layer 2's bug sweep exists.
+are also why the config validation bug sweep exists.
 
 A best-in-class tool should fail at config-load time, with a message that
 points to the offending field, the JSON pointer, the received value, and a
@@ -24,8 +24,8 @@ Use **Ajv 2020** (`ajv/dist/2020.js`) with **`ajv-formats`** and
 time so they fail at config-load rather than mid-crawl.
 
 - Schema is the **source of truth** for config shape. Types in
-  `src/types/config.d.ts` are generated from it (Layer 1 ships the wiring;
-  later layers add the pre-commit hook).
+  `src/types/config.d.ts` are generated from it (the CLI migration ships the wiring;
+  later work adds the pre-commit hook).
 - Errors are formatted with `better-ajv-errors` (`format: 'cli'`) so the user
   sees a colourised pointer, received value, and suggested alternative.
 - A convenience `assertValidConfig(config, path)` throws a
@@ -54,5 +54,5 @@ time so they fail at config-load rather than mid-crawl.
 ## More Information
 
 - Ajv: <https://ajv.js.org/>
-- ACT-compatible rule IDs end up in a separate enrichment map in Layer 3b;
+- ACT-compatible rule IDs end up in a separate enrichment map in the WCAG-EM summary step;
   this ADR is only about structural validation.

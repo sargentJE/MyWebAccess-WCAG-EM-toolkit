@@ -44,7 +44,7 @@ test('accepts leading-v form (v22.11.0)', () => {
   assert.strictEqual(isNodeVersionSupported('v22.11.0'), true);
 });
 
-test("bin/wcag-em.mjs inline guard uses the same 22/11 constants as the helper", async () => {
+test('bin/wcag-em.mjs inline guard uses the same 22/11 constants as the helper', async () => {
   // The bin file keeps its own inline engine check because the guard must
   // run before any `import` — it cannot import this helper. Source-text
   // assertion catches the drift class where a future Node LTS bump lands

@@ -5,7 +5,7 @@
     "source": "https://act-rules.github.io/implementation/axe-core/",
     "coverage": "partial",
     "ruleCount": 30,
-    "note": "Seed covers the 30 ACT rules most commonly implemented by axe-core as of axe-core 4.11.2. Expanding to full coverage is tracked as a Layer 3b follow-up in CHANGELOG.md [Unreleased]. Regenerate via scripts/refresh-rule-maps.mjs when the installed axe-core version changes."
+    "note": "Pre-v1.0 seed covering the 30 ACT rules most commonly implemented by axe-core 4.11.2. Expanding to full coverage is tracked in CHANGELOG.md. Regenerate via scripts/refresh-rule-maps.mjs when the installed axe-core version changes."
   },
   "area-alt": ["c487ae"],
   "aria-allowed-attr": ["5c01ea"],

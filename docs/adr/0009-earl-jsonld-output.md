@@ -43,13 +43,13 @@ already on the input summary.
 
 ### 1. JSON-LD vs the other four serialisations
 
-| Format | Status | Rationale |
-|---|---|---|
+| Format      | Status       | Rationale                                                                                                                                                                                                                                                                                                                                      |
+| ----------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **JSON-LD** | **Selected** | (a) Zero-dep parsing — Node 22's `JSON.parse` reads it; `Turtle`/RDF-XML/N3/N-Triples need an external parser. (b) Modern ecosystem default — Alfa's `@siteimprove/alfa-earl` package emits JSON-LD; the W3C ACT-rules CG validator consumes JSON-LD. (c) Diff-friendly in PR review (line-oriented like the existing `wcag-em-summary.json`). |
-| Turtle | Rejected | Most compact human-readable RDF, but every consumer also accepts JSON-LD; shipping Turtle alongside doubles maintenance for no consumer benefit. Re-add as a second reporter (`earl-turtle`?) only if a downstream tool emerges that requires it. |
-| RDF/XML | Rejected | Verbose, XML-ecosystem-specific (collides with our existing `junit.xml` mental model). The W3C is moving away from RDF/XML as a default. |
-| N3 | Rejected | Subset of Turtle plus rules; no consumer in the accessibility audit space requires it. |
-| N-Triples | Rejected | Line-oriented but lossy (no @context, no CURIEs); strictly worse than JSON-LD for our use case. |
+| Turtle      | Rejected     | Most compact human-readable RDF, but every consumer also accepts JSON-LD; shipping Turtle alongside doubles maintenance for no consumer benefit. Re-add as a second reporter (`earl-turtle`?) only if a downstream tool emerges that requires it.                                                                                              |
+| RDF/XML     | Rejected     | Verbose, XML-ecosystem-specific (collides with our existing `junit.xml` mental model). The W3C is moving away from RDF/XML as a default.                                                                                                                                                                                                       |
+| N3          | Rejected     | Subset of Turtle plus rules; no consumer in the accessibility audit space requires it.                                                                                                                                                                                                                                                         |
+| N-Triples   | Rejected     | Line-oriented but lossy (no @context, no CURIEs); strictly worse than JSON-LD for our use case.                                                                                                                                                                                                                                                |
 
 ### 2. Per-violation Assertion model (Alfa convention)
 
@@ -65,7 +65,7 @@ URL)** pair:
       "earl:assertedBy": {
         "@type": "earl:Assertor",
         "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-        "doap:release": "0.3.0"
+        "doap:release": "0.3.0",
       },
       "earl:subject": "https://example.com/page",
       "earl:test": "image-alt",
@@ -73,11 +73,11 @@ URL)** pair:
         "@type": "earl:Result",
         "earl:outcome": "earl:failed",
         "earl:info": "impact: critical | classification: primary-automated-finding | Images must have alt text | https://dequeuniversity.com/...",
-        "earl:pointer": "img"
+        "earl:pointer": "img",
       },
-      "earl:mode": "earl:automatic"
-    }
-  ]
+      "earl:mode": "earl:automatic",
+    },
+  ],
 }
 ```
 
@@ -104,12 +104,12 @@ WCAG SC is a site-level claim, not a per-page one.
 
 ### 3. Outcome mapping table
 
-| axe outcome | EARL outcome | Always shown? |
-|---|---|---|
-| `failed` | `earl:failed` | Yes |
-| `incomplete` | `earl:cantTell` | Yes (regardless of `includePasses`) |
-| `inapplicable` | `earl:inapplicable` | **Never emitted by the reporter** (volume guard, ADR-0008 §6) |
-| `passed` | `earl:passed` | Only when `includePasses === true` (and only at per-SC level — never per-rule) |
+| axe outcome    | EARL outcome        | Always shown?                                                                  |
+| -------------- | ------------------- | ------------------------------------------------------------------------------ |
+| `failed`       | `earl:failed`       | Yes                                                                            |
+| `incomplete`   | `earl:cantTell`     | Yes (regardless of `includePasses`)                                            |
+| `inapplicable` | `earl:inapplicable` | **Never emitted by the reporter** (volume guard, ADR-0008 §6)                  |
+| `passed`       | `earl:passed`       | Only when `includePasses === true` (and only at per-SC level — never per-rule) |
 
 Unknown outcome values fall back to `earl:cantTell` — the safest
 "we don't know" answer for an audit. The mapping lives in
@@ -146,29 +146,40 @@ true` → emits typed pointers + extends `@context` accordingly).
 The hooks are documented in the reporter's JSDoc; the change is
 ~20 LOC.
 
-### 5. Tool identity — `earl:Assertor` shape
+### 5. Tool + evaluator identity — `earl:Assertor` shape
 
 ```jsonc
 "earl:assertedBy": {
   "@type": "earl:Assertor",
   "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-  "doap:release": "0.3.0"
+  "doap:release": "0.3.0",
+  "foaf:name": "Jamie Sargent",          // optional — from wcagEm.evaluator.name
+  "foaf:mbox": "auditor@example.com"     // optional — from wcagEm.evaluator.contact
 }
 ```
 
-Pulled from `TOOL_IDENTITY` (`src/lib/version.mjs`). Two fields:
+Tool identity pulled from `TOOL_IDENTITY` (`src/lib/version.mjs`):
 
 - `doap:name` — package name. Stable across versions.
 - `doap:release` — package version. Increments per published release.
 
-`doap:homepage` is **omitted** at v1.0. The package.json doesn't
-ship a `homepage` field yet (Layer 5 will, alongside the
-README rewrite). Adding it now would mean a version-bump path that
-adds a transient field; cleaner to defer to Layer 5.
+When `wcagEm.evaluator` is configured with non-empty values, the
+assertor includes `foaf:name` (evaluator name) and `foaf:mbox`
+(evaluator contact). These fields are omitted for default/empty
+evaluator config, preserving backward compatibility. This allows
+EARL consumers to identify both the tool that produced the assertions
+and the human evaluator who configured and reviewed the audit.
 
-The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). When
-typed pointers ship (the §4 follow-up), `@context` becomes a
-multi-vocab object embedding `ptr:` and `doap:` explicitly.
+`doap:homepage` is **omitted** at v1.0. The package.json doesn't
+ship a `homepage` field yet (v2.0 will, alongside the
+README rewrite). Adding it now would mean a version-bump path that
+adds a transient field; cleaner to defer to v2.0.
+
+The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). The
+`foaf:` prefix follows the same informal pattern as `doap:` — no
+namespace expansion at v1.0. When typed pointers ship (the §4
+follow-up), `@context` becomes a multi-vocab object embedding
+`ptr:`, `doap:`, and `foaf:` explicitly.
 
 ## Consequences
 
@@ -188,12 +199,12 @@ multi-vocab object embedding `ptr:` and `doap:` explicitly.
   Acknowledged + tracked above; not a blocker because real-world
   consumers accept plain strings.
 - Per-violation × N-pages can produce a large `@graph` for big
-  audits. Not a v1.0 problem (default sample is 80 pages); Layer 5+
+  audits. Not a v1.0 problem (default sample is 80 pages); v2.0+
   may add an `earl:Assertion`-deduplication mode that aggregates
   rule-on-page tuples.
-- `doap:homepage` deferred until Layer 5 — minor; the
+- `doap:homepage` deferred until v2.0 — minor; the
   current Assertor identifies the tool unambiguously via `name +
-  release`.
+release`.
 
 ## Symbol references (per ADR-0001)
 

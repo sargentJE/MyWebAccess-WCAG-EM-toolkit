@@ -29,7 +29,6 @@ test('accepts a minimal valid config', async () => {
 });
 
 test('rejects missing rootUrl', async () => {
-  // eslint-disable-next-line no-unused-vars
   const { rootUrl: _rootUrl, ...broken } = validConfig;
   const result = await validateConfig(broken);
   assert.equal(result.valid, false);
@@ -64,6 +63,16 @@ test('validRegex keyword accepts a valid pattern', async () => {
   };
   const result = await validateConfig(ok);
   assert.equal(result.valid, true);
+});
+
+test('validRegex keyword rejects an unparseable documentLinkPatterns entry', async () => {
+  const broken = {
+    ...validConfig,
+    crawl: { ...validConfig.crawl, documentLinkPatterns: ['(unclosed-group', '\\.pdf$'] },
+  };
+  const result = await validateConfig(broken);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors && result.errors.some((e) => e.keyword === 'validRegex'));
 });
 
 test('runOnly enforces {type, values} object shape', async () => {

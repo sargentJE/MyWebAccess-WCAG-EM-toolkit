@@ -7,3 +7,22 @@ test/.tmp/
 test/fixtures/static-site/
 package-lock.json
 *.min.js
+
+# Runtime artefacts written by Crawlee — gitignored, never hand-edited.
+storage/
+
+# Local-only audit configs (gitignored convention) — not subject to repo style.
+configs/au-demo.json
+
+# Auto-generated from schemas/config.schema.json by scripts/gen-types.mjs;
+# regenerated on every commit via .husky/pre-commit. Excluded from prettier
+# so the regen output (which doesn't run prettier) doesn't conflict with
+# format:check.
+src/types/config.d.ts
+
+# Whitespace inside html`...` tagged template literals is part of the runtime
+# HTML output (the template tag does not normalise whitespace). Prettier
+# reformatting these literals changes the emitted summary.html — verified by
+# test/unit/reporters-html.test.mjs failing on the reformatted output. The
+# rest of the file's prose is also tightly hand-laid for diff readability.
+src/reporters/html.mjs

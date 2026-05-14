@@ -24,7 +24,7 @@ architecture decisions.
   _Decision Outcome_ → _Consequences_ → _Pros and Cons of the Options_ (optional) →
   _More Information_ (optional).
 - Status is one of: `proposed`, `accepted`, `deprecated`, `superseded by NNNN`.
-- The existing `box/` narrative notes are promoted into numbered ADRs during Layer 5
+- The existing `box/` narrative notes are promoted into numbered ADRs during the v1.0 release sprint
   of the v0.3 → v1.0 promotion plan; `box/` is then removed.
 
 ## Consequences

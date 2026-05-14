@@ -174,7 +174,7 @@ function renderCriteriaOutcomes(summary) {
   out += `<tr><th>Criterion</th><th>Outcome</th><th>Related rules</th></tr>\n`;
   out += `</thead>\n<tbody>\n`;
   for (const c of outcomes) {
-    out += html`<tr><td>${c.criterion ?? ''}</td><td>${c.outcome ?? ''}</td><td>${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}</td></tr>\n`;
+    out += html`<tr><td>${c.sc ?? ''}</td><td>${c.outcome ?? ''}</td><td>${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}</td></tr>\n`;
   }
   out += `</tbody>\n</table>\n`;
   return out;
@@ -236,13 +236,13 @@ function renderFindings(findings, ctx, screenshotsByUrl) {
  */
 function renderPasses(summary) {
   const wcagEm = summary.wcagEmSummary;
-  /** @type {Array<{ criterion?: string, outcome?: string }>} */
+  /** @type {Array<{ sc?: string, outcome?: string }>} */
   const outcomes = Array.isArray(wcagEm?.criteriaOutcomes) ? wcagEm.criteriaOutcomes : [];
   const passed = outcomes.filter((c) => c?.outcome === 'passed');
   if (passed.length === 0) return '';
   let out = `<h2>Passing criteria</h2>\n<ul>\n`;
   for (const c of passed) {
-    out += html`<li>${c.criterion ?? ''}</li>\n`;
+    out += html`<li>${c.sc ?? ''}</li>\n`;
   }
   out += `</ul>\n`;
   return out;

@@ -117,7 +117,11 @@ test('runOneProcess returns error-result when newContext throws (loop continues)
 
   const result = await runOneProcess(
     browser,
-    { name: 'broken', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
+    {
+      name: 'broken',
+      startUrl: 'https://example.com/',
+      steps: [{ action: 'goto', url: 'https://example.com/' }],
+    },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
     { httpCredentials: { username: 'u', password: 'p' } },
@@ -188,7 +192,11 @@ test('runOneProcess threads contextOptions (httpCredentials) into newContext', a
 
   await runOneProcess(
     harness.browser,
-    { name: 'auth-probe', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
+    {
+      name: 'auth-probe',
+      startUrl: 'https://example.com/',
+      steps: [{ action: 'goto', url: 'https://example.com/' }],
+    },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
     { httpCredentials: { username: 'audit-user', password: 'secret' } },
@@ -209,7 +217,11 @@ test('runOneProcess uses empty contextOptions default when not passed', async ()
 
   await runOneProcess(
     harness.browser,
-    { name: 'no-auth', startUrl: 'https://example.com/', steps: [{ action: 'goto', url: 'https://example.com/' }] },
+    {
+      name: 'no-auth',
+      startUrl: 'https://example.com/',
+      steps: [{ action: 'goto', url: 'https://example.com/' }],
+    },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
     // 5th param omitted on purpose — default {} kicks in.

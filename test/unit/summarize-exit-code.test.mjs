@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `computeExitCode` — Layer 3a's threshold-based exit code.
+ * @file Tests for `computeExitCode` — threshold-based exit code.
  * @module test/unit/summarize-exit-code
  *
  * @description
@@ -40,17 +40,11 @@ test('computeExitCode returns 0 when failOnFindings is undefined', () => {
 });
 
 test('computeExitCode returns 0 when threshold is 0 (schema-valid but semantically-off)', () => {
-  assert.equal(
-    computeExitCode({ findings: [critical] }, { ...defaultPolicy, threshold: 0 }),
-    0,
-  );
+  assert.equal(computeExitCode({ findings: [critical] }, { ...defaultPolicy, threshold: 0 }), 0);
 });
 
 test('computeExitCode returns 0 when threshold is negative or NaN', () => {
-  assert.equal(
-    computeExitCode({ findings: [critical] }, { ...defaultPolicy, threshold: -1 }),
-    0,
-  );
+  assert.equal(computeExitCode({ findings: [critical] }, { ...defaultPolicy, threshold: -1 }), 0);
   assert.equal(
     computeExitCode(
       { findings: [critical] },
@@ -62,10 +56,7 @@ test('computeExitCode returns 0 when threshold is negative or NaN', () => {
 
 test('computeExitCode returns 0 when both impacts and classifications are empty', () => {
   assert.equal(
-    computeExitCode(
-      { findings: [critical] },
-      { impacts: [], classifications: [], threshold: 1 },
-    ),
+    computeExitCode({ findings: [critical] }, { impacts: [], classifications: [], threshold: 1 }),
     0,
   );
 });
@@ -81,10 +72,7 @@ test('default policy + one serious finding → exit 2', () => {
 });
 
 test('default policy + only moderate findings → exit 0', () => {
-  assert.equal(
-    computeExitCode({ findings: [moderate, moderate, moderate] }, defaultPolicy),
-    0,
-  );
+  assert.equal(computeExitCode({ findings: [moderate, moderate, moderate] }, defaultPolicy), 0);
 });
 
 test('default policy + empty findings → exit 0', () => {
@@ -106,10 +94,7 @@ test('threshold 3 + two serious findings → exit 0', () => {
 
 test('threshold 3 + three serious findings → exit 2 (meets threshold)', () => {
   assert.equal(
-    computeExitCode(
-      { findings: [serious, serious, serious] },
-      { ...defaultPolicy, threshold: 3 },
-    ),
+    computeExitCode({ findings: [serious, serious, serious] }, { ...defaultPolicy, threshold: 3 }),
     2,
   );
 });
@@ -143,10 +128,7 @@ test('impacts OR classifications — either triggers', () => {
 });
 
 test('findings without impact or classification properties are skipped', () => {
-  assert.equal(
-    computeExitCode(/** @type {any} */ ({ findings: [{}] }), defaultPolicy),
-    0,
-  );
+  assert.equal(computeExitCode(/** @type {any} */ ({ findings: [{}] }), defaultPolicy), 0);
 });
 
 test('findings with impact:null are skipped (schema permits null; guard must hold)', () => {

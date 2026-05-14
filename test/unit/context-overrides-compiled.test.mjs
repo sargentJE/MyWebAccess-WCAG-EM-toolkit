@@ -5,12 +5,12 @@
  *
  * @description
  * Mirror of `context-compile-regex.test.mjs` but for the per-URL axe override
- * compile-at-load introduced in Layer 3a (R2). Locks three invariants:
+ * compile-at-load. Locks three invariants:
  *   1. Non-enumerable descriptor — the compiled array never leaks into any
  *      JSON-serialised artefact.
  *   2. Each entry has a real `RegExp` on `.regex`.
- *   3. Each entry preserves the original override's own-keys so R3's
- *      `applyAxeOverride` predicate (`hasOwnProperty.call(override, key)`)
+ *   3. Each entry preserves the original override's own-keys so
+ *      `applyAxeOverride`'s predicate (`hasOwnProperty.call(override, key)`)
  *      correctly distinguishes `runOnly: null` from absent.
  */
 
@@ -70,10 +70,7 @@ test('buildContext attaches overridesCompiled as non-enumerable', async (t) => {
   const configPath = await writeFixtureConfig(tmpdir);
   const ctx = await buildContext({ configPath, outDir: tmpdir, skipPreflight: true });
 
-  const descriptor = Object.getOwnPropertyDescriptor(
-    ctx.config.scan.axe,
-    'overridesCompiled',
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(ctx.config.scan.axe, 'overridesCompiled');
   assert.ok(descriptor, 'descriptor must exist');
   assert.strictEqual(descriptor.enumerable, false);
   assert.strictEqual(descriptor.configurable, true);
@@ -103,7 +100,7 @@ test('overridesCompiled length matches overrides length and each has a RegExp', 
 
 test('overridesCompiled preserves hasOwnProperty semantics for runOnly', async (t) => {
   // F11 contract: `runOnly: null` (defined-as-null = clear) must be
-  // distinguishable from absent. R3's `applyAxeOverride` relies on
+  // distinguishable from absent. `applyAxeOverride` relies on
   // `hasOwnProperty.call(override, 'runOnly')` returning true for the first
   // override and false for the second.
   const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'overrides-compiled-'));

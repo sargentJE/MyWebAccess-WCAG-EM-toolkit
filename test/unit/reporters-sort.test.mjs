@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `sortFindings` — Layer 4 R3 deterministic sort contract.
+ * @file Tests for `sortFindings` — deterministic sort contract.
  * @module test/unit/reporters-sort
  *
  * @description

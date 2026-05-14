@@ -54,11 +54,13 @@ function expandPattern(processDef) {
 
   if (processDef.pattern === 'partial-submit') {
     const fills = (processDef.fields || []).map(
-      /** @param {any} field */ (field) => ({
-        action: 'fill',
-        selector: field.selector,
-        value: field.value ?? '',
-      }),
+      /** @type {(field: any) => { action: string, selector: string, value: string }} */ (
+        (field) => ({
+          action: 'fill',
+          selector: field.selector,
+          value: field.value ?? '',
+        })
+      ),
     );
     return [
       { action: 'goto', url: processDef.startUrl },
@@ -108,7 +110,7 @@ export async function runOneProcess(browser, processDef, ctx, viewport, contextO
   try {
     // NOTE: applyAuth's ContextOptions type is intentionally looser than
     // Playwright's BrowserContextOptions (storageState accepts `object`
-    // for the inline form). Cast at the spread site matches scan.mjs R4.
+    // for the inline form). Cast at the spread site matches scan.mjs.
     context = await browser.newContext(
       /** @type {any} */ ({
         viewport: { width: viewport.width, height: viewport.height },
@@ -166,10 +168,7 @@ export async function runOneProcess(browser, processDef, ctx, viewport, contextO
         await context.close();
       } catch (closeErr) {
         const msg = closeErr instanceof Error ? closeErr.message : String(closeErr);
-        ctx.logger.warn(
-          { viewport: viewport.id, err: msg },
-          'process context close failed',
-        );
+        ctx.logger.warn({ viewport: viewport.id, err: msg }, 'process context close failed');
       }
     }
   }
@@ -185,7 +184,7 @@ export async function run(ctx) {
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan-processes viewports');
 
-  // ANCHOR: AuthContextOptions — same sync helper as scan.mjs (R4). One call
+  // ANCHOR: AuthContextOptions — same sync helper as scan.mjs. One call
   // at run-entry; warnings emitted immediately; contextOptions threaded as
   // the 5th arg to runOneProcess.
   const { contextOptions: authContextOptions, warnings: authWarnings } = applyAuth(config);

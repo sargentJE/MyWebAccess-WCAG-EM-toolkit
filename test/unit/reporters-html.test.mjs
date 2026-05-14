@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the HTML reporter — Layer 4 R5.
+ * @file Tests for the HTML reporter.
  * @module test/unit/reporters-html
  *
  * @description
@@ -41,10 +41,7 @@ async function makeCtx(t, opts = {}) {
   await fs.mkdir(reportsDir, { recursive: true });
   await fs.mkdir(resultsDir, { recursive: true });
   if (Array.isArray(opts.axeResults)) {
-    await fs.writeFile(
-      path.join(resultsDir, 'axe-results.json'),
-      JSON.stringify(opts.axeResults),
-    );
+    await fs.writeFile(path.join(resultsDir, 'axe-results.json'), JSON.stringify(opts.axeResults));
   }
   const ctx = {
     paths: { reportsDir, resultsDir },
@@ -97,7 +94,7 @@ test('html reporter: empty findings still produces a "No findings." line', async
 
 test('html reporter: registry now lists html', () => {
   const names = listReporters();
-  assert.ok(names.includes('html'), 'html registered after R5');
+  assert.ok(names.includes('html'), 'html registered in the registry');
   assert.ok(names.includes('json'));
   assert.ok(names.includes('markdown'));
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');
@@ -263,7 +260,7 @@ test('includePasses=false: passes section absent', async (t) => {
   const summary = {
     ...baseSummary(),
     wcagEmSummary: {
-      criteriaOutcomes: [{ criterion: '1.1.1 Non-text Content', outcome: 'passed' }],
+      criteriaOutcomes: [{ sc: '1.1.1 Non-text Content', outcome: 'passed' }],
     },
   };
   await htmlReporter.emit(summary, ctx);
@@ -322,8 +319,8 @@ test('includePasses=true: passes section present with passing criteria', async (
     ...baseSummary(),
     wcagEmSummary: {
       criteriaOutcomes: [
-        { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-        { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+        { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+        { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
       ],
     },
   };
@@ -332,4 +329,22 @@ test('includePasses=true: passes section present with passing criteria', async (
   assert.match(got, /<h2>Passing criteria<\/h2>/);
   assert.match(got, /<li>1\.1\.1 Non-text Content<\/li>/);
   assert.ok(!got.includes('<li>1.4.3 Contrast (Minimum)</li>'));
+});
+
+test('html reporter: criteriaOutcomes sc field renders in criteria table (D4)', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t, { includePasses: false });
+  const summary = {
+    ...baseSummary(),
+    wcagEmSummary: {
+      criteriaOutcomes: [
+        { sc: '1.4.3', outcome: 'failed', relatedRules: ['color-contrast'] },
+        { sc: '2.4.1', outcome: 'passed', relatedRules: ['bypass'] },
+      ],
+    },
+  };
+  await htmlReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
+  assert.match(got, /<td>1\.4\.3<\/td>/, 'SC identifier must render from sc field');
+  assert.match(got, /<td>2\.4\.1<\/td>/, 'second SC identifier must also render');
+  assert.match(got, /<td>color-contrast<\/td>/, 'relatedRules must render');
 });

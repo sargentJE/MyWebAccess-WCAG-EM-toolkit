@@ -5,7 +5,7 @@
  *
  * @description
  * Generalises the `createServer`/`listen(0)`/`once(server,'listening')`
- * pattern that `test/unit/sitemap.test.mjs` has used since Layer 2 into a
+ * pattern that `test/unit/sitemap.test.mjs` has used since the config validation overhaul into a
  * reusable harness for reporter smoke tests, reporter XSS tests, the
  * discover-timeout behavioural test, and the authenticated-scan
  * integration test.
@@ -14,7 +14,7 @@
  * shared state; ephemeral `listen(0)` ports mean parallel `node --test`
  * runs never collide. The caller is responsible for `await stop()`.
  *
- * @see docs/adr/0008-pluggable-reporters.md (Layer 4 test-infrastructure notes)
+ * @see docs/adr/0008-pluggable-reporters.md (reporter pipeline test-infrastructure notes)
  */
 
 // SECTION: Imports
@@ -196,9 +196,7 @@ export async function startFixtureServer(options = {}) {
       // 4. Static file serving.
       if (staticDir) {
         const filePath =
-          urlPath === '/'
-            ? path.join(staticDir, 'index.html')
-            : safeResolve(staticDir, urlPath);
+          urlPath === '/' ? path.join(staticDir, 'index.html') : safeResolve(staticDir, urlPath);
         if (filePath === null) {
           res.statusCode = 400;
           res.end('Bad path');
@@ -213,9 +211,15 @@ export async function startFixtureServer(options = {}) {
           // reference the dynamic ephemeral baseUrl by placeholder without
           // a build step. Binary files (PNG, JPEG, SVG bytes) pass through
           // unchanged.
-          if (ext === '.html' || ext === '.xml' || ext === '.css' ||
-              ext === '.js'   || ext === '.mjs' || ext === '.json' ||
-              ext === '.txt') {
+          if (
+            ext === '.html' ||
+            ext === '.xml' ||
+            ext === '.css' ||
+            ext === '.js' ||
+            ext === '.mjs' ||
+            ext === '.json' ||
+            ext === '.txt'
+          ) {
             res.end(body.toString('utf8').replaceAll('__BASE_URL__', baseUrl));
           } else {
             res.end(body);

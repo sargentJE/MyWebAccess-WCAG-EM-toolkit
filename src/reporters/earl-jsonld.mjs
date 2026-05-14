@@ -65,6 +65,7 @@ const OUTCOME_MAP = Object.freeze({
  */
 export async function emit(summary, ctx) {
   const includePasses = Boolean(ctx?.config?.reporting?.includePasses);
+  const evaluator = ctx?.config?.wcagEm?.evaluator;
   const findings = sortFindings(Array.isArray(summary.findings) ? summary.findings : []);
 
   /** @type {Array<Record<string, any>>} */
@@ -77,17 +78,20 @@ export async function emit(summary, ctx) {
     const pointer = Array.isArray(f.targets) && f.targets.length ? String(f.targets[0]) : '';
     // Treat axe `failed` (the only impact-bearing finding state in
     // summary.findings[]) as the outcome unless the finding row carries
-    // a different state. For the current Layer 3b shape, every grouped
+    // a different state. For the current shape, every grouped
     // finding represents a violation -> earl:failed.
     const outcomeKey = typeof f.outcome === 'string' ? f.outcome : 'failed';
     for (const url of pages) {
-      graph.push(buildAssertion({
-        subject: String(url),
-        test: ruleId,
-        outcomeKey,
-        info: buildInfo(f),
-        pointer,
-      }));
+      graph.push(
+        buildAssertion({
+          subject: String(url),
+          test: ruleId,
+          outcomeKey,
+          info: buildInfo(f),
+          pointer,
+          evaluator,
+        }),
+      );
     }
   }
 
@@ -99,13 +103,16 @@ export async function emit(summary, ctx) {
     const siteSubject = String(summary?.site ?? 'site');
     for (const c of outcomes) {
       if (c?.outcome !== 'passed') continue;
-      graph.push(buildAssertion({
-        subject: siteSubject,
-        test: String(c.criterion ?? ''),
-        outcomeKey: 'passed',
-        info: 'No violations recorded for this success criterion.',
-        pointer: '',
-      }));
+      graph.push(
+        buildAssertion({
+          subject: siteSubject,
+          test: String(c.sc ?? ''),
+          outcomeKey: 'passed',
+          info: 'No violations recorded for this success criterion.',
+          pointer: '',
+          evaluator,
+        }),
+      );
     }
   }
 
@@ -125,10 +132,10 @@ export async function emit(summary, ctx) {
 /**
  * Build a single `earl:Assertion` JSON-LD node.
  *
- * @param {{ subject: string, test: string, outcomeKey: string, info: string, pointer: string }} args
+ * @param {{ subject: string, test: string, outcomeKey: string, info: string, pointer: string, evaluator?: { name?: string, contact?: string } }} args
  * @returns {Record<string, any>}
  */
-function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
+function buildAssertion({ subject, test, outcomeKey, info, pointer, evaluator }) {
   /** @type {Record<string, any>} */
   const result = {
     '@type': 'earl:Result',
@@ -138,7 +145,7 @@ function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
   if (pointer) result['earl:pointer'] = pointer;
   return {
     '@type': 'earl:Assertion',
-    'earl:assertedBy': buildAssertor(),
+    'earl:assertedBy': buildAssertor(evaluator),
     'earl:subject': subject,
     'earl:test': test,
     'earl:result': result,
@@ -147,19 +154,22 @@ function buildAssertion({ subject, test, outcomeKey, info, pointer }) {
 }
 
 /**
- * Build the EARL `earl:Assertor` for THIS toolkit, stamped from
- * TOOL_IDENTITY. Same shape every call — could be memoised, but
- * runtime-cheap and the stable JSON-LD output benefits from the doc
- * being a pure function of inputs.
+ * Build the EARL `earl:Assertor` stamped from TOOL_IDENTITY, with
+ * optional evaluator identity from `wcagEm.evaluator` config.
  *
+ * @param {{ name?: string, contact?: string }} [evaluator]
  * @returns {Record<string, any>}
  */
-function buildAssertor() {
-  return {
+function buildAssertor(evaluator) {
+  /** @type {Record<string, any>} */
+  const assertor = {
     '@type': 'earl:Assertor',
     'doap:name': TOOL_IDENTITY.name,
     'doap:release': TOOL_IDENTITY.version,
   };
+  if (evaluator?.name) assertor['foaf:name'] = evaluator.name;
+  if (evaluator?.contact) assertor['foaf:mbox'] = evaluator.contact;
+  return assertor;
 }
 
 /**

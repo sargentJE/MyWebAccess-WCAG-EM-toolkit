@@ -1,6 +1,6 @@
 {
-  "name": "legacy-events",
-  "rootUrl": "https://legacy-events.com/",
+  "name": "example-site-best-practice",
+  "rootUrl": "https://example.com/",
   "scope": {
     "mode": "same-hostname",
     "allowedHosts": []
@@ -9,8 +9,8 @@
     "maxPages": 80,
     "maxConcurrency": 5,
     "requestTimeoutSecs": 90,
-    "requestDelayMs": 500,
-    "excludeUrlPatterns": ["/wp-admin", "\\?replytocom=", "/feed/?$"],
+    "requestDelayMs": 250,
+    "excludeUrlPatterns": [],
     "sitemapSeeding": {
       "enabled": true,
       "urls": [],
@@ -26,20 +26,7 @@
     "captureSearchInputs": true
   },
   "sample": {
-    "structuredManual": [
-      "https://legacy-events.com/",
-      "https://legacy-events.com/about",
-      "https://legacy-events.com/contact-us",
-      "https://legacy-events.com/privacy-policy",
-      "https://legacy-events.com/sustainability",
-      "https://legacy-events.com/what-we-do",
-      "https://legacy-events.com/what-we-do/event-management",
-      "https://legacy-events.com/what-we-do/strategy-training",
-      "https://legacy-events.com/our-work",
-      "https://legacy-events.com/our-work/100-together-conference-2024",
-      "https://legacy-events.com/latest",
-      "https://legacy-events.com/latest/why-we-changed-our-name"
-    ],
+    "structuredManual": [],
     "autoSuggest": {
       "enabled": true,
       "perCluster": 1,
@@ -67,17 +54,7 @@
       "runOnly": null
     }
   },
-  "processes": [
-    {
-      "name": "contact-blank-submit",
-      "startUrl": "https://legacy-events.com/contact-us",
-      "pattern": "blank-submit",
-      "forceInclude": true,
-      "selectors": {
-        "submit": "button[type='submit'], input[type='submit']"
-      }
-    }
-  ],
+  "processes": [],
   "reporting": {
     "reporters": ["json", "markdown", "html", "earl-jsonld", "junit"],
     "groupBestPracticeSeparately": true,
@@ -92,7 +69,7 @@
     "conformanceTarget": "AA",
     "atBaseline": [],
     "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
-    "samplingMethodNotes": "Structured sample (WCAG-EM Step 3a) curated by the auditor — homepage, about, contact, policy, sustainability, what-we-do (incl. two service detail pages), our-work (incl. one conference case study), latest blog listing + one post. Supplemented by toolkit auto-suggest (top page-type per cluster) and a 10% random pool.",
+    "samplingMethodNotes": "Structured sample (WCAG-EM Step 3a) curated by the auditor for this run — set sample.structuredManual in your per-site config to pin critical user-journey URLs (homepage, contact, key flows, policy pages). Supplemented by toolkit auto-suggest (top page-type per cluster) and a 10% random pool.",
     "evaluator": {
       "name": "",
       "contact": ""

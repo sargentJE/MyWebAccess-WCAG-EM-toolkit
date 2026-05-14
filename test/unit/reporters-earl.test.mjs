@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for the EARL JSON-LD reporter — Layer 4 R6.
+ * @file Tests for the EARL JSON-LD reporter.
  * @module test/unit/reporters-earl
  *
  * @description
@@ -25,7 +25,7 @@ import { TOOL_IDENTITY } from '../../src/lib/version.mjs';
  *
  * @param {{ after: (fn: () => any) => void }} t
  * @param {Record<string, any>} summary
- * @param {{ includePasses?: boolean }} [opts]
+ * @param {{ includePasses?: boolean, wcagEm?: Record<string, any> }} [opts]
  * @returns {Promise<{ doc: any, raw: string }>}
  */
 async function emitAndRead(t, summary, opts = {}) {
@@ -33,7 +33,10 @@ async function emitAndRead(t, summary, opts = {}) {
   t.after(() => fs.rm(reportsDir, { recursive: true, force: true }));
   const ctx = {
     paths: { reportsDir },
-    config: { reporting: { includePasses: Boolean(opts.includePasses) } },
+    config: {
+      reporting: { includePasses: Boolean(opts.includePasses) },
+      wcagEm: opts.wcagEm ?? {},
+    },
   };
   await earlReporter.emit(summary, ctx);
   const raw = await fs.readFile(path.join(reportsDir, 'earl.jsonld'), 'utf8');
@@ -118,8 +121,8 @@ test('earl reporter: includePasses=false skips per-SC passed Assertions', async 
       findings: [],
       wcagEmSummary: {
         criteriaOutcomes: [
-          { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-          { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+          { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+          { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
         ],
       },
     },
@@ -137,9 +140,9 @@ test('earl reporter: includePasses=true emits earl:passed for each passed criter
       findings: [],
       wcagEmSummary: {
         criteriaOutcomes: [
-          { criterion: '1.1.1 Non-text Content', outcome: 'passed' },
-          { criterion: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
-          { criterion: '2.4.1 Bypass Blocks', outcome: 'passed' },
+          { sc: '1.1.1 Non-text Content', outcome: 'passed' },
+          { sc: '1.4.3 Contrast (Minimum)', outcome: 'failed' },
+          { sc: '2.4.1 Bypass Blocks', outcome: 'passed' },
         ],
       },
     },
@@ -158,7 +161,7 @@ test('earl reporter: includePasses=true emits earl:passed for each passed criter
 
 test('earl reporter: registry now lists earl-jsonld', () => {
   const names = listReporters();
-  assert.ok(names.includes('earl-jsonld'), 'earl-jsonld registered after R6');
+  assert.ok(names.includes('earl-jsonld'), 'earl-jsonld registered in the registry');
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');
 });
 
@@ -174,4 +177,43 @@ test('earl reporter: assertions are emitted in stable order (sortFindings semant
   });
   const order = doc['@graph'].map((/** @type {any} */ a) => a['earl:test']);
   assert.deepEqual(order, ['aaa-high', 'mmm-mid', 'zzz-low']);
+});
+
+// SECTION: D4 regression — evaluator propagation
+
+test('earl reporter: evaluator from wcagEm config appears in earl:assertedBy (D4)', async (t) => {
+  const { doc } = await emitAndRead(
+    t,
+    {
+      tool: TOOL_IDENTITY,
+      findings: [
+        { id: 'image-alt', impact: 'critical', targets: ['img'], pages: ['https://example.com/'] },
+      ],
+    },
+    { wcagEm: { evaluator: { name: 'D4-regression-evaluator', contact: 'test@d4.example' } } },
+  );
+  assert.equal(doc['@graph'].length, 1);
+  const assertor = doc['@graph'][0]['earl:assertedBy'];
+  assert.equal(assertor['doap:name'], TOOL_IDENTITY.name, 'tool identity preserved');
+  assert.equal(assertor['doap:release'], TOOL_IDENTITY.version, 'tool version preserved');
+  assert.equal(assertor['foaf:name'], 'D4-regression-evaluator', 'evaluator name stamped');
+  assert.equal(assertor['foaf:mbox'], 'test@d4.example', 'evaluator contact stamped');
+});
+
+test('earl reporter: empty evaluator config omits foaf:name from assertedBy (D4)', async (t) => {
+  const { doc } = await emitAndRead(
+    t,
+    {
+      tool: TOOL_IDENTITY,
+      findings: [
+        { id: 'image-alt', impact: 'critical', targets: ['img'], pages: ['https://example.com/'] },
+      ],
+    },
+    { wcagEm: { evaluator: { name: '', contact: '' } } },
+  );
+  assert.equal(doc['@graph'].length, 1);
+  const assertor = doc['@graph'][0]['earl:assertedBy'];
+  assert.equal(assertor['doap:name'], TOOL_IDENTITY.name, 'tool identity preserved');
+  assert.ok(!('foaf:name' in assertor), 'empty evaluator name must NOT appear');
+  assert.ok(!('foaf:mbox' in assertor), 'empty evaluator contact must NOT appear');
 });

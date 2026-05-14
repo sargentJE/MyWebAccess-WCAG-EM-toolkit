@@ -48,6 +48,12 @@
         "maxPages": { "type": "integer", "minimum": 1, "maximum": 5000 },
         "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 50 },
         "requestTimeoutSecs": { "type": "integer", "minimum": 5, "maximum": 600 },
+        "navigationTimeoutSecs": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Timeout in seconds for page.goto navigation. Independent from the request-handler budget (requestTimeoutSecs)."
+        },
         "requestDelayMs": {
           "type": "integer",
           "minimum": 0,
@@ -58,6 +64,11 @@
           "type": "array",
           "items": { "type": "string", "validRegex": true },
           "description": "Regex source strings; validated at load by the `validRegex` custom keyword."
+        },
+        "documentLinkPatterns": {
+          "type": "array",
+          "items": { "type": "string", "validRegex": true },
+          "description": "Regex source strings matched against URL.pathname; matching links are skipped at enqueue time. Default ships with common document/archive/installer/media/e-book/design-binary/data-file extensions. Set to [] to opt out and crawl all link types."
         },
         "sitemapSeeding": {
           "type": "object",

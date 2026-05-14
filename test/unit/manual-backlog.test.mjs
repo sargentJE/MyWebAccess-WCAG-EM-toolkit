@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @file Tests for `buildManualBacklog` — Layer 3b R9's findings-aware backlog.
+ * @file Tests for `buildManualBacklog` — findings-aware manual backlog.
  * @module test/unit/manual-backlog
  */
 
@@ -55,11 +55,7 @@ test('buildManualBacklog: landmark-one-main finding also triggers landmarks sect
 test('buildManualBacklog: processes → one walkthrough item per process', () => {
   const md = buildManualBacklog({
     findings: [],
-    processes: [
-      { name: 'signup' },
-      { name: 'checkout' },
-      { name: 'password-reset' },
-    ],
+    processes: [{ name: 'signup' }, { name: 'checkout' }, { name: 'password-reset' }],
   });
   assert.match(md, /## Process walkthroughs/);
   assert.match(md, /Complete walkthrough of process: \*\*signup\*\*/);
@@ -110,4 +106,56 @@ test('buildManualBacklog: handles missing/malformed optional args safely', () =>
   const md = buildManualBacklog({ findings: /** @type {any} */ (null) });
   assert.match(md, /# Manual testing backlog/);
   assert.doesNotMatch(md, /Process walkthroughs/);
+});
+
+// SECTION: AU dogfood Lane B gap closures (B2 — 2026-05-11)
+//
+// The five items below were identified by the AU dogfood verdict
+// (output/au-run-1/AU-DOGFOOD-REPORT.md Lane B, lines 48-67) as universally-
+// expected manual checks missing from the static template. All five are
+// ALWAYS-INCLUDED — axe-core has partial mechanical-presence overlap with
+// three of them (audio-caption/video-caption, image-alt/area-alt, focus-*
+// rules) but the SEMANTIC judgment ("is this alt truly meaningful? is the
+// focus indicator visible to a sighted user?") remains an auditor concern
+// regardless of axe findings.
+
+test('buildManualBacklog: static template includes alt-text-semantics item (SC 1.1.1)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.match(md, /Alt text semantics.*decorative.*informative/);
+});
+
+test('buildManualBacklog: static template includes captions/transcripts item (SC 1.2.1-1.2.5)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.match(md, /Captions and transcripts.*audio.*video/);
+});
+
+test('buildManualBacklog: static template includes color-only-information item (SC 1.4.1)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.match(md, /Color-only information/);
+});
+
+test('buildManualBacklog: static template includes focus-indicator-visibility item (covers SC 2.4.7 + 2.4.11)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.match(md, /Focus indicator visibility.*not obscured/);
+});
+
+test('buildManualBacklog: static template includes CAPTCHA-alternative item (covers SC 1.1.1 + 2.1.1)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.match(md, /CAPTCHA alternative.*keyboard-operable/);
+});
+
+test('buildManualBacklog: AU Lane B items present even when axe findings have partial overlap', () => {
+  // Verifies the always-included contract: axe firing audio-caption or
+  // image-alt or focus-order-semantics findings does NOT drop the manual
+  // items, because axe checks mechanical presence not semantic correctness.
+  const md = buildManualBacklog({
+    findings: [
+      { id: 'audio-caption', impact: 'serious' },
+      { id: 'image-alt', impact: 'critical' },
+      { id: 'focus-order-semantics', impact: 'moderate' },
+    ],
+  });
+  assert.match(md, /Alt text semantics/);
+  assert.match(md, /Captions and transcripts/);
+  assert.match(md, /Focus indicator visibility/);
 });
