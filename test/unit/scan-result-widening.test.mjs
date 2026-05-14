@@ -108,8 +108,13 @@ test('liftRuleSummaries does NOT persist nodes bulk (artefact-size guard)', () =
   ]);
   assert.equal(out[0].nodesCount, 1000);
   // Structural guard: the output object has exactly 7 keys, none of them `nodes`.
-  assert.deepEqual(
-    Object.keys(out[0]).sort(),
-    ['firstTarget', 'help', 'helpUrl', 'id', 'impact', 'nodesCount', 'tags'],
-  );
+  assert.deepEqual(Object.keys(out[0]).sort(), [
+    'firstTarget',
+    'help',
+    'helpUrl',
+    'id',
+    'impact',
+    'nodesCount',
+    'tags',
+  ]);
 });

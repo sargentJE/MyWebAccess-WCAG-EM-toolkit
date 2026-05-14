@@ -23,11 +23,16 @@ The toolkit runs a five-stage pipeline:
    reports (Markdown, HTML, EARL JSON-LD, JUnit), and generate the
    WCAG-EM Step 5 summary.
 
+## Prerequisites
+
+- **Node.js ≥ 22.11.0** — the toolkit requires a current Node.js release.
+  Check with `node -v`.
+
 ## Quick start
 
 ```bash
-npm install
-npx playwright install
+npm install wcag-em-a11y-toolkit
+npx playwright install chromium
 npx wcag-em audit --config configs/example-site.json
 ```
 
@@ -64,13 +69,32 @@ the full configuration reference.
 
 ## Reporters
 
-| Reporter      | Output file          | Description                           |
-| ------------- | -------------------- | ------------------------------------- |
-| `json`        | `axe-results.json`   | Raw axe results per page × viewport   |
-| `markdown`    | `report.md`          | Human-readable Markdown summary       |
-| `html`        | `report.html`        | Standalone HTML report with dark mode |
-| `earl-jsonld` | `earl-report.jsonld` | W3C EARL JSON-LD assertions           |
-| `junit`       | `junit.xml`          | JUnit XML for CI integration          |
+| Reporter      | Output file    | Description                                                    |
+| ------------- | -------------- | -------------------------------------------------------------- |
+| `json`        | `summary.json` | Structured summary with findings and incomplete results        |
+| `markdown`    | `summary.md`   | Human-readable Markdown summary with incomplete-review section |
+| `html`        | `summary.html` | Standalone HTML report with dark mode and needs-review section |
+| `earl-jsonld` | `earl.jsonld`  | W3C EARL JSON-LD assertions with WCAG-EM evaluation metadata   |
+| `junit`       | `junit.xml`    | JUnit XML for CI — `cantTell` results emit as failures         |
+
+In addition to the reporter outputs, the summarize stage also writes:
+
+- **`wcag-em-summary.json`** — per-SC outcomes covering every WCAG 2.2
+  success criterion at or below your conformance target. Criteria not
+  touched by any axe rule are marked `notTested`, giving a complete
+  checklist for the manual-review phase.
+- **`grouped-by-rule.json`** / **`grouped-by-component.json`** — machine-
+  readable finding breakdowns for integration with other tools.
+- **`manual-backlog.md`** — findings-aware manual-review backlog.
+
+## TypeScript support
+
+The package ships type declarations for the programmatic API:
+
+```ts
+import type { WCAGEMAccessibilityToolkitConfig } from 'wcag-em-a11y-toolkit';
+import { runAudit, buildContext } from 'wcag-em-a11y-toolkit';
+```
 
 ## Configuring for SPAs
 
@@ -207,11 +231,6 @@ After copying the sidecar, the four most important per-site overrides:
 
 See [`docs/adr/`](./docs/adr/) for the full list of architecture
 decision records.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development setup,
-coding conventions, and the pull request process.
 
 ## License
 

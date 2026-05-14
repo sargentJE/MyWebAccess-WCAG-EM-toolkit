@@ -1,4 +1,4 @@
-export { WCAGEMAccessibilityToolkitConfig, Action } from './config.d.ts';
+export { WCAGEMAccessibilityToolkitConfig, Action } from './config.js';
 
 export interface BuildContextOptions {
   requirePlaywright?: boolean;
@@ -7,7 +7,7 @@ export interface BuildContextOptions {
 }
 
 export interface RunContext {
-  config: import('./config.d.ts').WCAGEMAccessibilityToolkitConfig;
+  config: import('./config.js').WCAGEMAccessibilityToolkitConfig;
   logger: import('pino').Logger;
   paths: {
     reportsDir: string;

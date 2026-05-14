@@ -58,14 +58,30 @@ URL)** pair:
 
 ```jsonc
 {
-  "@context": "http://www.w3.org/ns/earl#",
+  "@context": {
+    "earl": "http://www.w3.org/ns/earl#",
+    "dct": "http://purl.org/dc/terms/",
+    "wcag-em": "http://www.w3.org/TR/WCAG-EM/#",
+    "doap": "http://usefulinc.com/ns/doap#",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+  },
+  "@type": "earl:Evaluation",
+  "dct:date": "2026-05-14T12:00:00.000Z",
+  "dct:description": "WCAG-EM automated evaluation of example-site",
+  "wcag-em:conformanceTarget": "AA",
+  "wcag-em:wcagVersion": "2.2",
+  "earl:assertedBy": {
+    "@type": "earl:Assertor",
+    "doap:name": "wcag-em-a11y-toolkit",
+    "doap:release": "1.1.0",
+  },
   "@graph": [
     {
       "@type": "earl:Assertion",
       "earl:assertedBy": {
         "@type": "earl:Assertor",
-        "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-        "doap:release": "0.3.0",
+        "doap:name": "wcag-em-a11y-toolkit",
+        "doap:release": "1.1.0",
       },
       "earl:subject": "https://example.com/page",
       "earl:test": "image-alt",
@@ -151,8 +167,8 @@ The hooks are documented in the reporter's JSDoc; the change is
 ```jsonc
 "earl:assertedBy": {
   "@type": "earl:Assertor",
-  "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-  "doap:release": "0.3.0",
+  "doap:name": "wcag-em-a11y-toolkit",
+  "doap:release": "1.1.0",
   "foaf:name": "Jamie Sargent",          // optional — from wcagEm.evaluator.name
   "foaf:mbox": "auditor@example.com"     // optional — from wcagEm.evaluator.contact
 }

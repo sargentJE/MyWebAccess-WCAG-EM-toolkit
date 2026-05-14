@@ -1,9 +1,28 @@
 {
   "name": "wcag-em-a11y-toolkit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
-  "private": false,
   "description": "CLI toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sargentJE/MyWebAccess-WCAG-EM-toolkit.git"
+  },
+  "homepage": "https://github.com/sargentJE/MyWebAccess-WCAG-EM-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/sargentJE/MyWebAccess-WCAG-EM-toolkit/issues"
+  },
+  "keywords": [
+    "wcag",
+    "wcag-em",
+    "accessibility",
+    "a11y",
+    "axe-core",
+    "audit",
+    "playwright",
+    "earl",
+    "testing"
+  ],
   "engines": {
     "node": ">=22.11.0"
   },
@@ -42,7 +61,7 @@
     "test:watch": "node --test --watch 'test/unit/**/*.test.mjs'",
     "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec 'test/unit/**/*.test.mjs' 'test/e2e/**/*.test.mjs'",
     "gen:types": "node scripts/gen-types.mjs",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.11.2",
