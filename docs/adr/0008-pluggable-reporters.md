@@ -54,7 +54,8 @@ unreachable.
 scaffolded earlier. The remaining `./commands/*` and `./lib/*`
 exports stay (they pre-date the reporter pipeline and the cost of removing them
 is bigger than the surface they leak). Future ADRs may revisit those
-under the same ADR-0012 lens.
+under the same ADR-0012 lens. **Update:** `./commands/*` and `./lib/*`
+removed by ADR-0014.
 
 ### 2. Reporter module interface
 

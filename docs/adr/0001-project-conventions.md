@@ -181,8 +181,8 @@ non-obvious.
 - **No telemetry.** The tool does not phone home.
 - **Offline-capable** after the first `npx playwright install`; running the tool
   against local fixtures requires no network.
-- **English-only** CLI output in v1.0. Localisation is listed in the v1.1 roadmap
-  in `CHANGELOG.md [Unreleased]`.
+- **English-only** CLI output in v1.0. Localisation is deferred to a future
+  release (ADR-0011).
 
 ### Reuse over rewrite
 

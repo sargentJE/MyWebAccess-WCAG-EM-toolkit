@@ -250,5 +250,5 @@ mjs` that runs `@axe-core/playwright` against the rendered reporter
 
 ### Deferred
 
-- See `[Unreleased] / Layer 4 follow-ups` above for the Crawlee hang
-  blocking the smoke + discover-timeout e2e tests.
+- ~~Crawlee hang blocking smoke + discover-timeout e2e tests~~ — resolved
+  in [1.0.0]; see Fixed bullets above.
