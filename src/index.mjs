@@ -6,10 +6,6 @@
  * @description
  * Re-exports the public surface so embedders can run audits in-process:
  *   ```js
- *   import { run as runDiscover } from 'wcag-em-a11y-toolkit/commands/discover';
- *   ```
- * or at the top level:
- *   ```js
  *   import { runAudit } from 'wcag-em-a11y-toolkit';
  *   ```
  *
