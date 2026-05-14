@@ -16,6 +16,28 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   pending security review (see carry-forward below).
 - Localisation — i18n for CLI output and reporter artefacts.
 
+## [1.1.0] - 2026-05-14
+
+### Fixed
+
+- Normalize URLs in summarize grouping stage — process-scan URLs with
+  trailing slashes no longer create duplicate findings.
+- Propagate axe `incomplete` results to EARL (`earl:cantTell`) and JUnit
+  (`<failure type="incomplete">`) reporters. HTML and markdown reporters
+  gain an "Incomplete results (needs review)" section.
+- HTML report screenshots use descriptive alt text (page URL + viewport)
+  instead of generic "Page screenshot".
+- Create `src/types/index.d.ts` barrel — resolves missing types export
+  for TypeScript consumers of the programmatic API.
+
+### Added
+
+- `wcag-em-summary.json` emits `notTested` for all WCAG 2.2 SC at or
+  below the configured conformance target, providing a complete SC
+  matrix for the manual-review backlog.
+- EARL JSON-LD includes evaluation-level WCAG-EM metadata wrapper
+  (`earl:Evaluation`, `dct:date`, `wcag-em:conformanceTarget`).
+
 ## [1.0.0] - 2026-05-14
 
 ### Added
