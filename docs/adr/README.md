@@ -21,14 +21,15 @@ rejected_.
 | [0008](./0008-pluggable-reporters.md)             | Pluggable reporter runtime (internal at v1.0)                      | accepted | 2026-04-30 |
 | [0009](./0009-earl-jsonld-output.md)              | EARL JSON-LD as the default RDF serialisation                      | accepted | 2026-04-30 |
 | [0012](./0012-extensibility-is-internal.md)       | Extensibility is internal for v1.0                                 | accepted | 2026-04    |
+| [0010](./0010-project-layout.md)                  | Project layout                                                     | accepted | 2026-05-14 |
 | [0013](./0013-crawlee-localhost-investigation.md) | Crawlee localhost-fixture hang investigation and resolution        | accepted | 2026-05-09 |
 
 ## Numbering convention
 
-ADR numbers are append-only. **0010** and **0011** are reserved for
-the v1.0 docs/release sprint (project layout + box-to-docs
-migration per the canonical roadmap). They are not gaps — they are
-held seats; do not reuse them out of order.
+ADR numbers are append-only. **0011** and **0014** are reserved for
+the v1.0 release sprint (release boundary + packaging decisions).
+They are not gaps — they are held seats; do not reuse them out of
+order.
 
 ## Citation convention
 
