@@ -4,23 +4,18 @@ node_modules/
 .husky/_/
 
 # Runtime artefacts
-output/inventory/*.json
-output/inventory/*.txt
-output/results/*.json
-output/screenshots/*.png
-output/reports/*.json
-output/reports/*.md
-output/reports/*.html
-output/reports/*.jsonld
-output/reports/*.xml
+output/
+storage/
 logs/
 .auth/
 sample.json
 
-# Tooling
+# Tooling / IDE
 coverage/
 *.tsbuildinfo
 .DS_Store
+.idea/
+.claude/
 
 # Test scratch
 test/.tmp/
