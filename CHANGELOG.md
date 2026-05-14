@@ -6,6 +6,18 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Roadmap
+
+- Baseline/regression mode — diff successive audits to surface new and
+  resolved findings between runs.
+- Plugin API — public extension surface for custom reporters and crawl
+  strategies (ADR-0012 scopes the internal-only v1.0 boundary).
+- Authenticated SPA crawler — `auth.setupScript` runtime execution
+  pending security review (see carry-forward below).
+- Localisation — i18n for CLI output and reporter artefacts.
+
+## [1.0.0] - 2026-05-14
+
 ### Added
 
 - **EARL evaluator identity** — `earl:assertedBy` now includes `foaf:name`

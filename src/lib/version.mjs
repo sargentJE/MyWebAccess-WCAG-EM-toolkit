@@ -62,7 +62,7 @@ export const TOOL_IDENTITY = Object.freeze({
  * from TOOL_IDENTITY so the markdown formatting can evolve without
  * affecting JSON consumers.
  *
- * @returns {string} e.g. `**Tool:** wcag-em-a11y-toolkit 0.3.0 (axe-core 4.11.2)\n\n`
+ * @returns {string} e.g. `**Tool:** wcag-em-a11y-toolkit 1.0.0 (axe-core 4.11.2)\n\n`
  */
 export function toolIdentityMarkdownHeader() {
   return `**Tool:** ${TOOL_IDENTITY.name} ${TOOL_IDENTITY.version} (axe-core ${TOOL_IDENTITY.axeCore})\n\n`;

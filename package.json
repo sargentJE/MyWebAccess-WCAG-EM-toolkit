@@ -1,8 +1,8 @@
 {
   "name": "wcag-em-a11y-toolkit",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "type": "module",
-  "private": true,
+  "private": false,
   "description": "CLI toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
   "engines": {
     "node": ">=22.11.0"
