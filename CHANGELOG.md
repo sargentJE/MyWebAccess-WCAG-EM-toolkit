@@ -26,7 +26,8 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   (`<failure type="incomplete">`) reporters. HTML and markdown reporters
   gain an "Incomplete results (needs review)" section.
 - HTML report screenshots use descriptive alt text (page URL + viewport)
-  instead of generic "Page screenshot".
+  instead of generic "Page screenshot". Homepage paths render as
+  `hostname homepage` (not `hostnamehomepage`).
 - Create `src/types/index.d.ts` barrel — resolves missing types export
   for TypeScript consumers of the programmatic API.
 
