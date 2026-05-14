@@ -38,8 +38,6 @@ export const name = 'earl-jsonld';
 
 // SECTION: Constants
 
-const EARL_CONTEXT = 'http://www.w3.org/ns/earl#';
-
 /**
  * Outcome mapping table. Keyed by axe-style outcome strings; values are
  * the EARL ontology individuals. Missing/unknown axe outcomes fall back
