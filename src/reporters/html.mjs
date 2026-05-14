@@ -298,7 +298,7 @@ function renderPasses(summary) {
 function buildScreenshotAlt(url, screenshotPath) {
   try {
     const parsed = new URL(url);
-    const pagePath = parsed.pathname === '/' ? 'homepage' : parsed.pathname;
+    const pagePath = parsed.pathname === '/' ? ' homepage' : parsed.pathname;
     const base = path.basename(screenshotPath).replace(/\.[^.]+$/, '');
     const vpMatch = base.match(/__([^_]+)$/);
     const vpLabel = vpMatch ? ` at ${vpMatch[1]} viewport` : '';
