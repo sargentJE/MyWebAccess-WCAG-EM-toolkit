@@ -311,6 +311,11 @@ test('html reporter: screenshot src uses forward slashes (Windows path safety)',
   assert.ok(imgMatch, 'expected screenshot <img> tag');
   assert.ok(!imgMatch[1].includes('\\'), `src must not contain backslashes: ${imgMatch[1]}`);
   assert.match(imgMatch[1], /\/screenshots\/page__desktop\.png$/);
+  // Descriptive alt text must contain hostname and viewport ID.
+  const altMatch = got.match(/<img class="screenshot"[^>]*alt="([^"]+)"/);
+  assert.ok(altMatch, 'expected alt attribute on screenshot');
+  assert.match(altMatch[1], /example\.com/, 'alt text includes hostname');
+  assert.match(altMatch[1], /desktop viewport/, 'alt text includes viewport ID');
 });
 
 test('includePasses=true: passes section present with passing criteria', async (t) => {

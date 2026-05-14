@@ -229,7 +229,8 @@ function renderFindings(findings, ctx, screenshotsByUrl) {
         // upstream URL-encoding libraries; we have no consumer that
         // wants Windows paths in HTML output.
         const rel = path.relative(ctx.paths.reportsDir, shots[0]).split(path.sep).join('/');
-        out += html`<img class="screenshot" alt="Page screenshot" src="${rel}">\n`;
+        const altText = buildScreenshotAlt(url, shots[0]);
+        out += html`<img class="screenshot" alt="${altText}" src="${rel}">\n`;
         break;
       }
     }
@@ -285,6 +286,27 @@ function renderPasses(summary) {
 }
 
 // SECTION: Internal helpers
+
+/**
+ * Build descriptive alt text for a page screenshot. Extracts hostname +
+ * path from the URL and viewport ID from the screenshot filename suffix.
+ *
+ * @param {string} url
+ * @param {string} screenshotPath
+ * @returns {string}
+ */
+function buildScreenshotAlt(url, screenshotPath) {
+  try {
+    const parsed = new URL(url);
+    const pagePath = parsed.pathname === '/' ? 'homepage' : parsed.pathname;
+    const base = path.basename(screenshotPath).replace(/\.[^.]+$/, '');
+    const vpMatch = base.match(/__([^_]+)$/);
+    const vpLabel = vpMatch ? ` at ${vpMatch[1]} viewport` : '';
+    return `Full-page screenshot of ${parsed.hostname}${pagePath}${vpLabel}`;
+  } catch {
+    return 'Page screenshot';
+  }
+}
 
 /**
  * Read `axe-results.json` and build a Map of page-url → screenshot
