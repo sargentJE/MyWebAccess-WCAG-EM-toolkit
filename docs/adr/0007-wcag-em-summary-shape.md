@@ -90,6 +90,14 @@ readers would have to filter out. The WCAG-EM report template does
 not demand exhaustiveness; it asks for "outcomes observed during
 evaluation".
 
+**Update (v1.1.0):** the dogfood audit proved auditors need a complete
+SC matrix for the manual-review backlog. `toWcagEmSummary` now emits
+`notTested` for every SC at or below the configured conformance target
+(`A`, `AA`, or `AAA`) that no axe rule touched in the run. The ~80-row
+concern from the original rationale is mitigated by the HTML reporter
+styling `notTested` rows as grey italic — the visual weight falls on
+actionable verdicts.
+
 ### 5. Output shape
 
 ```jsonc

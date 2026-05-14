@@ -271,6 +271,28 @@ test('junit reporter: XML 1.0-illegal control bytes are stripped from CDATA payl
   assert.ok(xml.includes('Selector: x'), 'selector survives strip');
 });
 
+test('junit reporter: incompleteFindings emit <failure type="incomplete"> entries', async (t) => {
+  const xml = await emitAndRead(t, {
+    findings: [],
+    incompleteFindings: [
+      {
+        id: 'aria-required-attr',
+        impact: 'critical',
+        help: 'Required ARIA attributes must be provided',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
+        classification: 'needs-review',
+        firstTarget: '[role="slider"]',
+        pages: ['https://example.com/a', 'https://example.com/b'],
+        pageCount: 2,
+      },
+    ],
+  });
+  assert.match(xml, /tests="2" failures="2"/);
+  assert.equal((xml.match(/<failure type="incomplete">/g) ?? []).length, 2);
+  assert.ok(xml.includes('Required ARIA attributes must be provided'));
+  assert.ok(xml.includes('Selector: [role="slider"]'));
+});
+
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
   assert.ok(names.includes('junit'), 'junit registered in the registry');

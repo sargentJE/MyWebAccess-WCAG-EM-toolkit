@@ -58,14 +58,30 @@ URL)** pair:
 
 ```jsonc
 {
-  "@context": "http://www.w3.org/ns/earl#",
+  "@context": {
+    "earl": "http://www.w3.org/ns/earl#",
+    "dct": "http://purl.org/dc/terms/",
+    "wcag-em": "http://www.w3.org/TR/WCAG-EM/#",
+    "doap": "http://usefulinc.com/ns/doap#",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+  },
+  "@type": "earl:Evaluation",
+  "dct:date": "2026-05-14T12:00:00.000Z",
+  "dct:description": "WCAG-EM automated evaluation of example-site",
+  "wcag-em:conformanceTarget": "AA",
+  "wcag-em:wcagVersion": "2.2",
+  "earl:assertedBy": {
+    "@type": "earl:Assertor",
+    "doap:name": "wcag-em-a11y-toolkit",
+    "doap:release": "1.1.0",
+  },
   "@graph": [
     {
       "@type": "earl:Assertion",
       "earl:assertedBy": {
         "@type": "earl:Assertor",
-        "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-        "doap:release": "0.3.0",
+        "doap:name": "wcag-em-a11y-toolkit",
+        "doap:release": "1.1.0",
       },
       "earl:subject": "https://example.com/page",
       "earl:test": "image-alt",
@@ -151,8 +167,8 @@ The hooks are documented in the reporter's JSDoc; the change is
 ```jsonc
 "earl:assertedBy": {
   "@type": "earl:Assertor",
-  "doap:name": "wcag-em-a11y-toolkit-v2-recommended",
-  "doap:release": "0.3.0",
+  "doap:name": "wcag-em-a11y-toolkit",
+  "doap:release": "1.1.0",
   "foaf:name": "Jamie Sargent",          // optional — from wcagEm.evaluator.name
   "foaf:mbox": "auditor@example.com"     // optional — from wcagEm.evaluator.contact
 }
@@ -170,16 +186,14 @@ evaluator config, preserving backward compatibility. This allows
 EARL consumers to identify both the tool that produced the assertions
 and the human evaluator who configured and reviewed the audit.
 
-`doap:homepage` is **omitted** at v1.0. The package.json doesn't
-ship a `homepage` field yet (v2.0 will, alongside the
-README rewrite). Adding it now would mean a version-bump path that
-adds a transient field; cleaner to defer to v2.0.
+`doap:homepage` is **omitted** from the Assertor at v1.0. As of
+v1.1.0, `package.json` ships a `homepage` field; a future version
+may surface it in the Assertor if consumers request it.
 
-The `@context` is `http://www.w3.org/ns/earl#` (single-vocab). The
-`foaf:` prefix follows the same informal pattern as `doap:` — no
-namespace expansion at v1.0. When typed pointers ship (the §4
-follow-up), `@context` becomes a multi-vocab object embedding
-`ptr:`, `doap:`, and `foaf:` explicitly.
+**Update (v1.1.0):** `@context` is now a multi-namespace object
+(`earl`, `dct`, `wcag-em`, `doap`, `foaf`) rather than a single
+string. The `foaf:` and `doap:` prefixes are expanded in the
+context object alongside the other namespaces.
 
 ## Consequences
 
@@ -202,20 +216,25 @@ follow-up), `@context` becomes a multi-vocab object embedding
   audits. Not a v1.0 problem (default sample is 80 pages); v2.0+
   may add an `earl:Assertion`-deduplication mode that aggregates
   rule-on-page tuples.
-- `doap:homepage` deferred until v2.0 — minor; the
-  current Assertor identifies the tool unambiguously via `name +
-release`.
+- `doap:homepage` omitted from Assertor — minor; the current
+  Assertor identifies the tool unambiguously via `name + release`.
+
+**Update (v1.1.0):** the EARL document now wraps the `@graph` in an
+evaluation-level `earl:Evaluation` node with `dct:date`,
+`dct:description`, `wcag-em:conformanceTarget`, and
+`wcag-em:wcagVersion`. The `@context` is expanded from a single string
+to a multi-namespace object (`earl`, `dct`, `wcag-em`, `doap`, `foaf`).
 
 ## Symbol references (per ADR-0001)
 
 - `name` / `emit` — exported by `src/reporters/earl-jsonld.mjs` (the
   reporter's public contract, registered in
   `src/reporters/index.mjs`).
-- `OUTCOME_MAP` / `EARL_CONTEXT` / `buildAssertion` / `buildAssertor` /
-  `buildInfo` — module-private inside
-  `src/reporters/earl-jsonld.mjs`. Tests assert behaviour through
-  `emit()` rather than importing the helpers directly; a future change
-  that needs to extract one for re-use should also export it.
+- `OUTCOME_MAP` / `buildAssertion` / `buildAssertor` / `buildInfo` —
+  module-private inside `src/reporters/earl-jsonld.mjs`. Tests assert
+  behaviour through `emit()` rather than importing the helpers
+  directly; a future change that needs to extract one for re-use
+  should also export it.
 - `TOOL_IDENTITY` — `src/lib/version.mjs` (source of `doap:name` +
   `doap:release`).
 - `sortFindings` — `src/reporters/_sort.mjs` (orders the `@graph`).

@@ -19,7 +19,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
-import { selectorComponentHint } from '../lib/urls.mjs';
+import { normalizeUrl, selectorComponentHint } from '../lib/urls.mjs';
 import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
@@ -221,38 +221,103 @@ export async function run(ctx) {
   }
 
   for (const pageResult of axeResults) {
+    const pageUrl = normalizeUrl(pageResult.url);
     for (const violation of pageResult.violations || []) {
       for (const node of violation.nodes || []) {
         const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
         addRuleFinding({
           sourceType: 'page-scan',
-          pageUrl: pageResult.url,
+          pageUrl,
           rule: violation,
           target,
           html: node.html ?? null,
         });
-        addComponentFinding({ pageUrl: pageResult.url, rule: violation, target });
+        addComponentFinding({ pageUrl, rule: violation, target });
       }
     }
   }
 
   for (const processResult of processResults) {
+    const processUrl = normalizeUrl(processResult.startUrl);
     for (const state of processResult.states || []) {
       for (const violation of state.violations || []) {
         for (const node of violation.nodes || []) {
           const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
           addRuleFinding({
             sourceType: `process:${processResult.name}:${state.state}`,
-            pageUrl: processResult.startUrl,
+            pageUrl: processUrl,
             rule: violation,
             target,
             html: node.html ?? null,
           });
-          addComponentFinding({ pageUrl: processResult.startUrl, rule: violation, target });
+          addComponentFinding({ pageUrl: processUrl, rule: violation, target });
         }
       }
     }
   }
+
+  // SECTION: Incomplete grouping (needs-review items for reporters)
+  /** @type {Map<string, any>} */
+  const incompletesByRule = new Map();
+  for (const pageResult of axeResults) {
+    const pageUrl = normalizeUrl(pageResult.url);
+    for (const inc of pageResult.incompleteDetail ?? []) {
+      if (inc.nodesCount === 0) continue;
+      const key = inc.id;
+      if (!incompletesByRule.has(key)) {
+        const meta = withActAndWcagMetadata(inc, { actMap, reportingConfig: config.reporting });
+        incompletesByRule.set(key, {
+          id: inc.id,
+          impact: inc.impact ?? null,
+          help: inc.help ?? null,
+          helpUrl: inc.helpUrl ?? null,
+          tags: inc.tags ?? [],
+          classification: 'needs-review',
+          actRuleIds: meta.actRuleIds,
+          wcagCriteria: meta.wcagCriteria,
+          pages: new Set(),
+          firstTarget: inc.firstTarget ?? null,
+        });
+      }
+      incompletesByRule.get(key).pages.add(pageUrl);
+    }
+  }
+  for (const processResult of processResults) {
+    const processUrl = normalizeUrl(processResult.startUrl);
+    for (const state of processResult.states || []) {
+      for (const inc of state.incompleteDetail ?? []) {
+        if (inc.nodesCount === 0) continue;
+        const key = inc.id;
+        if (!incompletesByRule.has(key)) {
+          const meta = withActAndWcagMetadata(inc, { actMap, reportingConfig: config.reporting });
+          incompletesByRule.set(key, {
+            id: inc.id,
+            impact: inc.impact ?? null,
+            help: inc.help ?? null,
+            helpUrl: inc.helpUrl ?? null,
+            tags: inc.tags ?? [],
+            classification: 'needs-review',
+            actRuleIds: meta.actRuleIds,
+            wcagCriteria: meta.wcagCriteria,
+            pages: new Set(),
+            firstTarget: inc.firstTarget ?? null,
+          });
+        }
+        incompletesByRule.get(key).pages.add(processUrl);
+      }
+    }
+  }
+  const incompleteFindings = [...incompletesByRule.values()]
+    .map((item) => ({
+      ...item,
+      pages: [...item.pages].sort(),
+      pageCount: item.pages.size,
+    }))
+    .sort((a, b) => {
+      /** @type {Record<string, number>} */
+      const impactOrder = { critical: 4, serious: 3, moderate: 2, minor: 1, null: 0 };
+      return (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
+    });
 
   // SECTION: Sort + flatten for emit
   const groupedFindings = [...groupedByRule.values()]
@@ -282,7 +347,7 @@ export async function run(ctx) {
 
   /** @type {Set<string>} */
   const ruleIdsSeenInRandom = new Set();
-  for (const pageResult of axeResults.filter((item) => randomSet.has(item.url))) {
+  for (const pageResult of axeResults.filter((item) => randomSet.has(normalizeUrl(item.url)))) {
     for (const violation of pageResult.violations || []) ruleIdsSeenInRandom.add(violation.id);
   }
   const newRuleIdsOnlyInRandom = [...ruleIdsSeenInRandom]
@@ -317,6 +382,7 @@ export async function run(ctx) {
     groupedComponentCount: groupedComponents.length,
     comparison,
     findings: groupedFindings,
+    incompleteFindings,
     // Surface infra-failure incompletes in the top-level
     // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
     scanWarnings: wcagEmSummary.scanWarnings,

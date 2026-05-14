@@ -176,6 +176,14 @@ with 200 inapplicable Assertions per page × N pages is unusable).
 The markdown reporter is `includePasses`-agnostic — it renders
 findings only, matching v0.3 behaviour.
 
+**Update (v1.1.0):** Incomplete results now flow through
+`summary.incompleteFindings[]` to all reporters. EARL emits
+`earl:cantTell` assertions, JUnit emits `<failure type="incomplete">`
+entries, HTML renders a "needs review" section, and markdown appends an
+"Incomplete results" heading. The data originates from the
+`incompleteDetail` arrays on per-page axe results, grouped by rule in
+`summarize.mjs` with the same pattern as violation grouping.
+
 ### 7. Zero-dep XSS-safe HTML template
 
 `src/reporters/_template.mjs` exports four helpers:

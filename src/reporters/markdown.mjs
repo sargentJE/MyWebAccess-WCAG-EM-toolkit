@@ -98,6 +98,24 @@ export async function emit(summary, ctx) {
     lines.push('');
   }
 
+  const incompleteFindings = Array.isArray(summary.incompleteFindings)
+    ? summary.incompleteFindings
+    : [];
+  if (incompleteFindings.length > 0) {
+    lines.push('## Incomplete results (needs review)');
+    lines.push('');
+    for (const item of incompleteFindings) {
+      lines.push(`### ${item.id}`);
+      lines.push(`- Impact: ${item.impact ?? 'n/a'}`);
+      lines.push(`- Classification: needs-review`);
+      lines.push(`- Pages affected: ${item.pageCount}`);
+      if (item.help) lines.push(`- Help: ${item.help}`);
+      if (item.helpUrl) lines.push(`- Rule URL: ${item.helpUrl}`);
+      if (item.firstTarget) lines.push(`- Example target: \`${item.firstTarget}\``);
+      lines.push('');
+    }
+  }
+
   const filePath = path.join(ctx.paths.reportsDir, 'summary.md');
   await writeText(filePath, lines.join('\n'));
   const stat = await fs.stat(filePath);

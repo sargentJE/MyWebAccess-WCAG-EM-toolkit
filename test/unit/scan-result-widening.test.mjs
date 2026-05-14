@@ -36,6 +36,9 @@ test('liftRuleSummaries: typical pass rule → {id, tags, impact:null, nodesCoun
       tags: ['cat.text-alternatives', 'wcag2a', 'wcag111'],
       impact: null,
       nodesCount: 2,
+      help: '',
+      helpUrl: '',
+      firstTarget: null,
     },
   ]);
 });
@@ -51,6 +54,25 @@ test('liftRuleSummaries: violation with impact preserved', () => {
   ]);
   assert.equal(out[0].impact, 'serious');
   assert.equal(out[0].nodesCount, 1);
+});
+
+test('liftRuleSummaries: firstTarget extracted from nodes[0].target[0]', () => {
+  const out = liftRuleSummaries([
+    {
+      id: 'image-alt',
+      tags: ['wcag111'],
+      impact: 'critical',
+      help: 'Images must have alt text',
+      helpUrl: 'https://dequeuniversity.com/rules/axe/4.10/image-alt',
+      nodes: [
+        { target: ['img.hero-banner'], html: '<img class="hero-banner">' },
+        { target: ['img.logo'], html: '<img class="logo">' },
+      ],
+    },
+  ]);
+  assert.equal(out[0].firstTarget, 'img.hero-banner', 'extracts first node first target');
+  assert.equal(out[0].help, 'Images must have alt text');
+  assert.equal(out[0].helpUrl, 'https://dequeuniversity.com/rules/axe/4.10/image-alt');
 });
 
 test('liftRuleSummaries: incomplete with zero nodes (infra failure signal)', () => {
@@ -71,6 +93,9 @@ test('liftRuleSummaries: missing/malformed fields default safely', () => {
   assert.deepEqual(out[0].tags, []);
   assert.equal(out[0].impact, null);
   assert.equal(out[0].nodesCount, 0);
+  assert.equal(out[0].help, '');
+  assert.equal(out[0].helpUrl, '');
+  assert.equal(out[0].firstTarget, null);
   assert.equal(out[1].id, '', 'missing id coerces to empty string');
 });
 
@@ -101,6 +126,14 @@ test('liftRuleSummaries does NOT persist nodes bulk (artefact-size guard)', () =
     },
   ]);
   assert.equal(out[0].nodesCount, 1000);
-  // Structural guard: the output object has exactly 4 keys, none of them `nodes`.
-  assert.deepEqual(Object.keys(out[0]).sort(), ['id', 'impact', 'nodesCount', 'tags']);
+  // Structural guard: the output object has exactly 7 keys, none of them `nodes`.
+  assert.deepEqual(Object.keys(out[0]).sort(), [
+    'firstTarget',
+    'help',
+    'helpUrl',
+    'id',
+    'impact',
+    'nodesCount',
+    'tags',
+  ]);
 });

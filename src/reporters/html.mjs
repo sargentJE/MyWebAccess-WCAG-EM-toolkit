@@ -28,6 +28,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { readJsonMaybe, writeText } from '../lib/fs-utils.mjs';
+import { normalizeUrl } from '../lib/urls.mjs';
 import { TOOL_IDENTITY } from '../lib/version.mjs';
 import { sortFindings } from './_sort.mjs';
 import { safeUrl, html } from './_template.mjs';
@@ -78,6 +79,7 @@ const STATIC_CSS = `
      e2e axe-core self-check at test/e2e/reporters-html-axe.test.mjs.
      .tool-banner inherits the same #555 problem as .impact-minor — both
      are too dark on #121212 (2.5 : 1). */
+  .outcome-notTested { color: #767676; font-style: italic; }
   @media (prefers-color-scheme: dark) {
     .impact-critical { color: #ff5b5b; }
     .impact-serious  { color: #ff8c5b; }
@@ -85,6 +87,7 @@ const STATIC_CSS = `
     .impact-minor    { color: #c8c8c8; }
     .impact-null     { color: #888; }
     .tool-banner     { color: #aaa; }
+    .outcome-notTested { color: #aaa; }
   }
 `;
 
@@ -99,6 +102,9 @@ const STATIC_CSS = `
  */
 export async function emit(summary, ctx) {
   const findings = sortFindings(Array.isArray(summary.findings) ? summary.findings : []);
+  const incompleteFindings = Array.isArray(summary.incompleteFindings)
+    ? summary.incompleteFindings
+    : [];
   const includePasses = Boolean(ctx?.config?.reporting?.includePasses);
   const screenshotsByUrl = await loadScreenshotMap(ctx);
 
@@ -113,6 +119,7 @@ export async function emit(summary, ctx) {
     renderRunSummary(summary) +
     renderCriteriaOutcomes(summary) +
     renderFindings(findings, ctx, screenshotsByUrl) +
+    renderIncompleteFindings(incompleteFindings) +
     (includePasses ? renderPasses(summary) : '') +
     `\n</body>\n</html>\n`;
 
@@ -174,7 +181,8 @@ function renderCriteriaOutcomes(summary) {
   out += `<tr><th>Criterion</th><th>Outcome</th><th>Related rules</th></tr>\n`;
   out += `</thead>\n<tbody>\n`;
   for (const c of outcomes) {
-    out += html`<tr><td>${c.sc ?? ''}</td><td>${c.outcome ?? ''}</td><td>${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}</td></tr>\n`;
+    const outcomeClass = c.outcome === 'notTested' ? ' class="outcome-notTested"' : '';
+    out += `<tr><td>${html`${c.sc ?? ''}`}</td><td${outcomeClass}>${html`${c.outcome ?? ''}`}</td><td>${html`${(Array.isArray(c.relatedRules) ? c.relatedRules : []).join(', ')}`}</td></tr>\n`;
   }
   out += `</tbody>\n</table>\n`;
   return out;
@@ -221,11 +229,40 @@ function renderFindings(findings, ctx, screenshotsByUrl) {
         // upstream URL-encoding libraries; we have no consumer that
         // wants Windows paths in HTML output.
         const rel = path.relative(ctx.paths.reportsDir, shots[0]).split(path.sep).join('/');
-        out += html`<img class="screenshot" alt="Page screenshot" src="${rel}">\n`;
+        const altText = buildScreenshotAlt(url, shots[0]);
+        out += html`<img class="screenshot" alt="${altText}" src="${rel}">\n`;
         break;
       }
     }
     out += `</details>\n`;
+  }
+  return out;
+}
+
+/**
+ * @param {ReadonlyArray<Record<string, any>>} incompleteFindings
+ * @returns {string}
+ */
+function renderIncompleteFindings(incompleteFindings) {
+  if (incompleteFindings.length === 0) return '';
+  let out = `<h2>Incomplete results (needs review)</h2>\n`;
+  for (const f of incompleteFindings) {
+    const impactClass = `impact-${typeof f.impact === 'string' ? f.impact : 'null'}`;
+    out += `<details>\n`;
+    out += html`<summary><code>${f.id ?? ''}</code> · <span class="${impactClass}">${f.impact ?? 'n/a'}</span> · ${f.pageCount ?? 0} pages · <em>needs review</em></summary>\n`;
+    out += `<dl>\n`;
+    if (f.help) out += html`<dt>Help</dt><dd>${f.help}</dd>\n`;
+    if (f.helpUrl) {
+      const href = safeUrl(f.helpUrl);
+      out += `<dt>Rule URL</dt><dd>` + html`<a href="${href}">${f.helpUrl}</a></dd>\n`;
+    }
+    if (f.firstTarget) {
+      out += html`<dt>Example target</dt><dd><code>${f.firstTarget}</code></dd>\n`;
+    }
+    if (Array.isArray(f.pages) && f.pages.length) {
+      out += `<dt>Pages</dt><dd>${f.pages.map((/** @type {string} */ p) => html`${p}`).join(', ')}</dd>\n`;
+    }
+    out += `</dl>\n</details>\n`;
   }
   return out;
 }
@@ -251,6 +288,27 @@ function renderPasses(summary) {
 // SECTION: Internal helpers
 
 /**
+ * Build descriptive alt text for a page screenshot. Extracts hostname +
+ * path from the URL and viewport ID from the screenshot filename suffix.
+ *
+ * @param {string} url
+ * @param {string} screenshotPath
+ * @returns {string}
+ */
+function buildScreenshotAlt(url, screenshotPath) {
+  try {
+    const parsed = new URL(url);
+    const pagePath = parsed.pathname === '/' ? ' homepage' : parsed.pathname;
+    const base = path.basename(screenshotPath).replace(/\.[^.]+$/, '');
+    const vpMatch = base.match(/__([^_]+)$/);
+    const vpLabel = vpMatch ? ` at ${vpMatch[1]} viewport` : '';
+    return `Full-page screenshot of ${parsed.hostname}${pagePath}${vpLabel}`;
+  } catch {
+    return 'Page screenshot';
+  }
+}
+
+/**
  * Read `axe-results.json` and build a Map of page-url → screenshot
  * absolute paths. Empty Map if the file is missing or unreadable —
  * the reporter degrades gracefully rather than failing the whole run.
@@ -268,7 +326,7 @@ async function loadScreenshotMap(ctx) {
     [],
   );
   for (const entry of axeResults) {
-    const url = entry?.url;
+    const url = typeof entry?.url === 'string' ? normalizeUrl(entry.url) : null;
     const shot = entry?.screenshot;
     if (typeof url !== 'string' || typeof shot !== 'string') continue;
     if (!map.has(url)) map.set(url, []);

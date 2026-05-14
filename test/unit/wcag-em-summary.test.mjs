@@ -57,10 +57,10 @@ test('toWcagEmSummary: violation → outcome failed', () => {
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  assert.equal(out.criteriaOutcomes.length, 1);
-  assert.equal(out.criteriaOutcomes[0].sc, '1.1.1');
-  assert.equal(out.criteriaOutcomes[0].outcome, 'failed');
-  assert.equal(out.criteriaOutcomes[0].level, 'A');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.1.1');
+  assert.ok(v);
+  assert.equal(v.outcome, 'failed');
+  assert.equal(v.level, 'A');
 });
 
 test('toWcagEmSummary: non-best-practice pass only → outcome passed', () => {
@@ -70,8 +70,9 @@ test('toWcagEmSummary: non-best-practice pass only → outcome passed', () => {
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  assert.equal(out.criteriaOutcomes.length, 1);
-  assert.equal(out.criteriaOutcomes[0].outcome, 'passed');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.1.1');
+  assert.ok(v);
+  assert.equal(v.outcome, 'passed');
 });
 
 test('toWcagEmSummary: best-practice rule passing does NOT count as passed', () => {
@@ -88,12 +89,9 @@ test('toWcagEmSummary: best-practice rule passing does NOT count as passed', () 
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  // Bucket exists for 1.3.1 because the rule tagged it, but the outcome is
-  // NOT 'passed' — best-practice passes don't contribute. Falls through to
-  // 'untested' since no other arm fires.
-  assert.equal(out.criteriaOutcomes.length, 1);
-  assert.equal(out.criteriaOutcomes[0].sc, '1.3.1');
-  assert.equal(out.criteriaOutcomes[0].outcome, 'untested');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.3.1');
+  assert.ok(v);
+  assert.equal(v.outcome, 'untested');
 });
 
 test('toWcagEmSummary: reviewable incomplete (nodesCount > 0) → outcome cantTell', () => {
@@ -103,8 +101,9 @@ test('toWcagEmSummary: reviewable incomplete (nodesCount > 0) → outcome cantTe
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  assert.equal(out.criteriaOutcomes.length, 1);
-  assert.equal(out.criteriaOutcomes[0].outcome, 'cantTell');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.4.3');
+  assert.ok(v);
+  assert.equal(v.outcome, 'cantTell');
 });
 
 test('toWcagEmSummary F8: infra-failure incomplete (nodesCount === 0) → scanWarnings, NOT cantTell', () => {
@@ -114,7 +113,9 @@ test('toWcagEmSummary F8: infra-failure incomplete (nodesCount === 0) → scanWa
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  assert.equal(out.criteriaOutcomes.length, 0, 'no SC verdict emitted for infra-failure-only SC');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.4.3');
+  assert.ok(v, '1.4.3 present as notTested (infra-failure does not create a bucket)');
+  assert.equal(v.outcome, 'notTested', 'infra-failure SC becomes notTested, not cantTell');
   assert.equal(out.scanWarnings.length, 1);
   assert.match(out.scanWarnings[0], /infra failure/);
   assert.match(out.scanWarnings[0], /1\.4\.3|color-contrast/);
@@ -127,8 +128,9 @@ test('toWcagEmSummary: inapplicable only → outcome inapplicable', () => {
     }),
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
-  assert.equal(out.criteriaOutcomes.length, 1);
-  assert.equal(out.criteriaOutcomes[0].outcome, 'inapplicable');
+  const v = out.criteriaOutcomes.find((o) => o.sc === '1.1.1');
+  assert.ok(v);
+  assert.equal(v.outcome, 'inapplicable');
 });
 
 test('toWcagEmSummary: failed wins over passed + cantTell + inapplicable for same SC', () => {
@@ -161,11 +163,13 @@ test('toWcagEmSummary: cantTell wins over passed + inapplicable (but not failed)
 
 // SECTION: SC-bucket algorithm
 
-test('toWcagEmSummary: only emits SCs actually touched by a rule in the run', () => {
-  // A scan that finds nothing anywhere → empty criteriaOutcomes (NOT one
-  // entry per WCAG 2.2 SC).
+test('toWcagEmSummary: empty scan emits notTested for all A+AA SC (AA target)', () => {
   const out = toWcagEmSummary(buildCtx(), { axeResults: [] });
-  assert.equal(out.criteriaOutcomes.length, 0);
+  assert.ok(out.criteriaOutcomes.length > 0, 'notTested entries emitted for empty scan');
+  assert.ok(
+    out.criteriaOutcomes.every((o) => o.outcome === 'notTested'),
+    'all outcomes are notTested',
+  );
 });
 
 test('toWcagEmSummary: natural-numeric SC sort (1.2.10 after 1.2.9, not between 1 and 2)', () => {
@@ -180,7 +184,11 @@ test('toWcagEmSummary: natural-numeric SC sort (1.2.10 after 1.2.9, not between 
   ];
   const out = toWcagEmSummary(buildCtx(), { axeResults });
   const scs = out.criteriaOutcomes.map((o) => o.sc);
-  assert.deepEqual(scs, ['1.2.3', '1.2.9', '1.2.10']);
+  const idx123 = scs.indexOf('1.2.3');
+  const idx129 = scs.indexOf('1.2.9');
+  const idx1210 = scs.indexOf('1.2.10');
+  assert.ok(idx123 < idx129, '1.2.3 before 1.2.9');
+  assert.ok(idx129 < idx1210, '1.2.9 before 1.2.10');
 });
 
 test('toWcagEmSummary: relatedRules per SC is unique + sorted', () => {
@@ -349,4 +357,127 @@ test('failed SC: violation examples capped at 5; subsequent incomplete entries d
   // Sanity: pages set still includes ALL contributing pages (incomplete pages
   // were ingested into the bucket; they just don't surface in examples).
   assert.equal(sc143.pagesExamined, 9, 'all 9 pages contributed to the bucket');
+});
+
+// SECTION: notTested emission for uncovered SC
+
+test('toWcagEmSummary: emits notTested for all A+AA SC not touched by a rule (AA target)', () => {
+  const axeResults = [
+    pageResult('https://x.com/', {
+      violations: [{ id: 'image-alt', tags: ['wcag111'], impact: 'critical', nodes: [{}] }],
+      passesDetail: [{ id: 'html-lang', tags: ['wcag311'], impact: null, nodesCount: 1 }],
+    }),
+  ];
+  const out = toWcagEmSummary(buildCtx({ conformanceTarget: 'AA' }), { axeResults });
+
+  const touched = out.criteriaOutcomes.filter((o) => o.outcome !== 'notTested');
+  assert.equal(touched.length, 2, 'two SC touched: 1.1.1 + 3.1.1');
+
+  const notTested = out.criteriaOutcomes.filter((o) => o.outcome === 'notTested');
+  assert.ok(notTested.length > 0, 'notTested entries emitted');
+  for (const nt of notTested) {
+    assert.ok(nt.level === 'A' || nt.level === 'AA', `level must be A or AA, got ${nt.level}`);
+    assert.deepEqual(nt.examples, []);
+    assert.equal(nt.pagesExamined, 0);
+    assert.deepEqual(nt.relatedRules, []);
+  }
+
+  const allA_AA_count = Object.entries(
+    /** @type {Record<string, string>} */ ({
+      '1.1.1': 'A',
+      '1.2.1': 'A',
+      '1.2.2': 'A',
+      '1.2.3': 'A',
+      '1.2.4': 'AA',
+      '1.2.5': 'AA',
+      '1.3.1': 'A',
+      '1.3.2': 'A',
+      '1.3.3': 'A',
+      '1.3.4': 'AA',
+      '1.3.5': 'AA',
+      '1.4.1': 'A',
+      '1.4.2': 'A',
+      '1.4.3': 'AA',
+      '1.4.4': 'AA',
+      '1.4.5': 'AA',
+      '1.4.10': 'AA',
+      '1.4.11': 'AA',
+      '1.4.12': 'AA',
+      '1.4.13': 'AA',
+      '2.1.1': 'A',
+      '2.1.2': 'A',
+      '2.1.4': 'A',
+      '2.2.1': 'A',
+      '2.2.2': 'A',
+      '2.3.1': 'A',
+      '2.4.1': 'A',
+      '2.4.2': 'A',
+      '2.4.3': 'A',
+      '2.4.4': 'A',
+      '2.4.5': 'AA',
+      '2.4.6': 'AA',
+      '2.4.7': 'AA',
+      '2.4.11': 'AA',
+      '2.5.1': 'A',
+      '2.5.2': 'A',
+      '2.5.3': 'A',
+      '2.5.4': 'A',
+      '2.5.7': 'AA',
+      '2.5.8': 'AA',
+      '3.1.1': 'A',
+      '3.1.2': 'AA',
+      '3.2.1': 'A',
+      '3.2.2': 'A',
+      '3.2.3': 'AA',
+      '3.2.4': 'AA',
+      '3.2.6': 'A',
+      '3.3.1': 'A',
+      '3.3.2': 'A',
+      '3.3.3': 'AA',
+      '3.3.4': 'AA',
+      '3.3.7': 'A',
+      '3.3.8': 'AA',
+      '4.1.1': 'A',
+      '4.1.2': 'A',
+      '4.1.3': 'AA',
+    }),
+  ).length;
+  assert.equal(
+    out.criteriaOutcomes.length,
+    allA_AA_count,
+    `total outcomes = all A+AA SC (${allA_AA_count})`,
+  );
+
+  assert.ok(
+    !out.criteriaOutcomes.some((o) => o.level === 'AAA'),
+    'no AAA SC emitted for AA target',
+  );
+});
+
+test('toWcagEmSummary: notTested entries are sorted with touched SC', () => {
+  const axeResults = [
+    pageResult('https://x.com/', {
+      violations: [{ id: 'color-contrast', tags: ['wcag143'], impact: 'serious', nodes: [{}] }],
+    }),
+  ];
+  const out = toWcagEmSummary(buildCtx({ conformanceTarget: 'AA' }), { axeResults });
+  const scs = out.criteriaOutcomes.map((o) => o.sc);
+  const idx143 = scs.indexOf('1.4.3');
+  const idx111 = scs.indexOf('1.1.1');
+  assert.ok(idx111 < idx143, '1.1.1 sorts before 1.4.3');
+});
+
+test('toWcagEmSummary: A target only emits level-A SC as notTested', () => {
+  const axeResults = [
+    pageResult('https://x.com/', {
+      violations: [{ id: 'image-alt', tags: ['wcag111'], impact: 'critical', nodes: [{}] }],
+    }),
+  ];
+  const out = toWcagEmSummary(buildCtx({ conformanceTarget: 'A' }), { axeResults });
+  const notTested = out.criteriaOutcomes.filter((o) => o.outcome === 'notTested');
+  assert.ok(
+    notTested.every((o) => o.level === 'A'),
+    'only A-level SC for A target',
+  );
+  assert.ok(!out.criteriaOutcomes.some((o) => o.level === 'AA'), 'no AA SC for A target');
 });

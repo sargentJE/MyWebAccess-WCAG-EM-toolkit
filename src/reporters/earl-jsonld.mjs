@@ -38,8 +38,6 @@ export const name = 'earl-jsonld';
 
 // SECTION: Constants
 
-const EARL_CONTEXT = 'http://www.w3.org/ns/earl#';
-
 /**
  * Outcome mapping table. Keyed by axe-style outcome strings; values are
  * the EARL ontology individuals. Missing/unknown axe outcomes fall back
@@ -95,6 +93,26 @@ export async function emit(summary, ctx) {
     }
   }
 
+  // Per-rule Assertions for incomplete results — earl:cantTell.
+  const incFindings = Array.isArray(summary.incompleteFindings) ? summary.incompleteFindings : [];
+  for (const f of incFindings) {
+    const pages = Array.isArray(f.pages) ? f.pages : [];
+    const ruleId = String(f.id ?? '');
+    const pointer = typeof f.firstTarget === 'string' ? f.firstTarget : '';
+    for (const url of pages) {
+      graph.push(
+        buildAssertion({
+          subject: String(url),
+          test: ruleId,
+          outcomeKey: 'incomplete',
+          info: buildInfo(f),
+          pointer,
+          evaluator,
+        }),
+      );
+    }
+  }
+
   // Per-SC Assertions for passed criteria (only when includePasses is on).
   if (includePasses) {
     const outcomes = Array.isArray(summary?.wcagEmSummary?.criteriaOutcomes)
@@ -116,8 +134,21 @@ export async function emit(summary, ctx) {
     }
   }
 
+  const wcagEm = summary?.wcagEmSummary ?? {};
   const doc = {
-    '@context': EARL_CONTEXT,
+    '@context': {
+      earl: 'http://www.w3.org/ns/earl#',
+      dct: 'http://purl.org/dc/terms/',
+      'wcag-em': 'http://www.w3.org/TR/WCAG-EM/#',
+      doap: 'http://usefulinc.com/ns/doap#',
+      foaf: 'http://xmlns.com/foaf/0.1/',
+    },
+    '@type': 'earl:Evaluation',
+    'dct:date': wcagEm.evaluationDate ?? new Date().toISOString(),
+    'dct:description': `WCAG-EM automated evaluation of ${summary?.site ?? 'site'}`,
+    'wcag-em:conformanceTarget': wcagEm.conformanceTarget ?? 'AA',
+    'wcag-em:wcagVersion': wcagEm.wcagVersion ?? '2.2',
+    'earl:assertedBy': buildAssertor(evaluator),
     '@graph': graph,
   };
 
