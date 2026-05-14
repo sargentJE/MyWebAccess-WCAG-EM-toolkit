@@ -87,7 +87,7 @@ const STATIC_CSS = `
     .impact-minor    { color: #c8c8c8; }
     .impact-null     { color: #888; }
     .tool-banner     { color: #aaa; }
-    .outcome-notTested { color: #888; }
+    .outcome-notTested { color: #aaa; }
   }
 `;
 
