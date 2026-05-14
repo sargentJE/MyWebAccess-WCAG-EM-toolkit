@@ -136,8 +136,21 @@ export async function emit(summary, ctx) {
     }
   }
 
+  const wcagEm = summary?.wcagEmSummary ?? {};
   const doc = {
-    '@context': EARL_CONTEXT,
+    '@context': {
+      earl: 'http://www.w3.org/ns/earl#',
+      dct: 'http://purl.org/dc/terms/',
+      'wcag-em': 'http://www.w3.org/TR/WCAG-EM/#',
+      doap: 'http://usefulinc.com/ns/doap#',
+      foaf: 'http://xmlns.com/foaf/0.1/',
+    },
+    '@type': 'earl:Evaluation',
+    'dct:date': wcagEm.evaluationDate ?? new Date().toISOString(),
+    'dct:description': `WCAG-EM automated evaluation of ${summary?.site ?? 'site'}`,
+    'wcag-em:conformanceTarget': wcagEm.conformanceTarget ?? 'AA',
+    'wcag-em:wcagVersion': wcagEm.wcagVersion ?? '2.2',
+    'earl:assertedBy': buildAssertor(evaluator),
     '@graph': graph,
   };
 

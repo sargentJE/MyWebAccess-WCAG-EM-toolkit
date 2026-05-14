@@ -206,6 +206,12 @@ follow-up), `@context` becomes a multi-vocab object embedding
   current Assertor identifies the tool unambiguously via `name +
 release`.
 
+**Update (v1.1.0):** the EARL document now wraps the `@graph` in an
+evaluation-level `earl:Evaluation` node with `dct:date`,
+`dct:description`, `wcag-em:conformanceTarget`, and
+`wcag-em:wcagVersion`. The `@context` is expanded from a single string
+to a multi-namespace object (`earl`, `dct`, `wcag-em`, `doap`, `foaf`).
+
 ## Symbol references (per ADR-0001)
 
 - `name` / `emit` — exported by `src/reporters/earl-jsonld.mjs` (the

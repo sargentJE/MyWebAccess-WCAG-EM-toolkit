@@ -50,8 +50,28 @@ test('earl reporter: empty findings produces a parseable doc with the EARL @cont
     tool: TOOL_IDENTITY,
     findings: [],
   });
-  assert.equal(doc['@context'], 'http://www.w3.org/ns/earl#');
+  assert.equal(doc['@context'].earl, 'http://www.w3.org/ns/earl#');
   assert.deepEqual(doc['@graph'], []);
+});
+
+test('earl reporter: evaluation-level WCAG-EM metadata present', async (t) => {
+  const { doc } = await emitAndRead(t, {
+    tool: TOOL_IDENTITY,
+    site: 'https://example.com',
+    findings: [],
+    wcagEmSummary: {
+      evaluationDate: '2026-05-14T10:00:00.000Z',
+      conformanceTarget: 'AA',
+      wcagVersion: '2.2',
+    },
+  });
+  assert.equal(doc['@type'], 'earl:Evaluation');
+  assert.equal(doc['dct:date'], '2026-05-14T10:00:00.000Z');
+  assert.equal(doc['wcag-em:conformanceTarget'], 'AA');
+  assert.equal(doc['wcag-em:wcagVersion'], '2.2');
+  assert.ok(doc['dct:description'].includes('example.com'));
+  assert.equal(doc['@context'].dct, 'http://purl.org/dc/terms/');
+  assert.equal(doc['@context']['wcag-em'], 'http://www.w3.org/TR/WCAG-EM/#');
 });
 
 test('earl reporter: failed finding emits one Assertion per (rule × url) pair', async (t) => {
