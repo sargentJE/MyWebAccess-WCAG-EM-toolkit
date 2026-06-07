@@ -88,6 +88,16 @@ In addition to the reporter outputs, the summarize stage also writes:
   readable finding breakdowns for integration with other tools.
 - **`manual-backlog.md`** — findings-aware manual-review backlog.
 
+### Uploading to the MyAccess Portal
+
+Enable the `portal-export` reporter to write `portal-export.json` in the
+portal's canonical-scan format, then upload it at the portal's scan-upload
+screen (drag-drop or "Paste JSON instead"). It carries per-element HTML
+evidence, WCAG SC references, and per-page instances. Compliance-affecting
+violations drive the dashboard compliance score; best-practice and axe
+needs-review items are emitted as manual-review cards that do not affect the
+score. Remediation is added by the admin in the portal's enrichment UI.
+
 ## TypeScript support
 
 The package ships type declarations for the programmatic API:
@@ -215,18 +225,18 @@ After copying the sidecar, the four most important per-site overrides:
 
 ## Folder guide
 
-| Path                 | Purpose                                      |
-| -------------------- | -------------------------------------------- |
-| `bin/`               | CLI entry point                              |
-| `src/commands/`      | Pipeline stages                              |
-| `src/lib/`           | Shared utilities                             |
-| `src/reporters/`     | Report generators                            |
-| `src/data/`          | Static data (ACT rule map, WCAG SC metadata) |
-| `schemas/`           | JSON Schema for config validation            |
-| `configs/`           | Example site configurations                  |
-| `docs/adr/`          | Architecture decision records                |
-| `docs/design-notes/` | Original design framework                    |
-| `test/`              | Unit, e2e, and fixture tests                 |
+| Path                 | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| `bin/`               | CLI entry point                                 |
+| `src/commands/`      | Pipeline stages                                 |
+| `src/lib/`           | Shared utilities                                |
+| `src/reporters/`     | Report generators                               |
+| `src/data/`          | Static data (ACT rule map, WCAG SC metadata)    |
+| `schemas/`           | JSON Schema for config + portal-export contract |
+| `configs/`           | Example site configurations                     |
+| `docs/adr/`          | Architecture decision records                   |
+| `docs/design-notes/` | Original design framework                       |
+| `test/`              | Unit, e2e, and fixture tests                    |
 
 ## Architecture decisions
 

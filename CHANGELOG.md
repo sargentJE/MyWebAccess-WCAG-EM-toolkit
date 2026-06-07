@@ -6,8 +6,60 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Added
+
+- **`portal-export` reporter** (`portal-export.json`) — emits the MyAccess
+  Portal "canonical-scan" envelope (`scanMetadata` / `summary` / `rawFindings`)
+  for direct upload, with no manual transformation. Compliance-affecting
+  violations feed `totalIssues`/`distribution`; best-practice and needs-review
+  rows are emitted as `manual-review` (`countsTowardCompliance: false`) so the
+  compliance score is unaffected. Per-element `instances[]` carry HTML evidence
+  and `occurrenceCount === instances.length` (the portal reconciles to the
+  instance list). Report-time self-validation `warn`s when a critical/high
+  finding lacks `evidence.html`. Added to the `reporting.reporters` enum.
+- **`schemas/portal-canonical-scan.schema.json`** — vendored (empirically
+  derived) portal contract, validated in
+  `test/unit/portal-export-schema.test.mjs` as a regression gate: critical/high
+  findings must carry `evidence.html` plus an instance htmlSnippet.
+- **`src/lib/axe-artifact.mjs`** — shared `liftRuleSummaries` /
+  `liftIncompleteSummaries`, consolidating a helper previously duplicated (and
+  diverged: 7-key in `scan.mjs` vs 4-key in `process-runner.mjs`).
+- ADR-0016 (incomplete-node evidence).
+
+### Changed
+
+- **axe `incomplete` (needs-review) results now retain condensed
+  `{ target, html }` node evidence end-to-end** — scan captures it into
+  `incompleteDetail[].examples`, summarize threads it into
+  `summary.incompleteFindings[]` (which gain `examples`/`occurrences`/`targets`,
+  mirroring grouped findings), and every reporter (html, markdown, junit,
+  portal-export) surfaces it. The `incompleteDetail` artefact is a strict
+  superset (adds `examples`; `nodesCount`/`firstTarget` unchanged) so ADR-0007's
+  F8 reviewable-vs-infra-failure split is unaffected; the `process-runner.mjs`
+  detail projection widens from the diverged 4-key copy to the shared
+  7-key+examples shape.
+- `incompleteFindings` now sort `[impact desc, ruleId asc]` (matching
+  `sortFindings`) so html/markdown/junit order needs-review deterministically.
+
+### Fixed
+
+- Markdown reporter's incomplete "Example HTML" is whitespace-collapsed and
+  backtick-neutralised, so multi-line / backtick-bearing axe `outerHTML` can no
+  longer corrupt the inline code span.
+
 ### Roadmap
 
+- Portal contract source-of-truth — replace the empirically-derived
+  `portal-canonical-scan.schema.json` with the portal's published schema plus a
+  `contractVersion` negotiated at upload, so drift is caught at the boundary
+  rather than via a failed upload.
+- Per-rule remediation library — seed remediation templates keyed by axe
+  `ruleId` so `portal-export` cards arrive pre-populated (the portal's
+  "actionable" gate currently needs manual remediation).
+- `occurrenceCount` semantics — reconcile/rename the distinct-element count
+  (`portal-export`) vs the Σ-`nodesCount` shown in `summary.json`/html/markdown.
+- Incomplete-evidence cap — config knob to bound `axe-results.json` on
+  incomplete-heavy sites.
 - Baseline/regression mode — diff successive audits to surface new and
   resolved findings between runs.
 - Plugin API — public extension surface for custom reporters and crawl
