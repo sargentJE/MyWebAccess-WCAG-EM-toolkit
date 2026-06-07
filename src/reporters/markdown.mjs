@@ -111,7 +111,15 @@ export async function emit(summary, ctx) {
       lines.push(`- Pages affected: ${item.pageCount}`);
       if (item.help) lines.push(`- Help: ${item.help}`);
       if (item.helpUrl) lines.push(`- Rule URL: ${item.helpUrl}`);
-      if (item.firstTarget) lines.push(`- Example target: \`${item.firstTarget}\``);
+      const ex = Array.isArray(item.examples) && item.examples.length ? item.examples[0] : null;
+      const exTarget = ex?.target ?? item.firstTarget;
+      if (exTarget) lines.push(`- Example target: \`${exTarget}\``);
+      if (ex?.html) {
+        // Collapse whitespace (axe outerHTML may be multi-line) and neutralise
+        // backticks so the inline code span can't be broken by the snippet.
+        const snippet = String(ex.html).replace(/`/g, "'").replace(/\s+/g, ' ').trim();
+        lines.push(`- Example HTML: \`${snippet}\``);
+      }
       lines.push('');
     }
   }

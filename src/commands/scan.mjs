@@ -27,6 +27,7 @@ const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
+import { liftRuleSummaries, liftIncompleteSummaries } from '../lib/axe-artifact.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
 import { applyAuth } from '../lib/auth.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
@@ -57,28 +58,12 @@ export function buildScreenshotPath(screenshotsDir, url, viewport, format = 'png
 }
 
 /**
- * Project an axe rule result array into a light summary shape for the
- * widened artefact contract. Keeps the fields `toWcagEmSummary` and
- * the reporter pipeline need — id, tags, impact, nodesCount, help,
- * helpUrl, firstTarget — and drops the `nodes` bulk that would blow
- * up `axe-results.json` on large sites. Pure function.
- *
- * @param {Array<{ id?: string, tags?: string[], impact?: string|null, help?: string, helpUrl?: string, nodes?: any[] }>} rules
- * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null }>}
+ * `liftRuleSummaries` and `liftIncompleteSummaries` now live in
+ * `lib/axe-artifact.mjs` (shared with `process-runner.mjs` so both scan paths
+ * emit one artefact contract). Re-exported here for the widening tests that
+ * import `liftRuleSummaries` from this module.
  */
-export function liftRuleSummaries(rules) {
-  if (!Array.isArray(rules)) return [];
-  return rules.map((r) => ({
-    id: String(r.id ?? ''),
-    tags: Array.isArray(r.tags) ? [...r.tags] : [],
-    impact: typeof r.impact === 'string' ? r.impact : null,
-    nodesCount: Array.isArray(r.nodes) ? r.nodes.length : 0,
-    help: typeof r.help === 'string' ? r.help : '',
-    helpUrl: typeof r.helpUrl === 'string' ? r.helpUrl : '',
-    firstTarget:
-      Array.isArray(r.nodes) && r.nodes[0]?.target?.[0] ? String(r.nodes[0].target[0]) : null,
-  }));
-}
+export { liftRuleSummaries };
 
 /**
  * Filter action objects by their compiled `regex` against a URL. Actions
@@ -285,7 +270,7 @@ export async function run(ctx) {
       // inversion. Omits `nodes` bulk to keep artefact size bounded —
       // nodesCount retains the reviewable-vs-infra-failure signal.
       passesDetail: liftRuleSummaries(axeResults.passes),
-      incompleteDetail: liftRuleSummaries(axeResults.incomplete),
+      incompleteDetail: liftIncompleteSummaries(axeResults.incomplete),
       inapplicableDetail: liftRuleSummaries(axeResults.inapplicable),
       // _preScanStates: underscore-prefix signals debug-only;
       // not part of the stable artefact contract. Empty array when no pre-scan

@@ -286,7 +286,9 @@
       "properties": {
         "reporters": {
           "type": "array",
-          "items": { "enum": ["json", "markdown", "html", "earl-jsonld", "junit"] },
+          "items": {
+            "enum": ["json", "markdown", "html", "earl-jsonld", "junit", "portal-export"]
+          },
           "uniqueItems": true
         },
         "includePasses": { "type": "boolean" },

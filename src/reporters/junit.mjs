@@ -102,7 +102,11 @@ export async function emit(summary, ctx) {
   for (const f of incFindings) {
     const ruleId = String(f.id ?? '');
     const pages = Array.isArray(f.pages) ? f.pages : [];
-    const firstTarget = typeof f.firstTarget === 'string' ? f.firstTarget : '';
+    const ex = Array.isArray(f.examples) && f.examples.length ? f.examples[0] : null;
+    const firstTarget =
+      (ex && typeof ex.target === 'string' ? ex.target : null) ??
+      (typeof f.firstTarget === 'string' ? f.firstTarget : '');
+    const exampleHtml = ex && typeof ex.html === 'string' ? ex.html : '';
     for (const url of pages) {
       const caseName = firstTarget ? `${url}#${firstTarget}` : url;
       testsCount += 1;
@@ -111,7 +115,7 @@ export async function emit(summary, ctx) {
         help: typeof f.help === 'string' ? f.help : '',
         helpUrl: typeof f.helpUrl === 'string' ? f.helpUrl : '',
         selector: firstTarget,
-        html: '',
+        html: exampleHtml,
       });
       cases.push(
         `  <testcase classname="${escapeXmlAttr(ruleId)}" name="${escapeXmlAttr(caseName)}">\n` +

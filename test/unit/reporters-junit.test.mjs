@@ -282,6 +282,13 @@ test('junit reporter: incompleteFindings emit <failure type="incomplete"> entrie
         helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
         classification: 'needs-review',
         firstTarget: '[role="slider"]',
+        examples: [
+          {
+            pageUrl: 'https://example.com/a',
+            target: '[role="slider"]',
+            html: '<div role="slider"></div>',
+          },
+        ],
         pages: ['https://example.com/a', 'https://example.com/b'],
         pageCount: 2,
       },
@@ -291,10 +298,12 @@ test('junit reporter: incompleteFindings emit <failure type="incomplete"> entrie
   assert.equal((xml.match(/<failure type="incomplete">/g) ?? []).length, 2);
   assert.ok(xml.includes('Required ARIA attributes must be provided'));
   assert.ok(xml.includes('Selector: [role="slider"]'));
+  // Example HTML evidence now populates the incomplete failure body.
+  assert.ok(xml.includes('<div role="slider">'));
 });
 
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
   assert.ok(names.includes('junit'), 'junit registered in the registry');
-  assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown']);
+  assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown', 'portal-export']);
 });

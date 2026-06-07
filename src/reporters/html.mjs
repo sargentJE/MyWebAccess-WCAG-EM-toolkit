@@ -256,8 +256,13 @@ function renderIncompleteFindings(incompleteFindings) {
       const href = safeUrl(f.helpUrl);
       out += `<dt>Rule URL</dt><dd>` + html`<a href="${href}">${f.helpUrl}</a></dd>\n`;
     }
-    if (f.firstTarget) {
-      out += html`<dt>Example target</dt><dd><code>${f.firstTarget}</code></dd>\n`;
+    const ex = Array.isArray(f.examples) && f.examples.length ? f.examples[0] : null;
+    const exTarget = ex?.target ?? f.firstTarget;
+    if (exTarget) {
+      out += html`<dt>Example target</dt><dd><code>${exTarget}</code></dd>\n`;
+    }
+    if (ex?.html) {
+      out += html`<dt>Example HTML</dt><dd><pre>${ex.html}</pre></dd>\n`;
     }
     if (Array.isArray(f.pages) && f.pages.length) {
       out += `<dt>Pages</dt><dd>${f.pages.map((/** @type {string} */ p) => html`${p}`).join(', ')}</dd>\n`;

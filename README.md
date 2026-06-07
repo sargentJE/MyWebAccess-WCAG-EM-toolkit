@@ -55,27 +55,28 @@ All commands accept `--config <path>`, `--out-dir <path>`,
 Start from [`configs/example-site.json`](./configs/example-site.json)
 and adapt to your site. Key fields:
 
-| Field                         | Purpose                                                            |
-| ----------------------------- | ------------------------------------------------------------------ |
-| `rootUrl`                     | Starting URL for the crawler                                       |
-| `crawl.maxPages`              | Maximum pages to discover                                          |
-| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                        |
-| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)          |
-| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit` |
-| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                         |
+| Field                         | Purpose                                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| `rootUrl`                     | Starting URL for the crawler                                                        |
+| `crawl.maxPages`              | Maximum pages to discover                                                           |
+| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                         |
+| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                           |
+| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export` |
+| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                          |
 
 See [`schemas/config.schema.json`](./schemas/config.schema.json) for
 the full configuration reference.
 
 ## Reporters
 
-| Reporter      | Output file    | Description                                                    |
-| ------------- | -------------- | -------------------------------------------------------------- |
-| `json`        | `summary.json` | Structured summary with findings and incomplete results        |
-| `markdown`    | `summary.md`   | Human-readable Markdown summary with incomplete-review section |
-| `html`        | `summary.html` | Standalone HTML report with dark mode and needs-review section |
-| `earl-jsonld` | `earl.jsonld`  | W3C EARL JSON-LD assertions with WCAG-EM evaluation metadata   |
-| `junit`       | `junit.xml`    | JUnit XML for CI — `cantTell` results emit as failures         |
+| Reporter        | Output file          | Description                                                                                  |
+| --------------- | -------------------- | -------------------------------------------------------------------------------------------- |
+| `json`          | `summary.json`       | Structured summary with findings and incomplete results                                      |
+| `markdown`      | `summary.md`         | Human-readable Markdown summary with incomplete-review section                               |
+| `html`          | `summary.html`       | Standalone HTML report with dark mode and needs-review section                               |
+| `earl-jsonld`   | `earl.jsonld`        | W3C EARL JSON-LD assertions with WCAG-EM evaluation metadata                                 |
+| `junit`         | `junit.xml`          | JUnit XML for CI — `cantTell` results emit as failures                                       |
+| `portal-export` | `portal-export.json` | MyAccess Portal canonical-scan envelope for direct upload (compliance summary + rawFindings) |
 
 In addition to the reporter outputs, the summarize stage also writes:
 

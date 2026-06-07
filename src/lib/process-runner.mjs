@@ -26,6 +26,7 @@ import path from 'node:path';
 import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { fileSafeFromUrl } from './urls.mjs';
+import { liftRuleSummaries, liftIncompleteSummaries } from './axe-artifact.mjs';
 
 // SECTION: Constants
 
@@ -242,9 +243,9 @@ async function dispatch(step, ctx) {
  *   passes: number,
  *   incomplete: number,
  *   inapplicable: number,
- *   passesDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
- *   incompleteDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
- *   inapplicableDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>,
+ *   passesDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null }>,
+ *   incompleteDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null, examples: Array<{ target: string|null, html: string|null }> }>,
+ *   inapplicableDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null }>,
  * }>}
  */
 async function runAxe(page) {
@@ -255,27 +256,11 @@ async function runAxe(page) {
     incomplete: result.incomplete.length,
     inapplicable: result.inapplicable.length,
     passesDetail: liftRuleSummaries(result.passes),
-    incompleteDetail: liftRuleSummaries(result.incomplete),
+    incompleteDetail: liftIncompleteSummaries(result.incomplete),
     inapplicableDetail: liftRuleSummaries(result.inapplicable),
   };
 }
 
-/**
- * Project an axe rule result array into a light summary shape for the
- * widened artefact contract (the scan-artefact widening step). Mirrors the
- * helper in `src/commands/scan.mjs` — duplicated here rather than imported
- * to avoid a cross-command coupling. Both helpers share the same contract
- * documented in the widening commit.
- *
- * @param {Array<{ id?: string, tags?: string[], impact?: string|null, nodes?: any[] }>} rules
- * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number }>}
- */
-function liftRuleSummaries(rules) {
-  if (!Array.isArray(rules)) return [];
-  return rules.map((r) => ({
-    id: String(r.id ?? ''),
-    tags: Array.isArray(r.tags) ? [...r.tags] : [],
-    impact: typeof r.impact === 'string' ? r.impact : null,
-    nodesCount: Array.isArray(r.nodes) ? r.nodes.length : 0,
-  }));
-}
+// `liftRuleSummaries` / `liftIncompleteSummaries` are imported from
+// `./axe-artifact.mjs` — the single source of truth shared with `scan.mjs`
+// (this path previously kept a diverged 4-key copy).

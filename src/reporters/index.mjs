@@ -29,6 +29,7 @@ import * as markdownReporter from './markdown.mjs';
 import * as htmlReporter from './html.mjs';
 import * as earlJsonldReporter from './earl-jsonld.mjs';
 import * as junitReporter from './junit.mjs';
+import * as portalExportReporter from './portal-export.mjs';
 
 // SECTION: Types
 
@@ -61,7 +62,7 @@ import * as junitReporter from './junit.mjs';
 
 /**
  * Module-private. NOT exported. Each reporter lands a new entry as it
- * Registered reporters: json, markdown, html, earl-jsonld, junit.
+ * Registered reporters: json, markdown, html, earl-jsonld, junit, portal-export.
  *
  * @type {Map<string, ReporterModule>}
  */
@@ -71,6 +72,7 @@ const registry = new Map([
   [htmlReporter.name, /** @type {ReporterModule} */ (htmlReporter)],
   [earlJsonldReporter.name, /** @type {ReporterModule} */ (earlJsonldReporter)],
   [junitReporter.name, /** @type {ReporterModule} */ (junitReporter)],
+  [portalExportReporter.name, /** @type {ReporterModule} */ (portalExportReporter)],
 ]);
 
 // SECTION: Public API

@@ -348,6 +348,13 @@ test('html reporter: incompleteFindings render a "needs review" section', async 
         helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
         classification: 'needs-review',
         firstTarget: '[role="slider"]',
+        examples: [
+          {
+            pageUrl: 'https://example.com/a',
+            target: '[role="slider"]',
+            html: '<div role="slider"></div>',
+          },
+        ],
         pages: ['https://example.com/a', 'https://example.com/b'],
         pageCount: 2,
       },
@@ -360,6 +367,9 @@ test('html reporter: incompleteFindings render a "needs review" section', async 
   assert.ok(got.includes('needs review'));
   assert.ok(got.includes('Required ARIA attributes must be provided'));
   assert.ok(got.includes('[role=&quot;slider&quot;]'));
+  // Example HTML evidence renders (escaped) in a <pre>.
+  assert.ok(got.includes('Example HTML'));
+  assert.ok(got.includes('&lt;div role=&quot;slider&quot;&gt;'));
 });
 
 test('html reporter: no incomplete section when incompleteFindings is empty', async (t) => {

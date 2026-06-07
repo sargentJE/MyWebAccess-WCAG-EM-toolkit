@@ -177,6 +177,13 @@ test('markdown reporter: incompleteFindings render an "Incomplete results" secti
         helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/aria-required-attr',
         classification: 'needs-review',
         firstTarget: '[role="slider"]',
+        examples: [
+          {
+            pageUrl: 'https://example.com/a',
+            target: '[role="slider"]',
+            html: '<div role="slider"></div>',
+          },
+        ],
         pages: ['https://example.com/a'],
         pageCount: 1,
       },
@@ -189,6 +196,7 @@ test('markdown reporter: incompleteFindings render an "Incomplete results" secti
   assert.match(got, /- Classification: needs-review/);
   assert.match(got, /- Help: Required ARIA attributes must be provided/);
   assert.match(got, /- Example target: `\[role="slider"\]`/);
+  assert.match(got, /- Example HTML: `<div role="slider"><\/div>`/);
 });
 
 test('markdown reporter: no incomplete section when incompleteFindings is absent', async (t) => {
@@ -220,4 +228,50 @@ test('markdown reporter: registry now lists json + markdown', async () => {
   assert.ok(names.includes('json'), 'json still registered');
   assert.ok(names.includes('markdown'), 'markdown registered in the registry');
   assert.deepEqual(names, [...names].sort(), 'list remains sorted');
+});
+
+test('markdown reporter: Example HTML is collapsed to one line and backtick-safe', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: TOOL_IDENTITY,
+    site: 'inc-html',
+    generatedAt: '2026-04-29T00:00:00.000Z',
+    inventoryCount: 1,
+    finalSampleCount: 1,
+    samplePagesScanned: 1,
+    processRuns: 0,
+    groupedFindingCount: 0,
+    comparison: {
+      randomSampleIntroducedNewRuleIds: [],
+      randomSampleIntroducedNewClusters: [],
+      expandStructuredSampleRecommended: false,
+    },
+    findings: [],
+    incompleteFindings: [
+      {
+        id: 'scrollable-region-focusable',
+        impact: 'serious',
+        help: 'Scrollable region must have keyboard access',
+        classification: 'needs-review',
+        firstTarget: '.innertitle',
+        examples: [
+          {
+            pageUrl: 'https://example.com/a',
+            target: '.innertitle',
+            html: '<div class="x">\n\t<h1>Hi `code`</h1>\n</div>',
+          },
+        ],
+        pages: ['https://example.com/a'],
+        pageCount: 1,
+      },
+    ],
+  };
+  await markdownReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.md'), 'utf8');
+  // Multi-line + backtick HTML collapses to a single, safe inline code span.
+  assert.ok(
+    got.includes('- Example HTML: `<div class="x"> <h1>Hi \'code\'</h1> </div>`'),
+    'snippet collapsed + backticks neutralised',
+  );
+  assert.ok(!got.includes('`code`'), 'no raw backtick survives to break the span');
 });

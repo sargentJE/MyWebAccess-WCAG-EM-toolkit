@@ -257,6 +257,25 @@ export async function run(ctx) {
   }
 
   // SECTION: Incomplete grouping (needs-review items for reporters)
+  /**
+   * Accumulate one page/state's incomplete-rule detail into its grouped entry,
+   * mirroring `addRuleFinding`: count every reviewable node (`nodesCount`),
+   * collect distinct selectors, and keep up to 5 HTML examples for evidence.
+   *
+   * @param {any} entry
+   * @param {{ nodesCount?: number, examples?: Array<{ target?: string|null, html?: string|null }> }} inc
+   * @param {string} pageUrl
+   */
+  const accumulateIncomplete = (entry, inc, pageUrl) => {
+    entry.pages.add(pageUrl);
+    entry.occurrences += typeof inc.nodesCount === 'number' ? inc.nodesCount : 0;
+    for (const ex of Array.isArray(inc.examples) ? inc.examples : []) {
+      if (ex.target) entry.targets.add(ex.target);
+      if (entry.examples.length < 5) {
+        entry.examples.push({ pageUrl, target: ex.target ?? null, html: ex.html ?? null });
+      }
+    }
+  };
   /** @type {Map<string, any>} */
   const incompletesByRule = new Map();
   for (const pageResult of axeResults) {
@@ -275,11 +294,14 @@ export async function run(ctx) {
           classification: 'needs-review',
           actRuleIds: meta.actRuleIds,
           wcagCriteria: meta.wcagCriteria,
+          occurrences: 0,
           pages: new Set(),
+          targets: new Set(),
+          examples: [],
           firstTarget: inc.firstTarget ?? null,
         });
       }
-      incompletesByRule.get(key).pages.add(pageUrl);
+      accumulateIncomplete(incompletesByRule.get(key), inc, pageUrl);
     }
   }
   for (const processResult of processResults) {
@@ -299,11 +321,14 @@ export async function run(ctx) {
             classification: 'needs-review',
             actRuleIds: meta.actRuleIds,
             wcagCriteria: meta.wcagCriteria,
+            occurrences: 0,
             pages: new Set(),
+            targets: new Set(),
+            examples: [],
             firstTarget: inc.firstTarget ?? null,
           });
         }
-        incompletesByRule.get(key).pages.add(processUrl);
+        accumulateIncomplete(incompletesByRule.get(key), inc, processUrl);
       }
     }
   }
@@ -312,11 +337,18 @@ export async function run(ctx) {
       ...item,
       pages: [...item.pages].sort(),
       pageCount: item.pages.size,
+      targets: [...item.targets].sort(),
     }))
     .sort((a, b) => {
       /** @type {Record<string, number>} */
       const impactOrder = { critical: 4, serious: 3, moderate: 2, minor: 1, null: 0 };
-      return (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
+      const delta = (impactOrder[b.impact ?? 'null'] ?? 0) - (impactOrder[a.impact ?? 'null'] ?? 0);
+      if (delta !== 0) return delta;
+      // ruleId asc tiebreak — matches `sortFindings` so html/markdown/junit order
+      // needs-review consistently (they consume this list without re-sorting).
+      const aId = typeof a.id === 'string' ? a.id : '';
+      const bId = typeof b.id === 'string' ? b.id : '';
+      return aId < bId ? -1 : aId > bId ? 1 : 0;
     });
 
   // SECTION: Sort + flatten for emit
