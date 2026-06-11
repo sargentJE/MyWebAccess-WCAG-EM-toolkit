@@ -112,7 +112,16 @@ export function buildExecutionHealth({
   let pageViewsFailed = 0;
 
   for (const entry of Array.isArray(axeResults) ? axeResults : []) {
-    const url = normalizeUrl(String(entry?.url ?? ''));
+    // NOTE: never crash health accounting on a malformed entry — a failed
+    // page-view with a missing/invalid url still counts under a sentinel
+    // rather than throwing (normalizeUrl rejects non-URLs) or vanishing.
+    const rawUrl = typeof entry?.url === 'string' && entry.url ? entry.url : null;
+    let url;
+    try {
+      url = rawUrl ? normalizeUrl(rawUrl) : '(unknown-url)';
+    } catch {
+      url = rawUrl ?? '(unknown-url)';
+    }
     let rec = byUrl.get(url);
     if (!rec) {
       rec = { ok: [], failed: [] };

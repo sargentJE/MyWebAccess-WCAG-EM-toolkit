@@ -219,8 +219,14 @@ async function dispatch(step, ctx) {
       // outer bound.
       // LINK: README.md → "Configuring for SPAs"
       if (typeof step.selector === 'string' && step.selector.length > 0) {
+        // When falling back to the shared step budget, undercut it slightly so
+        // Playwright's TimeoutError (which names the selector) deterministically
+        // wins the race against runStep's rejectAfter at the same budget —
+        // otherwise the recorded state flips between 'error' and 'step-timeout'
+        // depending on which timer fires first.
+        const budget = Number(config?.scan?.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS);
         await page.waitForSelector(step.selector, {
-          timeout: step.timeoutMs ?? Number(config?.scan?.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS),
+          timeout: step.timeoutMs ?? Math.max(budget - 50, 1),
         });
         return null;
       }

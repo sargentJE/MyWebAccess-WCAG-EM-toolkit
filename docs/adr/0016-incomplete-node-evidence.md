@@ -58,3 +58,23 @@ process-sourced needs-review findings were even poorer.
 - `src/reporters/portal-export.mjs` + `schemas/portal-canonical-scan.schema.json`.
 - `test/unit/axe-artifact.test.mjs`, `test/unit/portal-export-schema.test.mjs`.
 - ADR-0007 — the WCAG-EM summary / artefact-widening contract this extends.
+
+## Amendment (2026-06-10, Sprint 1 "Truthful outputs")
+
+Two extensions to the condensed-example contract, both review-driven
+(docs/reviews/2026-06-toolkit-review.md, C2/C4):
+
+- **`examples[]` entries gain `failureSummary`** — axe's own per-node
+  diagnosis of why the result needs review. Violations already carried it
+  (full nodes are retained); incompletes now keep the condensed
+  `{ target, html, failureSummary }` triple so the portal (which displays
+  `failureSummary` when present) and the report-builder draft receive it.
+- **Examples are capped at the artefact source** — the original decision
+  accepted unbounded condensed examples on the grounds that incompletes are
+  few; a live run hit 32 occurrences on a single rule, and the
+  `failureSummary` widening makes the growth real. `liftIncompleteSummaries`
+  now applies `reporting.maxIncompleteExamplesPerRule` (default 25);
+  `nodesCount` always keeps the true total, so the F8
+  reviewable-vs-infra-failure split and downstream occurrence counting are
+  unaffected. Portal-bound evidence strings are additionally pre-trimmed to
+  the portal's 2000-char ingestion limit at export build.

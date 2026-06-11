@@ -137,8 +137,10 @@ test('waitFor with a selector polls page.waitForSelector, not the sleep path', a
   assert.strictEqual(result, null, 'successful selector wait produces no state entry');
   assert.strictEqual(mocks.waitForSelector.mock.calls.length, 1);
   assert.strictEqual(mocks.waitForSelector.mock.calls[0].arguments[0], '[data-hydrated]');
-  // No explicit step.timeoutMs -> the shared step budget (scan.timeoutMs).
-  assert.deepStrictEqual(mocks.waitForSelector.mock.calls[0].arguments[1], { timeout: 5000 });
+  // No explicit step.timeoutMs -> the shared step budget (scan.timeoutMs)
+  // minus the 50ms undercut that lets Playwright's selector-naming
+  // TimeoutError deterministically beat runStep's rejectAfter race.
+  assert.deepStrictEqual(mocks.waitForSelector.mock.calls[0].arguments[1], { timeout: 4950 });
   assert.strictEqual(mocks.waitForTimeout.mock.calls.length, 0, 'sleep path must not run');
 });
 

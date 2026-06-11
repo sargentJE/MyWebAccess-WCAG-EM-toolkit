@@ -20,8 +20,8 @@ The toolkit runs a five-stage pipeline:
    search, navigation states) via a step DSL and scan the resulting
    states.
 5. **Summarize** — aggregate findings into per-SC outcomes, produce
-   reports (Markdown, HTML, EARL JSON-LD, JUnit), and generate the
-   WCAG-EM Step 5 summary.
+   reports (JSON, Markdown, HTML, EARL JSON-LD, JUnit, portal export,
+   report-builder draft), and generate the WCAG-EM Step 5 summary.
 
 ## Prerequisites
 
@@ -170,7 +170,8 @@ For paid client work, start from
 rather than the bare-bones `example-site.json`. The sidecar opts in to
 axe-core's `best-practice` tag (covers `landmark-one-main`, `region`,
 `heading-order`, `page-has-heading-one` — universally-expected auditor
-concerns), enables all 5 reporters, and stamps WCAG 2.2 AA conformance
+concerns), enables the five baseline reporters (add `portal-export` /
+`report-builder-starter` per client need), and stamps WCAG 2.2 AA conformance
 fields for proper WCAG-EM Step 5 reporting.
 
 After copying the sidecar, the four most important per-site overrides:
