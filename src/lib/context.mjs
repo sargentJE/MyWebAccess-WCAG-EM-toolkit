@@ -229,7 +229,11 @@ export async function buildContext(options = {}) {
     resultsDir: path.join(outDir, 'results'),
     reportsDir: path.join(outDir, 'reports'),
     screenshotsDir: path.join(outDir, 'screenshots'),
-    sampleJsonPath: path.resolve('sample.json'),
+    // NOTE: under outDir since the 2026-06 review (finding C2). The previous
+    // `path.resolve('sample.json')` resolved against the process CWD and
+    // ignored --out-dir, so two runs from one shell shared (and clobbered)
+    // the same handoff file regardless of their out-dirs.
+    sampleJsonPath: path.join(outDir, 'sample.json'),
   };
 
   // ANCHOR: StepE — preflight
