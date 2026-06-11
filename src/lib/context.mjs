@@ -135,6 +135,8 @@ function compileActionRegex(action) {
  * @property {RunContextPaths} paths - Pre-resolved output subdirectories.
  * @property {Record<string, string | boolean>} args - Raw CLI args (legacy surface).
  * @property {boolean} [preflightRan] - True once preflight has succeeded.
+ * @property {boolean} [requirePlaywright] - Build-time browser-check intent,
+ *   preserved for ensurePreflight re-runs on skipPreflight contexts.
  *   Set non-enumerably by `buildContext` and `ensurePreflight` so it never
  *   leaks into JSON-serialised artefacts. Defined on the ctx object, not
  *   the config.
@@ -270,6 +272,10 @@ export async function buildContext(options = {}) {
   if (!options.skipPreflight) {
     defineHidden(ctx, 'preflightRan', true);
   }
+  // ANCHOR: RequirePlaywrightIntent — recorded (non-enumerable) so a later
+  //   ensurePreflight on a skipPreflight context re-runs the SAME check set
+  //   the caller asked for at build time, browser check included.
+  defineHidden(ctx, 'requirePlaywright', options.requirePlaywright === true);
 
   return ctx;
 }
@@ -290,6 +296,10 @@ export async function ensurePreflight(ctx) {
   const pf = await runPreflight({
     configPath: ctx.configPath,
     outDir: ctx.paths.outDir,
+    // Preserve build-time intent when buildContext recorded it (skipPreflight
+    // flows); hand-built contexts carry no browser claim, so the check stays
+    // off and a missing browser surfaces at Playwright launch instead.
+    requirePlaywright: ctx.requirePlaywright === true,
   });
   if (!pf.ok) {
     const err = new Error(`Preflight failed:\n  - ${pf.failures.join('\n  - ')}`);

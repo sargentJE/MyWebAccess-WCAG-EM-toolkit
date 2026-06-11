@@ -29,7 +29,13 @@ import { constants as fsConstants } from 'node:fs';
  * @typedef {object} PreflightOptions
  * @property {string} configPath - Absolute path expected to resolve to a readable JSON file.
  * @property {string} outDir - Absolute directory that must exist and be writable (created if missing).
- * @property {boolean} [requirePlaywright] - Skip the browser-binary check for commands that don't launch Chromium (e.g. `summarize`).
+ * @property {boolean} [requirePlaywright] - Opt IN to the browser-binary
+ *   check for commands that launch Chromium (discover/scan/scan-processes/
+ *   audit pass `true`). Default FALSE: callers that do not state a browser
+ *   need (summarize, hand-built programmatic contexts, unit suites on
+ *   browserless runners) get config + out-dir checks only — a wrong default
+ *   here failed the unit tier on CI, where Playwright browsers are installed
+ *   for the e2e job alone.
  */
 
 /**
@@ -68,8 +74,9 @@ export async function runPreflight(opts) {
     );
   }
 
-  // ANCHOR: Check3 — Playwright browser binaries installed
-  if (opts.requirePlaywright !== false) {
+  // ANCHOR: Check3 — Playwright browser binaries installed (opt-in; see
+  // PreflightOptions.requirePlaywright for why the default is OFF).
+  if (opts.requirePlaywright === true) {
     // NOTE: we avoid actually launching Chromium here (too slow); instead
     // check that the playwright browsers directory exists and contains at
     // least one chromium build. The path is controlled by

@@ -66,3 +66,29 @@ test('ensurePreflight sets ctx.preflightRan with the correct descriptor shape', 
   assert.strictEqual(descriptor.configurable, true, 'configurable must be true');
   assert.strictEqual(descriptor.writable, false, 'writable must be false');
 });
+
+// ANCHOR: PreflightIntentPreserved — the CI-red regression of 2026-06:
+// ensurePreflight on a browserless runner must NOT demand Playwright unless
+// the context was built with that intent; when it WAS, the check still runs.
+test('ensurePreflight: no browser check by default; build-time intent preserved', async (t) => {
+  const { buildContext, ensurePreflight } = await import('../../src/lib/context.mjs');
+  const prev = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  process.env.PLAYWRIGHT_BROWSERS_PATH = '/nonexistent-browsers-dir-for-test';
+  t.after(() => {
+    if (prev === undefined) delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+    else process.env.PLAYWRIGHT_BROWSERS_PATH = prev;
+  });
+
+  // Default (no browser claim): config + out-dir checks only -> succeeds.
+  const ctx = await buildContext({ skipPreflight: true });
+  await ensurePreflight(ctx);
+  assert.strictEqual(ctx.preflightRan, true);
+
+  // Explicit browser intent at build time survives into ensurePreflight.
+  const browserCtx = await buildContext({ skipPreflight: true, requirePlaywright: true });
+  await assert.rejects(
+    () => ensurePreflight(browserCtx),
+    /Playwright browsers directory missing/,
+    'recorded requirePlaywright intent must keep the browser check live',
+  );
+});
