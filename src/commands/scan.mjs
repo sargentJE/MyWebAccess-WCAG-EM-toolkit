@@ -270,7 +270,10 @@ export async function run(ctx) {
       // inversion. Omits `nodes` bulk to keep artefact size bounded —
       // nodesCount retains the reviewable-vs-infra-failure signal.
       passesDetail: liftRuleSummaries(axeResults.passes),
-      incompleteDetail: liftIncompleteSummaries(axeResults.incomplete),
+      incompleteDetail: liftIncompleteSummaries(
+        axeResults.incomplete,
+        config.reporting?.maxIncompleteExamplesPerRule,
+      ),
       inapplicableDetail: liftRuleSummaries(axeResults.inapplicable),
       // _preScanStates: underscore-prefix signals debug-only;
       // not part of the stable artefact contract. Empty array when no pre-scan

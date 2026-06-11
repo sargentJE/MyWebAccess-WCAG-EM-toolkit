@@ -76,8 +76,8 @@ test('liftIncompleteSummaries: superset adds condensed {target, html} examples',
   assert.equal(row.firstTarget, '.a');
   // target joined with ' | ' to match the violation selector format.
   assert.deepEqual(row.examples, [
-    { target: '.a | .b', html: '<span class="a">' },
-    { target: '.c', html: '<span class="c">' },
+    { target: '.a | .b', html: '<span class="a">', failureSummary: null },
+    { target: '.c', html: '<span class="c">', failureSummary: null },
   ]);
 });
 
@@ -105,7 +105,26 @@ test('liftIncompleteSummaries: non-array target / non-string html -> nulls', () 
     },
   ]);
   assert.deepEqual(out[0].examples, [
-    { target: null, html: null },
-    { target: null, html: '<b>' },
+    { target: null, html: null, failureSummary: null },
+    { target: null, html: '<b>', failureSummary: null },
   ]);
+});
+
+test('liftIncompleteSummaries: failureSummary retained per example; cap bounds examples, not nodesCount', () => {
+  const nodes = Array.from({ length: 30 }, (_, i) => ({
+    target: [`#el-${i}`],
+    html: `<div id="el-${i}"></div>`,
+    failureSummary: `Fix any of the following for el-${i}`,
+  }));
+  const [lifted] = liftIncompleteSummaries(
+    [{ id: 'color-contrast', tags: [], impact: 'serious', help: '', helpUrl: '', nodes }],
+    25,
+  );
+  assert.equal(lifted.nodesCount, 30, 'true total preserved');
+  assert.equal(lifted.examples.length, 25, 'examples bounded by the cap');
+  assert.equal(lifted.examples[0].failureSummary, 'Fix any of the following for el-0');
+  const [defaulted] = liftIncompleteSummaries([
+    { id: 'x', tags: [], impact: null, help: '', helpUrl: '', nodes },
+  ]);
+  assert.equal(defaulted.examples.length, 25, 'default cap applies');
 });

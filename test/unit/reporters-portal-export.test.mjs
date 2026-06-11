@@ -669,8 +669,11 @@ test('portal-export: warns when a critical/high finding lacks HTML evidence (sta
   const { parsed } = await emitParsed(summary, ctx);
   const f = parsed.rawFindings.find((/** @type {any} */ r) => r.ruleId === 'aria-valid-attr-value');
   assert.equal(f.evidence?.html ?? null, null, 'no html evidence available from stale data');
-  assert.equal(warnings.length, 1, 'self-validation warned at report time');
-  assert.ok(warnings[0].obj.findings.includes('aria-valid-attr-value'));
+  // Two guards fire on this payload since the validateExports gate landed:
+  // the evidence guard (asserted here) and the vendored-contract warning.
+  const evidenceWarnings = warnings.filter(({ obj }) => Array.isArray(obj?.findings));
+  assert.equal(evidenceWarnings.length, 1, 'self-validation warned at report time');
+  assert.ok(evidenceWarnings[0].obj.findings.includes('aria-valid-attr-value'));
 });
 
 test('portal-export: does NOT warn when critical/high findings carry evidence', async (t) => {
@@ -724,4 +727,139 @@ test('portal-export: pageViewsScanned + executionHealth ride scanOptions only wh
   assert.equal(parsed.scanMetadata.scanOptions.pagesScanned, 17);
   assert.equal(parsed.scanMetadata.scanOptions.pageViewsScanned, 35);
   assert.deepEqual(parsed.scanMetadata.scanOptions.executionHealth, health);
+});
+
+test('portal-export: scoreBasis ships with averageScore and folds untested into notTested', async (t) => {
+  const { ctx } = await makeCtx(t);
+  const { parsed } = await emitParsed(
+    baseSummary({
+      wcagEmSummary: {
+        criteriaOutcomes: [
+          { sc: '1.1.1', outcome: 'passed' },
+          { sc: '1.4.3', outcome: 'failed' },
+          { sc: '2.4.1', outcome: 'cantTell' },
+          { sc: '1.2.1', outcome: 'inapplicable' },
+          { sc: '3.1.2', outcome: 'notTested' },
+          { sc: '9.9.9', outcome: 'untested' },
+        ],
+      },
+    }),
+    ctx,
+  );
+  assert.equal(parsed.summary.averageScore, 50, 'one passed of two adjudicated');
+  assert.deepEqual(parsed.summary.scoreBasis, {
+    passed: 1,
+    failed: 1,
+    cantTell: 1,
+    inapplicable: 1,
+    notTested: 2,
+  });
+});
+
+test('portal-export: manualReviewIssues counts non-compliance rows; scoreBasis omitted without outcomes', async (t) => {
+  const { ctx } = await makeCtx(t);
+  const { parsed } = await emitParsed(
+    baseSummary({
+      groupedFindingCount: 1,
+      findings: [
+        finding({ id: 'image-alt', impact: 'critical', pages: ['https://example.com/'] }),
+        finding({
+          id: 'region',
+          impact: 'moderate',
+          classification: 'best-practice-or-manual-review',
+          pages: ['https://example.com/'],
+        }),
+      ],
+      incompleteFindings: [
+        {
+          id: 'video-caption',
+          impact: 'critical',
+          help: 'Check captions',
+          helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/video-caption',
+          tags: [],
+          classification: 'needs-review',
+          actRuleIds: [],
+          wcagCriteria: ['1.2.2'],
+          occurrences: 1,
+          pages: ['https://example.com/'],
+          pageCount: 1,
+          targets: [],
+          examples: [],
+        },
+      ],
+    }),
+    ctx,
+  );
+  // best-practice + needs-review rows are countsTowardCompliance: false.
+  assert.equal(parsed.summary.manualReviewIssues, 2);
+  assert.ok(!('scoreBasis' in parsed.summary), 'no outcomes -> no basis');
+});
+
+test('portal-export: failureSummary flows from finding examples into evidence and is trimmed', async (t) => {
+  const { ctx } = await makeCtx(t);
+  const longSummary = 'Fix any of the following: '.repeat(200); // > 2000 chars
+  const { parsed } = await emitParsed(
+    baseSummary({
+      groupedFindingCount: 1,
+      findings: [
+        finding({
+          id: 'color-contrast',
+          pages: ['https://example.com/'],
+          targets: ['p.low'],
+          examples: [
+            {
+              pageUrl: 'https://example.com/',
+              target: 'p.low',
+              html: '<p class="low">x</p>',
+              failureSummary: longSummary,
+            },
+          ],
+        }),
+      ],
+    }),
+    ctx,
+  );
+  const row = parsed.rawFindings.find((/** @type {any} */ r) => r.ruleId === 'color-contrast');
+  assert.equal(typeof row.evidence.failureSummary, 'string');
+  assert.equal(row.evidence.failureSummary.length, 2000, 'pre-trimmed to the portal limit');
+});
+
+test('portal-export: validateExports=error rejects a contract-breaking payload before writing', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  ctx.config.reporting = { validateExports: 'error' };
+  // critical finding with NO evidence.html anywhere -> vendored schema rejects.
+  const summary = baseSummary({
+    groupedFindingCount: 1,
+    findings: [
+      finding({ id: 'image-alt', impact: 'critical', pages: ['https://example.com/'], examples: [] }),
+    ],
+  });
+  await assert.rejects(
+    () => portalReporter.emit(summary, ctx),
+    /fails the vendored contract/,
+    'error mode must throw',
+  );
+  await assert.rejects(
+    () => fs.access(path.join(reportsDir, 'portal-export.json')),
+    'no file may be written in error mode',
+  );
+});
+
+test('portal-export: validateExports=warn logs and still writes (default behaviour)', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  /** @type {any[]} */
+  const warnings = [];
+  ctx.logger = { warn: (/** @type {any} */ o, /** @type {any} */ m) => warnings.push({ o, m }) };
+  const summary = baseSummary({
+    groupedFindingCount: 1,
+    findings: [
+      finding({ id: 'image-alt', impact: 'critical', pages: ['https://example.com/'], examples: [] }),
+    ],
+  });
+  await portalReporter.emit(summary, ctx);
+  await fs.access(path.join(reportsDir, 'portal-export.json'));
+  assert.ok(
+    warnings.some(({ m }) => String(m).includes('vendored contract')),
+    'warn mode surfaces the violation',
+  );
 });

@@ -240,7 +240,7 @@ async function dispatch(step, ctx) {
     }
 
     case 'axe': {
-      const axe = await runAxe(page);
+      const axe = await runAxe(page, config?.reporting?.maxIncompleteExamplesPerRule);
       return { state: step.state ?? 'state', ...axe };
     }
 
@@ -251,6 +251,8 @@ async function dispatch(step, ctx) {
 
 /**
  * @param {import('playwright').Page} page
+ * @param {number} [maxIncompleteExamples] - Per-rule incomplete-example cap
+ *   (`reporting.maxIncompleteExamplesPerRule`).
  * @returns {Promise<{
  *   violations: any[],
  *   passes: number,
@@ -261,7 +263,7 @@ async function dispatch(step, ctx) {
  *   inapplicableDetail: Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null }>,
  * }>}
  */
-async function runAxe(page) {
+async function runAxe(page, maxIncompleteExamples) {
   const result = await new AxeBuilder({ page }).analyze();
   return {
     violations: result.violations,
@@ -269,7 +271,7 @@ async function runAxe(page) {
     incomplete: result.incomplete.length,
     inapplicable: result.inapplicable.length,
     passesDetail: liftRuleSummaries(result.passes),
-    incompleteDetail: liftIncompleteSummaries(result.incomplete),
+    incompleteDetail: liftIncompleteSummaries(result.incomplete, maxIncompleteExamples),
     inapplicableDetail: liftRuleSummaries(result.inapplicable),
   };
 }

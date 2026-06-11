@@ -317,9 +317,9 @@ export async function run(ctx) {
   const structuredClusters = new Set();
 
   /**
-   * @param {{ sourceType: string, pageUrl: string, rule: any, target: string | null, html: string | null }} f
+   * @param {{ sourceType: string, pageUrl: string, rule: any, target: string | null, html: string | null, failureSummary?: string | null }} f
    */
-  function addRuleFinding({ sourceType, pageUrl, rule, target, html }) {
+  function addRuleFinding({ sourceType, pageUrl, rule, target, html, failureSummary = null }) {
     const key = rule.id;
     if (!groupedByRule.has(key)) {
       const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig: config.reporting });
@@ -349,7 +349,7 @@ export async function run(ctx) {
     const inv = inventoryByUrl.get(pageUrl);
     if (inv?.pageType) entry.pageTypes.add(inv.pageType);
     if (inv?.clusterKey) entry.clusters.add(inv.clusterKey);
-    if (entry.examples.length < 5) entry.examples.push({ pageUrl, target, html });
+    if (entry.examples.length < 5) entry.examples.push({ pageUrl, target, html, failureSummary });
 
     if (structuredSet.has(pageUrl)) structuredRuleIds.add(rule.id);
     if (structuredSet.has(pageUrl) && inv?.clusterKey) structuredClusters.add(inv.clusterKey);
@@ -394,6 +394,7 @@ export async function run(ctx) {
           rule: violation,
           target,
           html: node.html ?? null,
+          failureSummary: typeof node.failureSummary === 'string' ? node.failureSummary : null,
         });
         addComponentFinding({ pageUrl, rule: violation, target });
       }
@@ -412,6 +413,7 @@ export async function run(ctx) {
             rule: violation,
             target,
             html: node.html ?? null,
+            failureSummary: typeof node.failureSummary === 'string' ? node.failureSummary : null,
           });
           addComponentFinding({ pageUrl: processUrl, rule: violation, target });
         }
@@ -426,7 +428,7 @@ export async function run(ctx) {
    * collect distinct selectors, and keep up to 5 HTML examples for evidence.
    *
    * @param {any} entry
-   * @param {{ nodesCount?: number, examples?: Array<{ target?: string|null, html?: string|null }> }} inc
+   * @param {{ nodesCount?: number, examples?: Array<{ target?: string|null, html?: string|null, failureSummary?: string|null }> }} inc
    * @param {string} pageUrl
    */
   const accumulateIncomplete = (entry, inc, pageUrl) => {
@@ -435,7 +437,12 @@ export async function run(ctx) {
     for (const ex of Array.isArray(inc.examples) ? inc.examples : []) {
       if (ex.target) entry.targets.add(ex.target);
       if (entry.examples.length < 5) {
-        entry.examples.push({ pageUrl, target: ex.target ?? null, html: ex.html ?? null });
+        entry.examples.push({
+          pageUrl,
+          target: ex.target ?? null,
+          html: ex.html ?? null,
+          failureSummary: ex.failureSummary ?? null,
+        });
       }
     }
   };

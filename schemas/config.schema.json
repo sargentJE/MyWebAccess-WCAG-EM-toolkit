@@ -4,7 +4,14 @@
   "title": "WCAG-EM Accessibility Toolkit Config",
   "description": "Per-site configuration for the WCAG-EM-aligned automated accessibility testing toolkit. Validated by Ajv at config-load; see docs/adr/0002-config-is-ajv-validated.md.",
   "type": "object",
-  "required": ["name", "rootUrl", "scope", "crawl", "sample", "scan"],
+  "required": [
+    "name",
+    "rootUrl",
+    "scope",
+    "crawl",
+    "sample",
+    "scan"
+  ],
   "additionalProperties": false,
   "properties": {
     "name": {
@@ -23,15 +30,24 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode"],
+      "required": [
+        "mode"
+      ],
       "properties": {
         "mode": {
-          "enum": ["same-hostname", "same-origin", "allowed-hosts"],
+          "enum": [
+            "same-hostname",
+            "same-origin",
+            "allowed-hosts"
+          ],
           "description": "Crawl scope discipline. `same-hostname` (default) is safest for public sites."
         },
         "allowedHosts": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "uniqueItems": true,
           "description": "Extra hostnames when mode is `allowed-hosts`."
         },
@@ -45,9 +61,21 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "maxPages": { "type": "integer", "minimum": 1, "maximum": 5000 },
-        "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 50 },
-        "requestTimeoutSecs": { "type": "integer", "minimum": 5, "maximum": 600 },
+        "maxPages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "maxConcurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "requestTimeoutSecs": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600
+        },
         "navigationTimeoutSecs": {
           "type": "integer",
           "minimum": 5,
@@ -62,30 +90,48 @@
         },
         "excludeUrlPatterns": {
           "type": "array",
-          "items": { "type": "string", "validRegex": true },
+          "items": {
+            "type": "string",
+            "validRegex": true
+          },
           "description": "Regex source strings; validated at load by the `validRegex` custom keyword."
         },
         "documentLinkPatterns": {
           "type": "array",
-          "items": { "type": "string", "validRegex": true },
+          "items": {
+            "type": "string",
+            "validRegex": true
+          },
           "description": "Regex source strings matched against URL.pathname; matching links are skipped at enqueue time. Default ships with common document/archive/installer/media/e-book/design-binary/data-file extensions. Set to [] to opt out and crawl all link types."
         },
         "sitemapSeeding": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" },
+            "enabled": {
+              "type": "boolean"
+            },
             "urls": {
               "type": "array",
-              "items": { "type": "string", "format": "uri" },
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
               "uniqueItems": true
             },
             "commonPaths": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^/" },
+              "items": {
+                "type": "string",
+                "pattern": "^/"
+              },
               "uniqueItems": true
             },
-            "maxUrls": { "type": "integer", "minimum": 1, "maximum": 10000 }
+            "maxUrls": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
           }
         }
       }
@@ -94,11 +140,21 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "captureH1": { "type": "boolean" },
-        "captureCanonical": { "type": "boolean" },
-        "captureForms": { "type": "boolean" },
-        "captureLandmarks": { "type": "boolean" },
-        "captureSearchInputs": { "type": "boolean" }
+        "captureH1": {
+          "type": "boolean"
+        },
+        "captureCanonical": {
+          "type": "boolean"
+        },
+        "captureForms": {
+          "type": "boolean"
+        },
+        "captureLandmarks": {
+          "type": "boolean"
+        },
+        "captureSearchInputs": {
+          "type": "boolean"
+        }
       }
     },
     "sample": {
@@ -107,7 +163,10 @@
       "properties": {
         "structuredManual": {
           "type": "array",
-          "items": { "type": "string", "format": "uri" },
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
           "uniqueItems": true,
           "description": "Evaluator-chosen sample URLs (WCAG-EM Step 3a)."
         },
@@ -115,8 +174,14 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" },
-            "perCluster": { "type": "integer", "minimum": 1, "maximum": 20 },
+            "enabled": {
+              "type": "boolean"
+            },
+            "perCluster": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
             "preferTypes": {
               "type": "array",
               "items": {
@@ -135,13 +200,23 @@
             }
           }
         },
-        "randomPercentOfStructured": { "type": "number", "minimum": 0, "maximum": 1 },
-        "minRandomPages": { "type": "integer", "minimum": 0 },
+        "randomPercentOfStructured": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minRandomPages": {
+          "type": "integer",
+          "minimum": 0
+        },
         "randomSeed": {
           "type": "integer",
           "description": "Recorded in metadata; same seed reproduces the same sample (WCAG-EM Step 3b)."
         },
-        "smallSiteSupplementaryScanThreshold": { "type": "integer", "minimum": 0 }
+        "smallSiteSupplementaryScanThreshold": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "scan": {
@@ -152,8 +227,14 @@
           "type": "object",
           "description": "Legacy single-viewport; prefer `viewports` (Layer 3a).",
           "properties": {
-            "width": { "type": "integer", "minimum": 280 },
-            "height": { "type": "integer", "minimum": 300 }
+            "width": {
+              "type": "integer",
+              "minimum": 280
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 300
+            }
           }
         },
         "viewports": {
@@ -162,18 +243,48 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "width", "height"],
+            "required": [
+              "id",
+              "width",
+              "height"
+            ],
             "properties": {
-              "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-              "width": { "type": "integer", "minimum": 280 },
-              "height": { "type": "integer", "minimum": 300 }
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 280
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 300
+              }
             }
           }
         },
-        "waitUntil": { "enum": ["load", "domcontentloaded", "networkidle", "commit"] },
-        "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 600000 },
-        "retries": { "type": "integer", "minimum": 0, "maximum": 5 },
-        "fullPageScreenshots": { "type": "boolean" },
+        "waitUntil": {
+          "enum": [
+            "load",
+            "domcontentloaded",
+            "networkidle",
+            "commit"
+          ]
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 600000
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "fullPageScreenshots": {
+          "type": "boolean"
+        },
         "beforeScan": {
           "type": "object",
           "description": "Pre-scan hooks for cookie-consent dismissal, modal close, hydration waits.",
@@ -181,7 +292,9 @@
           "properties": {
             "actions": {
               "type": "array",
-              "items": { "$ref": "#/$defs/action" }
+              "items": {
+                "$ref": "#/$defs/action"
+              }
             }
           }
         },
@@ -189,22 +302,56 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "include": { "type": "array", "items": { "type": "string" } },
-            "exclude": { "type": "array", "items": { "type": "string" } },
-            "withRules": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "withTags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "include": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "withRules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "withTags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
             "runOnly": {
               "oneOf": [
-                { "type": "null" },
+                {
+                  "type": "null"
+                },
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["type", "values"],
+                  "required": [
+                    "type",
+                    "values"
+                  ],
                   "properties": {
-                    "type": { "enum": ["tag", "rule"] },
+                    "type": {
+                      "enum": [
+                        "tag",
+                        "rule"
+                      ]
+                    },
                     "values": {
                       "type": "array",
-                      "items": { "type": "string" },
+                      "items": {
+                        "type": "string"
+                      },
                       "minItems": 1,
                       "uniqueItems": true
                     }
@@ -218,29 +365,71 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["urlPattern"],
+                "required": [
+                  "urlPattern"
+                ],
                 "properties": {
-                  "urlPattern": { "type": "string", "validRegex": true },
-                  "include": { "type": "array", "items": { "type": "string" } },
-                  "exclude": { "type": "array", "items": { "type": "string" } },
-                  "withRules": { "type": "array", "items": { "type": "string" } },
-                  "withTags": { "type": "array", "items": { "type": "string" } },
+                  "urlPattern": {
+                    "type": "string",
+                    "validRegex": true
+                  },
+                  "include": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "exclude": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "withRules": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "withTags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "runOnly": {
                     "oneOf": [
-                      { "type": "null" },
+                      {
+                        "type": "null"
+                      },
                       {
                         "type": "object",
-                        "required": ["type", "values"],
+                        "required": [
+                          "type",
+                          "values"
+                        ],
                         "properties": {
-                          "type": { "enum": ["tag", "rule"] },
-                          "values": { "type": "array", "items": { "type": "string" } }
+                          "type": {
+                            "enum": [
+                              "tag",
+                              "rule"
+                            ]
+                          },
+                          "values": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
                         }
                       }
                     ]
                   },
                   "actions": {
                     "type": "array",
-                    "items": { "$ref": "#/$defs/action" }
+                    "items": {
+                      "$ref": "#/$defs/action"
+                    }
                   }
                 }
               }
@@ -254,29 +443,76 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "startUrl"],
+        "required": [
+          "name",
+          "startUrl"
+        ],
         "properties": {
-          "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "startUrl": { "type": "string", "format": "uri" },
-          "pattern": {
-            "oneOf": [{ "enum": ["blank-submit", "partial-submit"] }, { "type": "null" }]
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
           },
-          "forceInclude": { "type": "boolean" },
-          "relatedUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
-          "steps": { "type": "array", "items": { "$ref": "#/$defs/action" } },
-          "selectors": { "type": "object", "additionalProperties": { "type": "string" } },
+          "startUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "pattern": {
+            "oneOf": [
+              {
+                "enum": [
+                  "blank-submit",
+                  "partial-submit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "forceInclude": {
+            "type": "boolean"
+          },
+          "relatedUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/action"
+            }
+          },
+          "selectors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "fields": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["selector"],
+              "required": [
+                "selector"
+              ],
               "properties": {
-                "selector": { "type": "string" },
-                "value": { "type": "string" }
+                "selector": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
               }
             }
           },
-          "stepTimeoutMs": { "type": "integer", "minimum": 100, "maximum": 600000 }
+          "stepTimeoutMs": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 600000
+          }
         }
       }
     },
@@ -287,36 +523,86 @@
         "reporters": {
           "type": "array",
           "items": {
-            "enum": ["json", "markdown", "html", "earl-jsonld", "junit", "portal-export"]
+            "enum": [
+              "json",
+              "markdown",
+              "html",
+              "earl-jsonld",
+              "junit",
+              "portal-export"
+            ]
           },
           "uniqueItems": true
         },
-        "includePasses": { "type": "boolean" },
-        "groupBestPracticeSeparately": { "type": "boolean" },
+        "includePasses": {
+          "type": "boolean"
+        },
+        "groupBestPracticeSeparately": {
+          "type": "boolean"
+        },
         "markdownReport": {
           "type": "boolean",
           "description": "Legacy alias for `reporters: [markdown]`; ignored when `reporters` is set."
         },
-        "screenshotFormat": { "enum": ["png", "jpeg"] },
-        "screenshotQuality": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "screenshotFormat": {
+          "enum": [
+            "png",
+            "jpeg"
+          ]
+        },
+        "screenshotQuality": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
         "failOnFindings": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "impacts": {
               "type": "array",
-              "items": { "enum": ["critical", "serious", "moderate", "minor"] },
+              "items": {
+                "enum": [
+                  "critical",
+                  "serious",
+                  "moderate",
+                  "minor"
+                ]
+              },
               "uniqueItems": true
             },
             "classifications": {
               "type": "array",
               "items": {
-                "enum": ["primary-automated-finding", "best-practice-or-manual-review"]
+                "enum": [
+                  "primary-automated-finding",
+                  "best-practice-or-manual-review"
+                ]
               },
               "uniqueItems": true
             },
-            "threshold": { "type": "integer", "minimum": 0 }
+            "threshold": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
+        },
+        "validateExports": {
+          "type": "string",
+          "enum": [
+            "off",
+            "warn",
+            "error"
+          ],
+          "default": "warn",
+          "description": "Write-time validation of exporter payloads against their vendored contracts (currently portal-export). 'warn' logs schema violations and still writes; 'error' makes the reporter fail instead of emitting an invalid file; 'off' skips the check."
+        },
+        "maxIncompleteExamplesPerRule": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 25,
+          "description": "Per-rule cap on condensed { target, html, failureSummary } examples retained for axe incomplete (needs-review) results in axe-results.json / process-results.json. nodesCount always keeps the true total; the cap only bounds carried evidence."
         }
       }
     },
@@ -325,22 +611,45 @@
       "additionalProperties": false,
       "properties": {
         "storageState": {
-          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "object" }]
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object"
+            }
+          ]
         },
         "httpCredentials": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["username", "password"],
+          "required": [
+            "username",
+            "password"
+          ],
           "properties": {
-            "username": { "type": "string" },
-            "password": { "type": "string" }
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
           }
         },
-        "setupScript": { "type": "string", "minLength": 1 },
-        "ttlMinutes": { "type": "integer", "minimum": 1 },
+        "setupScript": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ttlMinutes": {
+          "type": "integer",
+          "minimum": 1
+        },
         "extraHttpHeaders": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -353,15 +662,43 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "name": { "type": "string" },
-            "contact": { "type": "string" }
+            "name": {
+              "type": "string"
+            },
+            "contact": {
+              "type": "string"
+            }
           }
         },
-        "wcagVersion": { "enum": ["2.0", "2.1", "2.2"] },
-        "conformanceTarget": { "enum": ["A", "AA", "AAA"] },
-        "atBaseline": { "type": "array", "items": { "type": "string" } },
-        "technologiesReliedUpon": { "type": "array", "items": { "type": "string" } },
-        "samplingMethodNotes": { "type": "string" }
+        "wcagVersion": {
+          "enum": [
+            "2.0",
+            "2.1",
+            "2.2"
+          ]
+        },
+        "conformanceTarget": {
+          "enum": [
+            "A",
+            "AA",
+            "AAA"
+          ]
+        },
+        "atBaseline": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "technologiesReliedUpon": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "samplingMethodNotes": {
+          "type": "string"
+        }
       }
     }
   },
@@ -369,19 +706,48 @@
     "action": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
-          "enum": ["goto", "click", "fill", "press", "waitFor", "screenshot", "axe"]
+          "enum": [
+            "goto",
+            "click",
+            "fill",
+            "press",
+            "waitFor",
+            "screenshot",
+            "axe"
+          ]
         },
-        "url": { "type": "string" },
-        "selector": { "type": "string" },
-        "value": { "type": "string" },
-        "key": { "type": "string" },
-        "name": { "type": "string" },
-        "state": { "type": "string" },
-        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 600000 },
-        "urlPattern": { "type": "string", "validRegex": true }
+        "url": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 600000
+        },
+        "urlPattern": {
+          "type": "string",
+          "validRegex": true
+        }
       }
     }
   }

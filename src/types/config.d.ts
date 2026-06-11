@@ -185,6 +185,14 @@ export interface WCAGEMAccessibilityToolkitConfig {
       classifications?: ("primary-automated-finding" | "best-practice-or-manual-review")[];
       threshold?: number;
     };
+    /**
+     * Write-time validation of exporter payloads against their vendored contracts (currently portal-export). 'warn' logs schema violations and still writes; 'error' makes the reporter fail instead of emitting an invalid file; 'off' skips the check.
+     */
+    validateExports?: "off" | "warn" | "error";
+    /**
+     * Per-rule cap on condensed { target, html, failureSummary } examples retained for axe incomplete (needs-review) results in axe-results.json / process-results.json. nodesCount always keeps the true total; the cap only bounds carried evidence.
+     */
+    maxIncompleteExamplesPerRule?: number;
   };
   auth?: {
     storageState?:

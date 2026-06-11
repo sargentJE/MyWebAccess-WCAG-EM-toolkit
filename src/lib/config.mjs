@@ -132,6 +132,12 @@ const DEFAULTS = {
       classifications: [],
       threshold: 1,
     },
+    // Write-time export validation ('warn' logs + writes; 'error' fails the
+    // reporter instead of emitting an invalid file) and the per-rule cap on
+    // condensed incomplete-evidence examples (2026-06 review C2/C4 +
+    // board P1 size-cap item). nodesCount always keeps the true total.
+    validateExports: 'warn',
+    maxIncompleteExamplesPerRule: 25,
   },
   // WCAG-EM Step 5 report metadata. `toWcagEmSummary`
   // reads these fields into the emitted `wcag-em-summary.json` alongside

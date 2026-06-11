@@ -29,14 +29,28 @@
 // SECTION: Imports
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import Ajv2020Module from 'ajv/dist/2020.js';
+import addFormatsModule from 'ajv-formats';
 import { writeJson, readJsonMaybe } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { sortFindings } from './_sort.mjs';
+
+const Ajv2020 = /** @type {any} */ (Ajv2020Module).default ?? /** @type {any} */ (Ajv2020Module);
+const addFormats =
+  /** @type {any} */ (addFormatsModule).default ?? /** @type {any} */ (addFormatsModule);
 
 // SECTION: Module identity
 export const name = 'portal-export';
 
 // SECTION: Constants
+
+/**
+ * The portal truncates every evidence string (top-level html, instance
+ * htmlSnippet, failureSummary) at 2000 chars during ingestion and emits an
+ * EVIDENCE_TRUNCATED warning. Trimming at build keeps the payload identical
+ * to what the portal will store and the upload warning-free.
+ */
+const PORTAL_EVIDENCE_MAX_CHARS = 2000;
 
 /**
  * axe impact -> portal { priorityLabel, distribution bucket }. `null` impact
@@ -80,6 +94,69 @@ function deriveCategory(tags) {
 }
 
 /**
+ * Pre-trim an evidence string to the portal's ingestion limit; non-strings
+ * pass through unchanged (callers preserve their own null handling).
+ *
+ * @param {any} value
+ * @returns {any}
+ */
+function trimEvidence(value) {
+  return typeof value === 'string' && value.length > PORTAL_EVIDENCE_MAX_CHARS
+    ? value.slice(0, PORTAL_EVIDENCE_MAX_CHARS)
+    : value;
+}
+
+/**
+ * Count adjudication outcomes so `averageScore` ships with its basis. The
+ * 2026-06 review's live run exported `averageScore: 50` while 36 of 50
+ * criteria were notTested, with nothing in the payload conveying that the
+ * score rested on 12 adjudicated criteria (finding C3). `untested` (the
+ * defensive decideOutcome fallback) folds into `notTested` — both mean "no
+ * adjudication" to a consumer.
+ *
+ * @param {Array<{ outcome?: string }>} [outcomes]
+ * @returns {{ passed: number, failed: number, cantTell: number, inapplicable: number, notTested: number }}
+ */
+function computeScoreBasis(outcomes) {
+  const basis = { passed: 0, failed: 0, cantTell: 0, inapplicable: 0, notTested: 0 };
+  if (!Array.isArray(outcomes)) return basis;
+  for (const o of outcomes) {
+    const key = o?.outcome === 'untested' ? 'notTested' : o?.outcome;
+    if (typeof key === 'string' && key in basis) {
+      basis[/** @type {keyof typeof basis} */ (key)] += 1;
+    }
+  }
+  return basis;
+}
+
+// SECTION: Contract validation
+
+/** @type {any} */
+let portalValidator = null;
+
+/**
+ * Lazily compile the vendored canonical-scan schema (Ajv2020, mirroring
+ * `validate-config.mjs`). Compiled once per process; reporters are
+ * short-lived so the cache is a per-run cost saving, not a staleness risk.
+ *
+ * @returns {Promise<any>} compiled Ajv validate function
+ */
+async function getPortalValidator() {
+  if (!portalValidator) {
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    addFormats(ajv);
+    const schema = JSON.parse(
+      await fs.readFile(
+        new URL('../../schemas/portal-canonical-scan.schema.json', import.meta.url),
+        'utf8',
+      ),
+    );
+    portalValidator = ajv.compile(schema);
+  }
+  return portalValidator;
+}
+
+/**
  * 0-100 compliance estimate: passed / (passed + failed), rounded. Counts only
  * adjudicated verdicts — `cantTell`/`untested`/`notTested`/`inapplicable` are
  * non-decisions and excluded. Returns `null` when nothing was scored; the
@@ -109,10 +186,10 @@ function computeAverageScore(outcomes) {
  *
  * @param {Record<string, any>} f
  * @param {string | null} selector
- * @returns {Array<{ url: string, selector: string|null, evidence?: { html: string|null } }>}
+ * @returns {Array<{ url: string, selector: string|null, evidence?: { html: string|null, failureSummary: string|null } }>}
  */
 function buildInstances(f, selector) {
-  /** @type {Map<string, { url: string, selector: string|null, evidence?: { html: string|null } }>} */
+  /** @type {Map<string, { url: string, selector: string|null, evidence?: { html: string|null, failureSummary: string|null } }>} */
   const byUrl = new Map();
   for (const url of Array.isArray(f.pages) ? f.pages : []) {
     if (typeof url === 'string') byUrl.set(url, { url, selector });
@@ -122,7 +199,14 @@ function buildInstances(f, selector) {
     if (typeof url !== 'string') continue;
     // First example per URL wins, matching the top-level evidence (examples[0]).
     if (byUrl.get(url)?.evidence) continue;
-    byUrl.set(url, { url, selector: ex.target ?? selector, evidence: { html: ex.html ?? null } });
+    byUrl.set(url, {
+      url,
+      selector: ex.target ?? selector,
+      evidence: {
+        html: trimEvidence(ex.html ?? null),
+        failureSummary: trimEvidence(ex.failureSummary ?? null),
+      },
+    });
   }
   return [...byUrl.values()].sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));
 }
@@ -144,24 +228,41 @@ async function loadInstanceMap(ctx) {
   const incompletes = new Map();
   const dir = ctx?.paths?.resultsDir;
   if (typeof dir !== 'string') return { violations, incompletes };
-  /** @type {(map: Map<string, any[]>, id: any, url: string, selector: string|null, html: any) => void} */
-  const push = (map, id, url, selector, html) => {
+  /** @type {(map: Map<string, any[]>, id: any, url: string, selector: string|null, html: any, failureSummary: any) => void} */
+  const push = (map, id, url, selector, html, failureSummary) => {
     if (typeof id !== 'string') return;
     if (!map.has(id)) map.set(id, []);
     /** @type {any[]} */ (map.get(id)).push({
       url,
       selector,
-      evidence: { html: typeof html === 'string' ? html : null },
+      evidence: {
+        html: typeof html === 'string' ? trimEvidence(html) : null,
+        failureSummary: typeof failureSummary === 'string' ? trimEvidence(failureSummary) : null,
+      },
     });
   };
   /** @type {(id: any, url: string, node: any) => void} */
   const addViolationNode = (id, url, node) => {
     const target = Array.isArray(node?.target) ? node.target : [];
-    push(violations, id, url, target.length ? target.join(' | ') : null, node?.html);
+    push(
+      violations,
+      id,
+      url,
+      target.length ? target.join(' | ') : null,
+      node?.html,
+      node?.failureSummary,
+    );
   };
   /** @type {(id: any, url: string, ex: any) => void} */
   const addIncompleteExample = (id, url, ex) => {
-    push(incompletes, id, url, typeof ex?.target === 'string' ? ex.target : null, ex?.html);
+    push(
+      incompletes,
+      id,
+      url,
+      typeof ex?.target === 'string' ? ex.target : null,
+      ex?.html,
+      ex?.failureSummary,
+    );
   };
   /** @type {(entry: any, url: string) => void} */
   const ingest = (entry, url) => {
@@ -240,7 +341,12 @@ function toRawFinding(f, instanceMap) {
     selector,
     wcag: Array.isArray(f.wcagCriteria) ? f.wcagCriteria : [],
     evidence: ex
-      ? { html: ex.html ?? null, pageUrl: ex.pageUrl ?? null, target: ex.target ?? null }
+      ? {
+          html: trimEvidence(ex.html ?? null),
+          pageUrl: ex.pageUrl ?? null,
+          target: ex.target ?? null,
+          failureSummary: trimEvidence(ex.failureSummary ?? null),
+        }
       : null,
     confidence: bestPractice ? 'manual-review' : 'automated',
     occurrenceCount: instances.length,
@@ -283,12 +389,18 @@ function toIncompleteRawFinding(f, incompleteMap) {
     selector,
     wcag: Array.isArray(f.wcagCriteria) ? f.wcagCriteria : [],
     evidence: ex
-      ? { html: ex.html ?? null, pageUrl: ex.pageUrl ?? null, target: ex.target ?? null }
+      ? {
+          html: trimEvidence(ex.html ?? null),
+          pageUrl: ex.pageUrl ?? null,
+          target: ex.target ?? null,
+          failureSummary: trimEvidence(ex.failureSummary ?? null),
+        }
       : selector
         ? {
             html: null,
             pageUrl: Array.isArray(f.pages) ? (f.pages[0] ?? null) : null,
             target: selector,
+            failureSummary: null,
           }
         : null,
     confidence: 'manual-review',
@@ -366,7 +478,14 @@ export async function emit(summary, ctx) {
     if (entry) distribution[entry.bucket] += 1;
   }
   const totalIssues = compliance.length;
-  const averageScore = computeAverageScore(summary.wcagEmSummary?.criteriaOutcomes);
+  const criteriaOutcomes = summary.wcagEmSummary?.criteriaOutcomes;
+  const averageScore = computeAverageScore(criteriaOutcomes);
+  // scoreBasis ships whenever per-SC outcomes exist so the dashboard score
+  // carries its adjudication context (how many SCs were actually decided).
+  const scoreBasis =
+    Array.isArray(criteriaOutcomes) && criteriaOutcomes.length
+      ? computeScoreBasis(criteriaOutcomes)
+      : null;
 
   // Confirmed violations + best-practice (manual-review) + needs-review
   // (manual-review). Only `compliance` feeds totalIssues/distribution.
@@ -376,6 +495,9 @@ export async function emit(summary, ctx) {
     ...incompletes.map((f) => toIncompleteRawFinding(f, instanceMap.incompletes)),
   ];
   warnOnMissingCriticalEvidence(rawFindings, ctx?.logger);
+  // The portal derives this count when absent; sending it makes the toolkit
+  // the source of record for its own manual-review split.
+  const manualReviewIssues = rawFindings.filter((r) => r.countsTowardCompliance === false).length;
 
   const out = {
     scanMetadata: {
@@ -403,12 +525,36 @@ export async function emit(summary, ctx) {
     summary: {
       totalIssues,
       reportedTotal: rawFindings.length,
+      manualReviewIssues,
       ...(totalIssues > 0 ? { distribution } : {}),
       ...(averageScore !== null ? { averageScore } : {}),
+      ...(scoreBasis ? { scoreBasis } : {}),
       scoreSource: 'wcag-em-criterion-outcomes',
     },
     rawFindings,
   };
+
+  // ANCHOR: ValidateExports — write-time contract gate (2026-06 review C4).
+  // 'warn' (default) logs violations and still writes — the warning is the
+  // signal, matching warnOnMissingCriticalEvidence; 'error' fails the
+  // reporter instead of emitting an invalid file (runReporters isolates the
+  // failure per-reporter); 'off' skips the check entirely.
+  const validateMode = ctx?.config?.reporting?.validateExports ?? 'warn';
+  if (validateMode !== 'off') {
+    const validate = await getPortalValidator();
+    if (!validate(out)) {
+      const issues = (validate.errors ?? [])
+        .map((/** @type {any} */ e) => `${e.instancePath || '/'} ${e.message}`)
+        .join('; ');
+      if (validateMode === 'error') {
+        throw new Error(`portal-export: payload fails the vendored contract: ${issues}`);
+      }
+      ctx?.logger?.warn?.(
+        { reporter: 'portal-export', issues },
+        'portal-export: payload fails the vendored contract; writing anyway (reporting.validateExports=warn)',
+      );
+    }
+  }
 
   const filePath = path.join(ctx.paths.reportsDir, 'portal-export.json');
   await writeJson(filePath, out);

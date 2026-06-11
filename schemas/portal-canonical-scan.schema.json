@@ -2,68 +2,209 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/jamiesargent/wcag-em-a11y-toolkit/schema/portal-canonical-scan.schema.json",
   "title": "MyAccess Portal canonical-scan payload",
-  "$comment": "Empirically derived from MyAccess Portal upload behaviour (the `portal-export` reporter target). NOT an official portal schema — it guards `portal-export.json` against regressions in the contract we have confirmed via live uploads, and cannot predict undiscovered portal requirements. See the portal-export reporter and docs/adr/0007-wcag-em-summary-shape.md.",
+  "$comment": "Empirically derived from MyAccess Portal upload behaviour (the `portal-export` reporter target). NOT an official portal schema \u2014 it guards `portal-export.json` against regressions in the contract we have confirmed via live uploads, and cannot predict undiscovered portal requirements. See the portal-export reporter and docs/adr/0007-wcag-em-summary-shape.md.",
   "type": "object",
-  "required": ["scanMetadata", "summary", "rawFindings"],
+  "required": [
+    "scanMetadata",
+    "summary",
+    "rawFindings"
+  ],
   "properties": {
     "scanMetadata": {
       "type": "object",
-      "required": ["url", "timestamp"],
+      "required": [
+        "url",
+        "timestamp"
+      ],
       "properties": {
         "url": {
           "type": "string",
           "pattern": "^https?://",
-          "description": "Root URL — must be a valid http(s) URL or the adapter rejects the payload."
+          "description": "Root URL \u2014 must be a valid http(s) URL or the adapter rejects the payload."
         },
-        "timestamp": { "type": "string", "minLength": 1 },
-        "tool": { "type": "string" },
-        "toolVersion": { "type": ["string", "null"] },
-        "scanOptions": { "type": "object" }
+        "timestamp": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tool": {
+          "type": "string"
+        },
+        "toolVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scanOptions": {
+          "type": "object"
+        }
       }
     },
     "summary": {
       "type": "object",
-      "required": ["totalIssues", "reportedTotal", "scoreSource"],
+      "required": [
+        "totalIssues",
+        "reportedTotal",
+        "scoreSource"
+      ],
       "properties": {
-        "totalIssues": { "type": "integer", "minimum": 0 },
-        "reportedTotal": { "type": "integer", "minimum": 0 },
+        "totalIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reportedTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
         "distribution": {
           "type": "object",
-          "required": ["critical", "high", "medium", "low"],
+          "required": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ],
           "properties": {
-            "critical": { "type": "integer", "minimum": 0 },
-            "high": { "type": "integer", "minimum": 0 },
-            "medium": { "type": "integer", "minimum": 0 },
-            "low": { "type": "integer", "minimum": 0 }
+            "critical": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
-        "averageScore": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
-        "scoreSource": { "const": "wcag-em-criterion-outcomes" }
+        "averageScore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scoreSource": {
+          "const": "wcag-em-criterion-outcomes"
+        },
+        "manualReviewIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scoreBasis": {
+          "type": "object",
+          "description": "Adjudication context for averageScore: how many WCAG criteria landed in each outcome. untested folds into notTested.",
+          "properties": {
+            "passed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cantTell": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inapplicable": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "notTested": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "passed",
+            "failed",
+            "cantTell",
+            "inapplicable",
+            "notTested"
+          ]
+        }
       }
     },
     "rawFindings": {
       "type": "array",
-      "items": { "$ref": "#/$defs/rawFinding" }
+      "items": {
+        "$ref": "#/$defs/rawFinding"
+      }
     }
   },
   "$defs": {
     "evidence": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "properties": {
-        "html": { "type": ["string", "null"] },
-        "pageUrl": { "type": ["string", "null"] },
-        "target": { "type": ["string", "null"] }
+        "html": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pageUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "failureSummary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "instance": {
       "type": "object",
-      "required": ["url"],
+      "required": [
+        "url"
+      ],
       "properties": {
-        "url": { "type": "string", "minLength": 1 },
-        "selector": { "type": ["string", "null"] },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "evidence": {
           "type": "object",
-          "properties": { "html": { "type": ["string", "null"] } }
+          "properties": {
+            "html": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "failureSummary": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         }
       }
     },
@@ -81,47 +222,133 @@
         "instances"
       ],
       "properties": {
-        "ruleId": { "type": "string", "minLength": 1 },
-        "impact": { "enum": ["critical", "serious", "moderate", "minor"] },
-        "priorityLabel": { "enum": ["Critical", "High", "Medium", "Low"] },
-        "message": { "type": "string", "minLength": 1 },
-        "description": { "type": ["string", "null"] },
-        "selector": { "type": ["string", "null"] },
-        "wcag": { "type": "array", "items": { "type": "string" } },
-        "evidence": { "$ref": "#/$defs/evidence" },
-        "confidence": { "enum": ["automated", "manual-review"] },
-        "occurrenceCount": { "type": "integer", "minimum": 0 },
-        "countsTowardCompliance": { "type": "boolean" },
-        "findingKind": { "enum": ["violation", "manual-review"] },
-        "instances": { "type": "array", "items": { "$ref": "#/$defs/instance" } },
-        "taxonomy": { "type": "object" }
+        "ruleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "impact": {
+          "enum": [
+            "critical",
+            "serious",
+            "moderate",
+            "minor"
+          ]
+        },
+        "priorityLabel": {
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wcag": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "confidence": {
+          "enum": [
+            "automated",
+            "manual-review"
+          ]
+        },
+        "occurrenceCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "countsTowardCompliance": {
+          "type": "boolean"
+        },
+        "findingKind": {
+          "enum": [
+            "violation",
+            "manual-review"
+          ]
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/instance"
+          }
+        },
+        "taxonomy": {
+          "type": "object"
+        }
       },
       "allOf": [
         {
           "$comment": "Critical/High findings must carry an HTML snippet at the finding level AND on at least one instance, or the portal flags them as missing evidence.html / instance htmlSnippet.",
           "if": {
-            "properties": { "impact": { "enum": ["critical", "serious"] } },
-            "required": ["impact"]
+            "properties": {
+              "impact": {
+                "enum": [
+                  "critical",
+                  "serious"
+                ]
+              }
+            },
+            "required": [
+              "impact"
+            ]
           },
           "then": {
-            "required": ["evidence"],
+            "required": [
+              "evidence"
+            ],
             "properties": {
               "evidence": {
                 "type": "object",
-                "required": ["html"],
-                "properties": { "html": { "type": "string", "minLength": 1 } }
+                "required": [
+                  "html"
+                ],
+                "properties": {
+                  "html": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
               },
               "instances": {
                 "type": "array",
                 "minItems": 1,
                 "contains": {
                   "type": "object",
-                  "required": ["evidence"],
+                  "required": [
+                    "evidence"
+                  ],
                   "properties": {
                     "evidence": {
                       "type": "object",
-                      "required": ["html"],
-                      "properties": { "html": { "type": "string", "minLength": 1 } }
+                      "required": [
+                        "html"
+                      ],
+                      "properties": {
+                        "html": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
                     }
                   }
                 }

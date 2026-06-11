@@ -65,24 +65,44 @@ export function liftRuleSummaries(rules) {
 }
 
 /**
- * Like `liftRuleSummaries` but ALSO retains a condensed `{ target, html }`
- * slice of every node as `examples`, so axe "incomplete" (needs-review)
- * findings carry HTML evidence downstream. Used ONLY for `incomplete` results —
- * passes/inapplicable stay lean via `liftRuleSummaries`. A strict superset of
- * the 7-key shape (nothing removed), so ADR-0007's `nodesCount`/`firstTarget`
- * contract is preserved. Pure.
+ * Default per-rule cap on retained incomplete examples. ADR-0016 accepted
+ * unbounded condensed examples on the grounds that incompletes are few; the
+ * 2026-06 review's live run hit 32 occurrences on a single rule, so the
+ * artefact is now bounded here at the source (config knob
+ * `reporting.maxIncompleteExamplesPerRule`). `nodesCount` keeps the TRUE
+ * total, so downstream occurrence counting is unaffected by the cap.
+ */
+export const DEFAULT_MAX_INCOMPLETE_EXAMPLES = 25;
+
+/**
+ * Like `liftRuleSummaries` but ALSO retains a condensed
+ * `{ target, html, failureSummary }` slice of the first `maxExamples` nodes
+ * as `examples`, so axe "incomplete" (needs-review) findings carry evidence
+ * downstream. `failureSummary` is axe's own human-readable diagnosis of WHY
+ * the node needs review — the portal displays it when provided (2026-06
+ * review C4). Used ONLY for `incomplete` results — passes/inapplicable stay
+ * lean via `liftRuleSummaries`. A strict superset of the 7-key shape
+ * (nothing removed), so ADR-0007's `nodesCount`/`firstTarget` contract is
+ * preserved. Pure.
  *
  * @param {Array<{ id?: string, tags?: string[], impact?: string|null, help?: string, helpUrl?: string, nodes?: any[] }>} rules
- * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null, examples: Array<{ target: string|null, html: string|null }> }>}
+ * @param {number} [maxExamples] - Per-rule example cap; defaults to
+ *   `DEFAULT_MAX_INCOMPLETE_EXAMPLES`.
+ * @returns {Array<{ id: string, tags: string[], impact: string|null, nodesCount: number, help: string, helpUrl: string, firstTarget: string|null, examples: Array<{ target: string|null, html: string|null, failureSummary: string|null }> }>}
  */
-export function liftIncompleteSummaries(rules) {
+export function liftIncompleteSummaries(rules, maxExamples = DEFAULT_MAX_INCOMPLETE_EXAMPLES) {
   if (!Array.isArray(rules)) return [];
+  const cap =
+    Number.isFinite(maxExamples) && maxExamples >= 0
+      ? maxExamples
+      : DEFAULT_MAX_INCOMPLETE_EXAMPLES;
   return rules.map((r) => {
     const base = liftRuleSummaries([r])[0];
     const nodes = Array.isArray(r.nodes) ? r.nodes : [];
-    const examples = nodes.map((n) => ({
+    const examples = nodes.slice(0, cap).map((n) => ({
       target: joinTarget(n),
       html: typeof n?.html === 'string' ? n.html : null,
+      failureSummary: typeof n?.failureSummary === 'string' ? n.failureSummary : null,
     }));
     return { ...base, examples };
   });
