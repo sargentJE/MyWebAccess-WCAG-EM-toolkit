@@ -50,6 +50,7 @@ function buildStepCtx(overrides = {}) {
   const fill = mock.fn(anyAsync);
   const press = mock.fn(anyAsync);
   const waitForTimeout = mock.fn(anyAsync);
+  const waitForSelector = mock.fn(anyAsync);
   const screenshot = mock.fn(anyAsync);
   const goto = mock.fn(anyAsync);
 
@@ -60,6 +61,7 @@ function buildStepCtx(overrides = {}) {
     }),
     keyboard: { press },
     waitForTimeout,
+    waitForSelector,
     screenshot,
   };
 
@@ -88,7 +90,7 @@ function buildStepCtx(overrides = {}) {
     viewport: { id: 'desktop', width: 1280, height: 800 },
   });
 
-  return { ctx, mocks: { goto, click, fill, press, waitForTimeout, screenshot } };
+  return { ctx, mocks: { goto, click, fill, press, waitForTimeout, waitForSelector, screenshot } };
 }
 
 // SECTION: Routing tests
@@ -127,6 +129,42 @@ test('waitFor action calls page.waitForTimeout', async () => {
   await runStep({ action: 'waitFor', timeoutMs: 100 }, ctx);
   assert.strictEqual(mocks.waitForTimeout.mock.calls.length, 1);
   assert.strictEqual(mocks.waitForTimeout.mock.calls[0].arguments[0], 100);
+});
+
+test('waitFor with a selector polls page.waitForSelector, not the sleep path', async () => {
+  const { ctx, mocks } = buildStepCtx({ timeoutMs: 5000 });
+  const result = await runStep({ action: 'waitFor', selector: '[data-hydrated]' }, ctx);
+  assert.strictEqual(result, null, 'successful selector wait produces no state entry');
+  assert.strictEqual(mocks.waitForSelector.mock.calls.length, 1);
+  assert.strictEqual(mocks.waitForSelector.mock.calls[0].arguments[0], '[data-hydrated]');
+  // No explicit step.timeoutMs -> the shared step budget (scan.timeoutMs).
+  assert.deepStrictEqual(mocks.waitForSelector.mock.calls[0].arguments[1], { timeout: 5000 });
+  assert.strictEqual(mocks.waitForTimeout.mock.calls.length, 0, 'sleep path must not run');
+});
+
+test('waitFor with selector + timeoutMs passes the explicit timeout through', async () => {
+  const { ctx, mocks } = buildStepCtx({ timeoutMs: 5000 });
+  await runStep({ action: 'waitFor', selector: '#app', timeoutMs: 250 }, ctx);
+  assert.deepStrictEqual(mocks.waitForSelector.mock.calls[0].arguments[1], { timeout: 250 });
+});
+
+test('waitFor with neither selector nor timeoutMs sleeps the 500ms default', async () => {
+  const { ctx, mocks } = buildStepCtx();
+  await runStep({ action: 'waitFor' }, ctx);
+  assert.strictEqual(mocks.waitForSelector.mock.calls.length, 0);
+  assert.strictEqual(mocks.waitForTimeout.mock.calls[0].arguments[0], 500);
+});
+
+test('a failing waitForSelector surfaces as state: error (absorbed, not thrown)', async () => {
+  const { ctx } = buildStepCtx();
+  ctx.page.waitForSelector = mock.fn(
+    /** @type {any} */ (() => Promise.reject(new Error('Timeout 250ms exceeded'))),
+  );
+  const result = await runStep({ action: 'waitFor', selector: '#never', timeoutMs: 250 }, ctx);
+  assert.ok(result);
+  assert.strictEqual(result.state, 'error');
+  assert.strictEqual(result.name, 'waitFor');
+  assert.match(result.error ?? '', /Timeout 250ms exceeded/);
 });
 
 // SECTION: fullPageScreenshots propagation

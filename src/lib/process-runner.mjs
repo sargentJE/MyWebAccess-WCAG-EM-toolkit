@@ -211,6 +211,19 @@ async function dispatch(step, ctx) {
       return null;
 
     case 'waitFor':
+      // NOTE: selector-aware since the 2026-06 review (finding C5): with a
+      // selector, poll the DOM for it — the hydration-marker behaviour the
+      // README's SPA guidance documents; without one, fall back to the fixed
+      // sleep. An explicit step.timeoutMs wins; otherwise the shared step
+      // budget applies so the rejectAfter race in runStep stays the single
+      // outer bound.
+      // LINK: README.md → "Configuring for SPAs"
+      if (typeof step.selector === 'string' && step.selector.length > 0) {
+        await page.waitForSelector(step.selector, {
+          timeout: step.timeoutMs ?? Number(config?.scan?.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS),
+        });
+        return null;
+      }
       await page.waitForTimeout(step.timeoutMs ?? 500);
       return null;
 
