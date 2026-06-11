@@ -318,7 +318,7 @@ function buildScreenshotAlt(url, screenshotPath) {
  * absolute paths. Empty Map if the file is missing or unreadable —
  * the reporter degrades gracefully rather than failing the whole run.
  *
- * @param {{ paths: { resultsDir?: string } }} ctx
+ * @param {{ paths: { resultsDir?: string }, logger?: { warn?: Function } }} ctx
  * @returns {Promise<Map<string, string[]>>}
  */
 async function loadScreenshotMap(ctx) {
@@ -329,6 +329,7 @@ async function loadScreenshotMap(ctx) {
   const axeResults = await readJsonMaybe(
     path.join(ctx.paths.resultsDir, 'axe-results.json'),
     [],
+    /** @type {any} */ (ctx?.logger),
   );
   for (const entry of axeResults) {
     const url = typeof entry?.url === 'string' ? normalizeUrl(entry.url) : null;

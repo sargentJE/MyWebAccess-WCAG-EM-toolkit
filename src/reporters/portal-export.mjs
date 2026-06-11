@@ -134,7 +134,7 @@ function buildInstances(f, selector) {
  * (url, selector) and sorted. Empty Map when `resultsDir` is absent or the
  * files are missing/unreadable — callers then fall back to per-page rows.
  *
- * @param {{ paths?: { resultsDir?: string } }} ctx
+ * @param {{ paths?: { resultsDir?: string }, logger?: { warn?: Function } }} ctx
  * @returns {Promise<{ violations: Map<string, any[]>, incompletes: Map<string, any[]> }>}
  */
 async function loadInstanceMap(ctx) {
@@ -173,14 +173,15 @@ async function loadInstanceMap(ctx) {
         addIncompleteExample(inc?.id, url, ex);
     }
   };
+  const logger = /** @type {any} */ (ctx?.logger);
   /** @type {any[]} */
-  const axe = await readJsonMaybe(path.join(dir, 'axe-results.json'), []);
+  const axe = await readJsonMaybe(path.join(dir, 'axe-results.json'), [], logger);
   for (const entry of Array.isArray(axe) ? axe : []) {
     const url = typeof entry?.url === 'string' ? normalizeUrl(entry.url) : null;
     if (url) ingest(entry, url);
   }
   /** @type {any[]} */
-  const proc = await readJsonMaybe(path.join(dir, 'process-results.json'), []);
+  const proc = await readJsonMaybe(path.join(dir, 'process-results.json'), [], logger);
   for (const entry of Array.isArray(proc) ? proc : []) {
     const url = typeof entry?.startUrl === 'string' ? normalizeUrl(entry.startUrl) : null;
     if (!url) continue;

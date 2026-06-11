@@ -99,16 +99,30 @@ export async function run(ctx) {
 
   /** @type {[any[], Record<string, any>, any[], any[], Record<string, string[]>]} */
   const [inventory, sampleMetadata, axeResults, processResults, actMap] = await Promise.all([
-    readJsonMaybe(path.join(paths.inventoryDir, 'inventory.json'), /** @type {any[]} */ ([])),
+    readJsonMaybe(
+      path.join(paths.inventoryDir, 'inventory.json'),
+      /** @type {any[]} */ ([]),
+      logger,
+    ),
     readJsonMaybe(
       path.join(paths.inventoryDir, 'sample-metadata.json'),
       /** @type {Record<string, any>} */ ({}),
+      logger,
     ),
-    readJsonMaybe(path.join(paths.resultsDir, 'axe-results.json'), /** @type {any[]} */ ([])),
-    readJsonMaybe(path.join(paths.resultsDir, 'process-results.json'), /** @type {any[]} */ ([])),
+    readJsonMaybe(
+      path.join(paths.resultsDir, 'axe-results.json'),
+      /** @type {any[]} */ ([]),
+      logger,
+    ),
+    readJsonMaybe(
+      path.join(paths.resultsDir, 'process-results.json'),
+      /** @type {any[]} */ ([]),
+      logger,
+    ),
     readJsonMaybe(
       new URL('../data/act-rule-map.json', import.meta.url).pathname,
       /** @type {Record<string, string[]>} */ ({}),
+      logger,
     ),
   ]);
 
