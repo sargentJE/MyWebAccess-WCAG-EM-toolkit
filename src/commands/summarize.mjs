@@ -73,6 +73,149 @@ export function computeExitCode(summary, failOnFindings) {
   return 0;
 }
 
+/**
+ * Build the execution-health block from the raw stage artefacts.
+ *
+ * The scan and scan-processes stages faithfully record their own failures
+ * (`error` on a page-view entry or a process result; non-ok states in
+ * `_preScanStates`), but until the 2026-06 review (finding C1) nothing
+ * consumed them — a WCAG-EM Step 5 report could claim a sample of N pages
+ * when M never loaded. This helper inverts those records into one block plus
+ * human-readable warning strings for the existing scanWarnings channel.
+ *
+ * Counting model: a PAGE may be scanned at several viewports (page-views).
+ * A page with zero failed views is fully scanned; with some failed views it
+ * is degraded (it still contributes findings); with zero successful views it
+ * is failed and contributed nothing to any verdict.
+ *
+ * Pure; exported for testability.
+ *
+ * @param {{
+ *   axeResults?: any[],
+ *   processResults?: any[],
+ *   sampleMetadata?: Record<string, any>,
+ *   inventoryMetadata?: Record<string, any>,
+ * }} args
+ * @returns {{ executionHealth: Record<string, any>, warnings: string[] }}
+ */
+export function buildExecutionHealth({
+  axeResults,
+  processResults,
+  sampleMetadata,
+  inventoryMetadata,
+}) {
+  /** @type {Map<string, { ok: any[], failed: Array<{ viewport: any, error: string, attempts: any }> }>} */
+  const byUrl = new Map();
+  /** @type {Array<{ url: string, viewport: any, action: any, state: string, error: any }>} */
+  const preScanFailures = [];
+  let pageViewsScanned = 0;
+  let pageViewsFailed = 0;
+
+  for (const entry of Array.isArray(axeResults) ? axeResults : []) {
+    const url = normalizeUrl(String(entry?.url ?? ''));
+    let rec = byUrl.get(url);
+    if (!rec) {
+      rec = { ok: [], failed: [] };
+      byUrl.set(url, rec);
+    }
+    if (typeof entry?.error === 'string') {
+      pageViewsFailed += 1;
+      rec.failed.push({
+        viewport: entry.viewport ?? null,
+        error: entry.error,
+        attempts: entry.attempts ?? null,
+      });
+    } else {
+      pageViewsScanned += 1;
+      rec.ok.push(entry.viewport ?? null);
+    }
+    for (const s of Array.isArray(entry?._preScanStates) ? entry._preScanStates : []) {
+      if (s?.state === 'error' || s?.state === 'step-timeout') {
+        preScanFailures.push({
+          url,
+          viewport: entry.viewport ?? null,
+          action: s.name ?? null,
+          state: s.state,
+          error: s.error ?? null,
+        });
+      }
+    }
+  }
+
+  /** @type {Array<{ url: string, failures: any[] }>} */
+  const pagesFailed = [];
+  /** @type {Array<{ url: string, failures: any[] }>} */
+  const pagesDegraded = [];
+  let pagesFullyScanned = 0;
+  for (const [url, rec] of byUrl) {
+    if (rec.failed.length === 0) pagesFullyScanned += 1;
+    else if (rec.ok.length === 0) pagesFailed.push({ url, failures: rec.failed });
+    else pagesDegraded.push({ url, failures: rec.failed });
+  }
+  const byUrlAsc = (/** @type {{ url: string }} */ a, /** @type {{ url: string }} */ b) =>
+    a.url < b.url ? -1 : a.url > b.url ? 1 : 0;
+  pagesFailed.sort(byUrlAsc);
+  pagesDegraded.sort(byUrlAsc);
+  preScanFailures.sort(byUrlAsc);
+
+  /** @type {Array<{ name: any, startUrl: any, error: string }>} */
+  const processFailures = [];
+  for (const proc of Array.isArray(processResults) ? processResults : []) {
+    if (typeof proc?.error === 'string') {
+      processFailures.push({
+        name: proc.name ?? null,
+        startUrl: proc.startUrl ?? null,
+        error: proc.error,
+      });
+    }
+  }
+
+  const maxPagesConfigured = inventoryMetadata?.maxPagesConfigured ?? null;
+  const reachedMaxPages = inventoryMetadata?.reachedMaxPages === true;
+
+  const executionHealth = {
+    sampleListedCount: sampleMetadata?.finalSampleCount ?? null,
+    pagesInSample: byUrl.size,
+    pagesFullyScanned,
+    pagesDegraded,
+    pagesFailed,
+    pageViewsScanned,
+    pageViewsFailed,
+    processFailures,
+    preScanFailures,
+    maxPagesConfigured,
+    reachedMaxPages,
+  };
+
+  /** @type {string[]} */
+  const warnings = [];
+  for (const p of pagesFailed) {
+    warnings.push(
+      `page failed to scan on all viewports: ${p.url} (${p.failures[0]?.error ?? 'unknown error'})`,
+    );
+  }
+  for (const p of pagesDegraded) {
+    warnings.push(
+      `page failed on viewport(s) ${p.failures.map((f) => f.viewport).join(', ')}: ${p.url}`,
+    );
+  }
+  for (const p of processFailures) {
+    warnings.push(`process "${p.name}" failed at ${p.startUrl}: ${p.error}`);
+  }
+  for (const p of preScanFailures) {
+    warnings.push(
+      `pre-scan action "${p.action}" ${p.state} on ${p.url} [${p.viewport}] — axe scanned the page without the intended setup`,
+    );
+  }
+  if (reachedMaxPages) {
+    warnings.push(
+      `crawl stopped at maxPages=${maxPagesConfigured}; the inventory (and therefore the sample) may be truncated`,
+    );
+  }
+
+  return { executionHealth, warnings };
+}
+
 // SECTION: Public API
 
 /**
@@ -97,34 +240,40 @@ export async function run(ctx) {
     });
   }
 
-  /** @type {[any[], Record<string, any>, any[], any[], Record<string, string[]>]} */
-  const [inventory, sampleMetadata, axeResults, processResults, actMap] = await Promise.all([
-    readJsonMaybe(
-      path.join(paths.inventoryDir, 'inventory.json'),
-      /** @type {any[]} */ ([]),
-      logger,
-    ),
-    readJsonMaybe(
-      path.join(paths.inventoryDir, 'sample-metadata.json'),
-      /** @type {Record<string, any>} */ ({}),
-      logger,
-    ),
-    readJsonMaybe(
-      path.join(paths.resultsDir, 'axe-results.json'),
-      /** @type {any[]} */ ([]),
-      logger,
-    ),
-    readJsonMaybe(
-      path.join(paths.resultsDir, 'process-results.json'),
-      /** @type {any[]} */ ([]),
-      logger,
-    ),
-    readJsonMaybe(
-      new URL('../data/act-rule-map.json', import.meta.url).pathname,
-      /** @type {Record<string, string[]>} */ ({}),
-      logger,
-    ),
-  ]);
+  /** @type {[any[], Record<string, any>, any[], any[], Record<string, string[]>, Record<string, any>]} */
+  const [inventory, sampleMetadata, axeResults, processResults, actMap, inventoryMetadata] =
+    await Promise.all([
+      readJsonMaybe(
+        path.join(paths.inventoryDir, 'inventory.json'),
+        /** @type {any[]} */ ([]),
+        logger,
+      ),
+      readJsonMaybe(
+        path.join(paths.inventoryDir, 'sample-metadata.json'),
+        /** @type {Record<string, any>} */ ({}),
+        logger,
+      ),
+      readJsonMaybe(
+        path.join(paths.resultsDir, 'axe-results.json'),
+        /** @type {any[]} */ ([]),
+        logger,
+      ),
+      readJsonMaybe(
+        path.join(paths.resultsDir, 'process-results.json'),
+        /** @type {any[]} */ ([]),
+        logger,
+      ),
+      readJsonMaybe(
+        new URL('../data/act-rule-map.json', import.meta.url).pathname,
+        /** @type {Record<string, string[]>} */ ({}),
+        logger,
+      ),
+      readJsonMaybe(
+        path.join(paths.inventoryDir, 'inventory-metadata.json'),
+        /** @type {Record<string, any>} */ ({}),
+        logger,
+      ),
+    ]);
 
   // ANCHOR: ActMapFallback — announce degraded enrichment once if map is empty.
   // withActAndWcagMetadata is called at every classifyRule call site; if
@@ -416,22 +565,36 @@ export async function run(ctx) {
   // failures that did not elevate to SC verdicts.
   const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults });
 
+  // ANCHOR: ExecutionHealth — invert stage-recorded failures into the summary
+  // (2026-06 review C1). samplePagesScanned counts PAGES with at least one
+  // successful view (fully scanned + degraded); page-views and failures are
+  // carried separately so coverage claims stop conflating the three.
+  const { executionHealth, warnings: executionWarnings } = buildExecutionHealth({
+    axeResults,
+    processResults,
+    sampleMetadata,
+    inventoryMetadata,
+  });
+
   const summary = {
     tool: TOOL_IDENTITY,
     site: config.name,
     generatedAt: new Date().toISOString(),
     inventoryCount: sampleMetadata.inventoryCount ?? inventory.length,
     finalSampleCount: sampleMetadata.finalSampleCount ?? axeResults.length,
-    samplePagesScanned: axeResults.length,
+    samplePagesScanned: executionHealth.pagesFullyScanned + executionHealth.pagesDegraded.length,
+    pageViewsScanned: executionHealth.pageViewsScanned,
     processRuns: processResults.length,
     groupedFindingCount: groupedFindings.length,
     groupedComponentCount: groupedComponents.length,
     comparison,
     findings: groupedFindings,
     incompleteFindings,
-    // Surface infra-failure incompletes in the top-level
-    // summary too, not just the WCAG-EM artefact (cross-consumer visibility).
-    scanWarnings: wcagEmSummary.scanWarnings,
+    executionHealth,
+    // Surface infra-failure incompletes AND execution failures in the
+    // top-level summary too, not just the WCAG-EM artefact (cross-consumer
+    // visibility).
+    scanWarnings: [...wcagEmSummary.scanWarnings, ...executionWarnings],
     wcagEmSummary,
   };
 

@@ -385,9 +385,19 @@ export async function emit(summary, ctx) {
       toolVersion: tool.version ?? null,
       scanOptions: {
         axeVersion: tool.axeCore ?? null,
+        // pagesScanned = unique pages with at least one successful view (the
+        // summarize redefinition, 2026-06 review C1); page-views and the full
+        // execution-health block ride along only when the summary carries
+        // them, so hand-built summaries keep the historical envelope.
         pagesScanned: summary.samplePagesScanned ?? null,
         sampleSize: summary.finalSampleCount ?? null,
         inventorySize: summary.inventoryCount ?? null,
+        ...(typeof summary.pageViewsScanned === 'number'
+          ? { pageViewsScanned: summary.pageViewsScanned }
+          : {}),
+        ...(summary.executionHealth && typeof summary.executionHealth === 'object'
+          ? { executionHealth: summary.executionHealth }
+          : {}),
       },
     },
     summary: {

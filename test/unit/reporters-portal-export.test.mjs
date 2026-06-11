@@ -693,3 +693,35 @@ test('portal-export: does NOT warn when critical/high findings carry evidence', 
   await emitParsed(summary, ctx);
   assert.equal(warnings.length, 0, 'no warning when evidence is present');
 });
+
+test('portal-export: pageViewsScanned + executionHealth ride scanOptions only when present', async (t) => {
+  const { ctx } = await makeCtx(t);
+  // Absent on the summary -> absent from the envelope (historical shape).
+  const { parsed: bare } = await emitParsed(baseSummary(), ctx);
+  assert.ok(!('pageViewsScanned' in bare.scanMetadata.scanOptions));
+  assert.ok(!('executionHealth' in bare.scanMetadata.scanOptions));
+
+  // Present on the summary -> forwarded verbatim.
+  const health = {
+    sampleListedCount: 18,
+    pagesInSample: 18,
+    pagesFullyScanned: 17,
+    pagesDegraded: [],
+    pagesFailed: [
+      { url: 'https://example.com/slow', failures: [{ viewport: 'desktop', error: 'timeout' }] },
+    ],
+    pageViewsScanned: 35,
+    pageViewsFailed: 1,
+    processFailures: [],
+    preScanFailures: [],
+    maxPagesConfigured: 80,
+    reachedMaxPages: false,
+  };
+  const { parsed } = await emitParsed(
+    baseSummary({ samplePagesScanned: 17, pageViewsScanned: 35, executionHealth: health }),
+    ctx,
+  );
+  assert.equal(parsed.scanMetadata.scanOptions.pagesScanned, 17);
+  assert.equal(parsed.scanMetadata.scanOptions.pageViewsScanned, 35);
+  assert.deepEqual(parsed.scanMetadata.scanOptions.executionHealth, health);
+});

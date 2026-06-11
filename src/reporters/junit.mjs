@@ -125,9 +125,33 @@ export async function emit(summary, ctx) {
     }
   }
 
+  // Execution failures — <error> (not <failure>): the page never produced a
+  // scan result, so this is an execution fault, not an accessibility verdict
+  // (2026-06 review C1). Emitted per failed page-view so CI surfaces exactly
+  // which (url x viewport) pairs the audit could not cover.
+  let errorsCount = 0;
+  const health = summary.executionHealth;
+  const failedPages = Array.isArray(health?.pagesFailed) ? health.pagesFailed : [];
+  const degradedPages = Array.isArray(health?.pagesDegraded) ? health.pagesDegraded : [];
+  for (const page of [...failedPages, ...degradedPages]) {
+    for (const failure of Array.isArray(page.failures) ? page.failures : []) {
+      testsCount += 1;
+      errorsCount += 1;
+      const caseName = `${page.url} [${failure.viewport ?? 'viewport'}]`;
+      cases.push(
+        `  <testcase classname="scan" name="${escapeXmlAttr(caseName)}">\n` +
+          `    <error type="scan-failure"><![CDATA[${defuseCdata(String(failure.error ?? 'scan failed'))}]]></error>\n` +
+          `  </testcase>`,
+      );
+    }
+  }
+
+  // NOTE: `errors` is emitted only when non-zero so clean runs keep the exact
+  // historical <testsuite> tag (consumers and tests match it verbatim).
+  const errorsAttr = errorsCount > 0 ? ` errors="${errorsCount}"` : '';
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<testsuite name="WCAG-EM Audit" tests="${testsCount}" failures="${failuresCount}" time="0">\n` +
+    `<testsuite name="WCAG-EM Audit" tests="${testsCount}" failures="${failuresCount}"${errorsAttr} time="0">\n` +
     cases.join('\n') +
     (cases.length > 0 ? '\n' : '') +
     `</testsuite>\n`;

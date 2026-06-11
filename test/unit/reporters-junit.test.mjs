@@ -307,3 +307,33 @@ test('junit reporter: registry now lists junit', () => {
   assert.ok(names.includes('junit'), 'junit registered in the registry');
   assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown', 'portal-export']);
 });
+
+test('junit reporter: execution failures emit <error type="scan-failure"> + errors attribute', async (t) => {
+  const xml = await emitAndRead(t, {
+    findings: [],
+    executionHealth: {
+      pagesFailed: [
+        {
+          url: 'https://example.com/slow',
+          failures: [{ viewport: 'desktop', error: 'page.goto: Timeout 3000ms exceeded' }],
+        },
+      ],
+      pagesDegraded: [
+        {
+          url: 'https://example.com/flaky',
+          failures: [{ viewport: 'reflow', error: 'net::ERR_CONNECTION_RESET' }],
+        },
+      ],
+    },
+  });
+  assert.match(xml, /<testsuite name="WCAG-EM Audit" tests="2" failures="0" errors="2" time="0">/);
+  assert.equal((xml.match(/<error type="scan-failure">/g) ?? []).length, 2);
+  assert.ok(xml.includes('https://example.com/slow [desktop]'));
+  assert.ok(xml.includes('Timeout 3000ms exceeded'));
+});
+
+test('junit reporter: clean runs keep the historical testsuite tag (no errors attribute)', async (t) => {
+  const xml = await emitAndRead(t, { findings: [], executionHealth: { pagesFailed: [], pagesDegraded: [] } });
+  assert.match(xml, /<testsuite name="WCAG-EM Audit" tests="0" failures="0" time="0">/);
+  assert.ok(!xml.includes('errors='), 'errors attribute must be omitted when zero');
+});

@@ -280,6 +280,13 @@ export async function run(ctx) {
     outOfScopeLinkCount: excludedOutOfScope.size,
     excludedByPatternCount: excludedByPattern.size,
     excludedByExtensionCount: excludedByExtension.size,
+    // NOTE: cap visibility (2026-06 review C1). Without these two fields a
+    // reader cannot distinguish "thorough crawl found N pages" from "crawl
+    // hit the ceiling at N" — summarize surfaces reachedMaxPages as a
+    // scan warning so the truncation is visible in every report.
+    maxPagesConfigured: typeof config.crawl?.maxPages === 'number' ? config.crawl.maxPages : null,
+    reachedMaxPages:
+      typeof config.crawl?.maxPages === 'number' && inventory.length >= config.crawl.maxPages,
     generatedAt: new Date().toISOString(),
   });
 

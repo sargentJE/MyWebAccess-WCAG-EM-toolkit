@@ -33,6 +33,60 @@ import { sortFindings } from './_sort.mjs';
 // SECTION: Module identity
 export const name = 'markdown';
 
+// SECTION: Scan health
+
+/**
+ * Render the scan-health section lines, or nothing when the run was clean.
+ * Failed pages contributed NOTHING to any verdict — without this section a
+ * reader of the Step 5 summary cannot tell attempted coverage from achieved
+ * coverage (2026-06 review C1).
+ *
+ * @param {Record<string, any> | undefined} health - `summary.executionHealth`.
+ * @returns {string[]} Markdown lines (empty array when there is nothing to report).
+ */
+function renderScanHealth(health) {
+  if (!health || typeof health !== 'object') return [];
+  const failed = Array.isArray(health.pagesFailed) ? health.pagesFailed : [];
+  const degraded = Array.isArray(health.pagesDegraded) ? health.pagesDegraded : [];
+  const processFailures = Array.isArray(health.processFailures) ? health.processFailures : [];
+  const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
+  const truncated = health.reachedMaxPages === true;
+  if (
+    failed.length === 0 &&
+    degraded.length === 0 &&
+    processFailures.length === 0 &&
+    preScanFailures.length === 0 &&
+    !truncated
+  ) {
+    return [];
+  }
+  const lines = ['## Scan health', ''];
+  if (truncated) {
+    lines.push(
+      `- Crawl stopped at maxPages=${health.maxPagesConfigured}; the inventory (and sample) may be truncated.`,
+    );
+  }
+  for (const p of failed) {
+    lines.push(
+      `- NOT SCANNED (all viewports failed): ${p.url} — ${p.failures?.[0]?.error ?? 'unknown error'}`,
+    );
+  }
+  for (const p of degraded) {
+    const vps = (p.failures ?? []).map((/** @type {any} */ f) => f.viewport).join(', ');
+    lines.push(`- Partially scanned (failed on ${vps}): ${p.url}`);
+  }
+  for (const p of processFailures) {
+    lines.push(`- Process "${p.name}" failed at ${p.startUrl}: ${p.error}`);
+  }
+  for (const p of preScanFailures) {
+    lines.push(
+      `- Pre-scan action "${p.action}" ${p.state} on ${p.url} [${p.viewport}] — page scanned without intended setup.`,
+    );
+  }
+  lines.push('');
+  return lines;
+}
+
 // SECTION: Public API
 
 /**
@@ -69,9 +123,13 @@ export async function emit(summary, ctx) {
     `- Inventory count: ${summary.inventoryCount}`,
     `- Final selected sample: ${summary.finalSampleCount}`,
     `- Sample pages scanned: ${summary.samplePagesScanned}`,
+    ...(typeof summary.pageViewsScanned === 'number'
+      ? [`- Page views scanned (pages x viewports): ${summary.pageViewsScanned}`]
+      : []),
     `- Process runs: ${summary.processRuns}`,
     `- Grouped findings: ${summary.groupedFindingCount}`,
     '',
+    ...renderScanHealth(summary.executionHealth),
     '## Random vs structured sample comparison',
     '',
     `- New rule IDs found only in random sample: ${comparison.randomSampleIntroducedNewRuleIds.length}`,

@@ -117,6 +117,7 @@ export async function emit(summary, ctx) {
     renderToolBanner() +
     renderHeader(summary) +
     renderRunSummary(summary) +
+    renderScanHealth(summary) +
     renderCriteriaOutcomes(summary) +
     renderFindings(findings, ctx, screenshotsByUrl) +
     renderIncompleteFindings(incompleteFindings) +
@@ -157,16 +158,67 @@ function renderHeader(summary) {
  * @returns {string}
  */
 function renderRunSummary(summary) {
+  const pageViewsRow =
+    typeof summary.pageViewsScanned === 'number'
+      ? html`<tr><th>Page views scanned (pages x viewports)</th><td>${summary.pageViewsScanned}</td></tr>\n`
+      : '';
   return (
     `<h2>Run summary</h2>\n` +
     `<table>\n<tbody>\n` +
     html`<tr><th>Inventory count</th><td>${summary.inventoryCount ?? 0}</td></tr>\n` +
     html`<tr><th>Final selected sample</th><td>${summary.finalSampleCount ?? 0}</td></tr>\n` +
     html`<tr><th>Sample pages scanned</th><td>${summary.samplePagesScanned ?? 0}</td></tr>\n` +
+    pageViewsRow +
     html`<tr><th>Process runs</th><td>${summary.processRuns ?? 0}</td></tr>\n` +
     html`<tr><th>Grouped findings</th><td>${summary.groupedFindingCount ?? 0}</td></tr>\n` +
     `</tbody>\n</table>\n`
   );
+}
+
+/**
+ * Scan-health section — rendered only when the run was not clean. Failed
+ * pages contributed nothing to any verdict; without this section a reader
+ * cannot tell attempted coverage from achieved coverage (2026-06 review C1).
+ *
+ * @param {Record<string, any>} summary
+ * @returns {string}
+ */
+function renderScanHealth(summary) {
+  const health = summary.executionHealth;
+  if (!health || typeof health !== 'object') return '';
+  const failed = Array.isArray(health.pagesFailed) ? health.pagesFailed : [];
+  const degraded = Array.isArray(health.pagesDegraded) ? health.pagesDegraded : [];
+  const processFailures = Array.isArray(health.processFailures) ? health.processFailures : [];
+  const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
+  const truncated = health.reachedMaxPages === true;
+  if (
+    failed.length === 0 &&
+    degraded.length === 0 &&
+    processFailures.length === 0 &&
+    preScanFailures.length === 0 &&
+    !truncated
+  ) {
+    return '';
+  }
+  let out = `<h2>Scan health</h2>\n<ul>\n`;
+  if (truncated) {
+    out += html`<li>Crawl stopped at maxPages=${health.maxPagesConfigured}; the inventory (and sample) may be truncated.</li>\n`;
+  }
+  for (const p of failed) {
+    out += html`<li><strong>Not scanned</strong> (all viewports failed): <code>${p.url}</code> — ${p.failures?.[0]?.error ?? 'unknown error'}</li>\n`;
+  }
+  for (const p of degraded) {
+    const vps = (p.failures ?? []).map((/** @type {any} */ f) => f.viewport).join(', ');
+    out += html`<li>Partially scanned (failed on ${vps}): <code>${p.url}</code></li>\n`;
+  }
+  for (const p of processFailures) {
+    out += html`<li>Process "${p.name}" failed at <code>${p.startUrl}</code>: ${p.error}</li>\n`;
+  }
+  for (const p of preScanFailures) {
+    out += html`<li>Pre-scan action "${p.action}" ${p.state} on <code>${p.url}</code> [${p.viewport}] — page scanned without intended setup.</li>\n`;
+  }
+  out += `</ul>\n`;
+  return out;
 }
 
 /**
