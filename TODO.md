@@ -13,7 +13,9 @@ _Last updated: 2026-06-10 (Sprint 1 "Truthful outputs" T1-T7 landed on `feat/tru
 
 ## Active
 
-- [ ] Push `feat/portal-export-reporter` and open a PR for review.
+- [x] Push `feat/portal-export-reporter` and open a PR for review.
+      _Superseded 2026-06-11: branch chain merged directly to main at Jamie's
+      direction after the accuracy-validation gate (see review doc)._
 - [x] Re-point the stale roadmap reference in auto-memory (done 2026-06-10
       during the review; the board + review doc are now the canonical record).
 - [x] Approve and schedule Sprint 1 "Truthful outputs" (top-cluster plan in the
@@ -76,7 +78,7 @@ _Last updated: 2026-06-10 (Sprint 1 "Truthful outputs" T1-T7 landed on `feat/tru
 - [ ] **WCAG SC tag coverage.** Map the rules that currently emit `wcag: []`
       (best-practice / experimental) to SCs where one applies, to satisfy the
       portal's "provide WCAG criteria tags" prompt.
-- [x] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36/50
+- [x] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36 of the 56 A/AA
       SCs notTested and nothing in the payload conveying it (live AU run). Emit
       `{passed, failed, cantTell, notTested, inapplicable}` + `manualReviewIssues`.
       Review C3/C4. -> Sprint 1 T5.

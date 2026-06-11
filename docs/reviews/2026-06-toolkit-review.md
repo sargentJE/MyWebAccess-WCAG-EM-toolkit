@@ -106,7 +106,7 @@ shared verdict-presentation contract.
 | Symptom                                                                                                                                                                              | Evidence                                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
 | Identical run: junit says **10 failures** (cantTell escalated), portal says **score 50**, html/md say "6 findings + 3 needs review"                                                  | `[live]` junit.mjs:100-126 vs portal-export.mjs:91-101                                            |
-| `averageScore: 50` exported while **36 of 50** SCs are notTested — nothing in the payload conveys the adjudication basis                                                             | `[live]` portal-export.mjs:368,392-398                                                            |
+| `averageScore: 50` exported while **36 of the 56** Level A/AA SCs are notTested — nothing in the payload conveys the adjudication basis                                              | `[live]` portal-export.mjs:368,392-398                                                            |
 | Dual vocabulary `notTested` vs `untested` for "no adjudication"                                                                                                                      | `[source]` wcag-em-summary.mjs:359 vs :412 — and the consumer enum break in C4 is its direct cost |
 | `pagesExamined` counts every bucket contributor (passes/inapplicable included) — over-reads as "pages tested"                                                                        | `[source]` wcag-em-summary.mjs:344                                                                |
 | EARL emits only failed/cantTell assertions (+passed behind includePasses); notTested/untested never expressed though `earl:untested` exists; OUTCOME_MAP has no key for them         | `[source]` earl-jsonld.mjs:48-53,117-135                                                          |
@@ -125,7 +125,7 @@ contract; the toolkit under-fills fields the consumers already accept.
    wcag-em-summary.mjs:380. The toolkit can synthesize this from sample-metadata (counts, seed,
    percent) instead of emitting an empty string.
 2. `criteriaOutcomes.outcome` consumer enum is `passed|failed|cantTell|inapplicable` — the v1.1
-   `notTested` matrix (36/50 outcomes on the live run) **breaks the consumer outright**. `[live]`
+   `notTested` matrix (36 of the 56 A/AA outcomes on the live run) **breaks the consumer outright**. `[live]`
    A v1.1 feature silently broke the integration; no contractVersion exists to catch it.
 
 Chain friction once unblocked: toolkit screenshots never reach draft evidence; finding IDs are
