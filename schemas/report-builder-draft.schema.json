@@ -16,11 +16,7 @@
     },
     "reportType": {
       "type": "string",
-      "enum": [
-        "combined-audit",
-        "technical-audit",
-        "retest"
-      ]
+      "enum": ["combined-audit", "technical-audit", "retest"]
     },
     "meta": {
       "type": "object",
@@ -59,13 +55,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "Red",
-            "Amber",
-            "Green",
-            "Draft",
-            "Final"
-          ]
+          "enum": ["Red", "Amber", "Green", "Draft", "Final"]
         },
         "preparedBy": {
           "type": "string",
@@ -101,13 +91,7 @@
         },
         "overallStatus": {
           "type": "string",
-          "enum": [
-            "Red",
-            "Amber",
-            "Green",
-            "Draft",
-            "Final"
-          ]
+          "enum": ["Red", "Amber", "Green", "Draft", "Final"]
         },
         "keyMetrics": {
           "type": "array",
@@ -127,10 +111,7 @@
                 "minLength": 1
               }
             },
-            "required": [
-              "label",
-              "value"
-            ],
+            "required": ["label", "value"],
             "additionalProperties": false
           }
         },
@@ -147,12 +128,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "summary",
-        "overallStatus",
-        "keyMetrics",
-        "guardrail"
-      ],
+      "required": ["summary", "overallStatus", "keyMetrics", "guardrail"],
       "additionalProperties": false
     },
     "scope": {
@@ -226,12 +202,7 @@
           }
         }
       },
-      "required": [
-        "websiteOrProduct",
-        "pagesTested",
-        "standard",
-        "samplingMethod"
-      ],
+      "required": ["websiteOrProduct", "pagesTested", "standard", "samplingMethod"],
       "additionalProperties": false
     },
     "methodology": {
@@ -266,10 +237,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "summary",
-        "conformanceCaveat"
-      ],
+      "required": ["summary", "conformanceCaveat"],
       "additionalProperties": false
     },
     "sourceRun": {
@@ -317,20 +285,11 @@
           },
           "level": {
             "type": "string",
-            "enum": [
-              "A",
-              "AA",
-              "AAA"
-            ]
+            "enum": ["A", "AA", "AAA"]
           },
           "outcome": {
             "type": "string",
-            "enum": [
-              "passed",
-              "failed",
-              "cantTell",
-              "inapplicable"
-            ]
+            "enum": ["passed", "failed", "cantTell", "inapplicable"]
           },
           "notes": {
             "type": "string",
@@ -345,11 +304,7 @@
             }
           }
         },
-        "required": [
-          "criterion",
-          "level",
-          "outcome"
-        ],
+        "required": ["criterion", "level", "outcome"],
         "additionalProperties": false
       }
     },
@@ -394,12 +349,7 @@
                 "minLength": 1
               }
             },
-            "required": [
-              "id",
-              "profile",
-              "assistiveTechnology",
-              "device"
-            ],
+            "required": ["id", "profile", "assistiveTechnology", "device"],
             "additionalProperties": false
           }
         },
@@ -418,12 +368,7 @@
               },
               "outcome": {
                 "type": "string",
-                "enum": [
-                  "Completed",
-                  "Completed with difficulty",
-                  "Blocked",
-                  "Not tested"
-                ]
+                "enum": ["Completed", "Completed with difficulty", "Blocked", "Not tested"]
               },
               "notes": {
                 "type": "string",
@@ -438,21 +383,12 @@
                 }
               }
             },
-            "required": [
-              "id",
-              "label",
-              "outcome",
-              "notes"
-            ],
+            "required": ["id", "label", "outcome", "notes"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "summary",
-        "testers",
-        "journeys"
-      ],
+      "required": ["summary", "testers", "journeys"],
       "additionalProperties": false
     },
     "manualChecks": {
@@ -466,12 +402,7 @@
           },
           "outcome": {
             "type": "string",
-            "enum": [
-              "Passed",
-              "Failed",
-              "Needs review",
-              "Not tested"
-            ]
+            "enum": ["Passed", "Failed", "Needs review", "Not tested"]
           },
           "notes": {
             "type": "string",
@@ -486,10 +417,7 @@
             }
           }
         },
-        "required": [
-          "label",
-          "outcome"
-        ],
+        "required": ["label", "outcome"],
         "additionalProperties": false
       }
     },
@@ -500,12 +428,7 @@
         "properties": {
           "tier": {
             "type": "string",
-            "enum": [
-              "Tier 1",
-              "Tier 2",
-              "Tier 3",
-              "Advisory"
-            ]
+            "enum": ["Tier 1", "Tier 2", "Tier 3", "Advisory"]
           },
           "title": {
             "type": "string",
@@ -541,20 +464,12 @@
                   "minLength": 1
                 }
               },
-              "required": [
-                "action"
-              ],
+              "required": ["action"],
               "additionalProperties": false
             }
           }
         },
-        "required": [
-          "tier",
-          "title",
-          "timeframe",
-          "summary",
-          "items"
-        ],
+        "required": ["tier", "title", "timeframe", "summary", "items"],
         "additionalProperties": false
       }
     },
@@ -583,17 +498,12 @@
                 "minLength": 1
               }
             },
-            "required": [
-              "label"
-            ],
+            "required": ["label"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "summary",
-        "references"
-      ],
+      "required": ["summary", "references"],
       "additionalProperties": false
     },
     "nextSteps": {
@@ -618,10 +528,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "title",
-          "content"
-        ],
+        "required": ["title", "content"],
         "additionalProperties": false
       }
     },
@@ -641,11 +548,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "generatedAt",
-        "generatedFrom",
-        "instructions"
-      ],
+      "required": ["generatedAt", "generatedFrom", "instructions"],
       "additionalProperties": false
     },
     "findings": {
@@ -664,32 +567,15 @@
           },
           "severity": {
             "type": "string",
-            "enum": [
-              "Critical",
-              "Serious",
-              "Moderate",
-              "Minor",
-              "Advisory"
-            ]
+            "enum": ["Critical", "Serious", "Moderate", "Minor", "Advisory"]
           },
           "status": {
             "type": "string",
-            "enum": [
-              "Open",
-              "Pass",
-              "Fail",
-              "Partially resolved",
-              "Not retested"
-            ]
+            "enum": ["Open", "Pass", "Fail", "Partially resolved", "Not retested"]
           },
           "priorityTier": {
             "type": "string",
-            "enum": [
-              "Tier 1",
-              "Tier 2",
-              "Tier 3",
-              "Advisory"
-            ]
+            "enum": ["Tier 1", "Tier 2", "Tier 3", "Advisory"]
           },
           "owner": {
             "type": "string",
@@ -723,19 +609,10 @@
                 },
                 "level": {
                   "type": "string",
-                  "enum": [
-                    "A",
-                    "AA",
-                    "AAA",
-                    "Best practice"
-                  ]
+                  "enum": ["A", "AA", "AAA", "Best practice"]
                 }
               },
-              "required": [
-                "criterion",
-                "name",
-                "level"
-              ],
+              "required": ["criterion", "name", "level"],
               "additionalProperties": false
             }
           },
@@ -862,16 +739,11 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "sourceType"
-                  ],
+                  "required": ["sourceType"],
                   "additionalProperties": false
                 }
               },
-              "required": [
-                "type",
-                "label"
-              ],
+              "required": ["type", "label"],
               "additionalProperties": false
             }
           },
@@ -930,9 +802,7 @@
                   "maximum": 9007199254740991
                 }
               },
-              "required": [
-                "sourceType"
-              ],
+              "required": ["sourceType"],
               "additionalProperties": false
             }
           },
@@ -946,11 +816,7 @@
           },
           "draftStatus": {
             "type": "string",
-            "enum": [
-              "generated",
-              "reviewed",
-              "discarded"
-            ]
+            "enum": ["generated", "reviewed", "discarded"]
           },
           "includeInReport": {
             "type": "boolean"
@@ -968,12 +834,7 @@
           },
           "axeImpact": {
             "type": "string",
-            "enum": [
-              "critical",
-              "serious",
-              "moderate",
-              "minor"
-            ]
+            "enum": ["critical", "serious", "moderate", "minor"]
           }
         },
         "required": [

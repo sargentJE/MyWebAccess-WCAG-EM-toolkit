@@ -42,8 +42,9 @@ test('paths.sampleJsonPath lives under outDir, not the process CWD', async (t) =
 
   assert.strictEqual(ctx.paths.sampleJsonPath, path.join(outDir, 'sample.json'));
   assert.ok(
-    !ctx.paths.sampleJsonPath.startsWith(path.resolve('sample.json').slice(0, -'sample.json'.length)) ||
-      ctx.paths.sampleJsonPath.startsWith(outDir),
+    !ctx.paths.sampleJsonPath.startsWith(
+      path.resolve('sample.json').slice(0, -'sample.json'.length),
+    ) || ctx.paths.sampleJsonPath.startsWith(outDir),
     'sample.json must not resolve against the CWD',
   );
 

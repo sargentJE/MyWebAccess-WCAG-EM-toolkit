@@ -9,38 +9,38 @@ roadmap, the Layer-3b carry-forwards, the post-`portal-export` review, and the
 ([docs/reviews/2026-06-toolkit-review.md](docs/reviews/2026-06-toolkit-review.md),
 which carries evidence, the full roadmap rationale, and the Sprint 1 plan).
 
-_Last updated: 2026-06-10_
+_Last updated: 2026-06-10 (Sprint 1 "Truthful outputs" T1-T7 landed on `feat/truthful-outputs`)_
 
 ## Active
 
 - [ ] Push `feat/portal-export-reporter` and open a PR for review.
 - [x] Re-point the stale roadmap reference in auto-memory (done 2026-06-10
       during the review; the board + review doc are now the canonical record).
-- [ ] Approve and schedule Sprint 1 "Truthful outputs" (top-cluster plan in the
+- [x] Approve and schedule Sprint 1 "Truthful outputs" (top-cluster plan in the
       review doc: T1-T7).
 
 ## P1 — reliability & contract
 
-- [ ] **Execution-health visibility.** Failed pages (`{url, error, violations: []}`),
+- [x] **Execution-health visibility.** Failed pages (`{url, error, violations: []}`),
       failed process states, and pre-scan action failures are recorded in raw
       artifacts but surface in NO report; `samplePagesScanned` counts page-views
       and includes failures, and flows to the portal export. Review C1,
       reproduced end-to-end (probes P1/P2/P4). Fix shape: `summary.executionHealth`
       block rendered by all reporters; counts split pages/page-views. -> Sprint 1 T2.
-- [ ] **report-builder contract breaks (x2) + starter exporter.** Live v1.1 output
+- [x] **report-builder contract breaks (x2) + starter exporter.** Live v1.1 output
       breaks `evidence-from-toolkit` twice: `samplingMethodNotes: ''` vs Zod
       `min(1)`, and `notTested` absent from the consumer outcome enum. Add the
       commissioned `report-builder-starter` reporter emitting DraftReportSchema
       directly (site-derived ID prefix, synthesized sampling notes, screenshots
       as evidence), with a versioned vendored contract. Review C4. -> Sprint 1 T6.
-- [ ] **`waitFor` ignores its selector.** process-runner.mjs:213-215 sleeps
+- [x] **`waitFor` ignores its selector.** process-runner.mjs:213-215 sleeps
       `timeoutMs ?? 500` and never polls `step.selector`; README's SPA guidance
       documents polling that does not exist. Review C5 (probe-confirmed).
       -> Sprint 1 T1.
-- [ ] **`sample.json` resolves against CWD** (context.mjs:232), ignoring
+- [x] **`sample.json` resolves against CWD** (context.mjs:232), ignoring
       `--out-dir` — concurrent/sequential runs from one shell cross-contaminate
       (demonstrated during the review). Move under outDir. -> Sprint 1 T4.
-- [ ] **Corrupt-artifact hardening.** `readJsonMaybe` treats `SyntaxError` like
+- [x] **Corrupt-artifact hardening.** `readJsonMaybe` treats `SyntaxError` like
       ENOENT (fs-utils.mjs:69-75) and `writeJson` is non-atomic — a corrupt
       `axe-results.json` yields an exit-0 "clean" report (probe P3). Distinguish + warn loudly; temp+rename writes. -> Sprint 1 T3.
 - [ ] **Portal contract source-of-truth.** Replace the empirically-derived
@@ -59,7 +59,7 @@ _Last updated: 2026-06-10_
       consistent numbers. _Review-confirmed (probe P4); single-viewport runs
       mask it, multi-viewport runs diverge. Also note render-state dependence:
       hidden carousel slides undercounted `image-alt` on the live AU run._
-- [ ] **Incomplete-evidence size cap.** Add `reporting.maxIncompleteExamplesPerRule`
+- [x] **Incomplete-evidence size cap.** Add `reporting.maxIncompleteExamplesPerRule`
       (default generous) applied in `liftIncompleteSummaries`, to bound
       `axe-results.json` on incomplete-heavy sites. _Review-confirmed: cap
       hardcoded at 5 (summarize.mjs:274); live AU run hit 32 occurrences on one
@@ -76,15 +76,15 @@ _Last updated: 2026-06-10_
 - [ ] **WCAG SC tag coverage.** Map the rules that currently emit `wcag: []`
       (best-practice / experimental) to SCs where one applies, to satisfy the
       portal's "provide WCAG criteria tags" prompt.
-- [ ] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36/50
+- [x] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36/50
       SCs notTested and nothing in the payload conveying it (live AU run). Emit
       `{passed, failed, cantTell, notTested, inapplicable}` + `manualReviewIssues`.
       Review C3/C4. -> Sprint 1 T5.
-- [ ] **Fill portal-consumable evidence fields.** `evidence.failureSummary`
+- [x] **Fill portal-consumable evidence fields.** `evidence.failureSummary`
       (axe emits it; artifact lift drops it), `taxonomy.wcagTechniques`
       (always `[]`), `context.pageRegion/elementType`. Non-breaking pass-through
       on the portal side, confirmed live. Review C4. -> Sprint 1 T5.
-- [ ] **Synthesize `samplingMethodNotes`** from sample-metadata (structured/random
+- [x] **Synthesize `samplingMethodNotes`** from sample-metadata (structured/random
       counts, seed, auto-suggest) when `wcagEm.samplingMethodNotes` is unset —
       the toolkit knows the method; `''` breaks the report-builder. -> Sprint 1 T6.
 - [ ] **Feature-aware manual backlog.** Live AU join: backlog covered 8/13
@@ -102,7 +102,7 @@ _Last updated: 2026-06-10_
 - [ ] Add a cross-reporter consistency test (the same finding's numbers agree
       across `portal-export` vs html / markdown) — would surface the
       `occurrenceCount` divergence above.
-- [ ] Carry toolkit screenshots into the report-builder chain as typed
+- [x] Carry toolkit screenshots into the report-builder chain as typed
       `screenshot` evidence (path + alt) — currently lost. -> Sprint 1 T6.
 - [ ] Express notTested SCs in EARL (`earl:untested` exists in the vocabulary;
       OUTCOME_MAP has no key and emit() never asserts them — review C3).

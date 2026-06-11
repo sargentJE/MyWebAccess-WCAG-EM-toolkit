@@ -4,14 +4,7 @@
   "title": "WCAG-EM Accessibility Toolkit Config",
   "description": "Per-site configuration for the WCAG-EM-aligned automated accessibility testing toolkit. Validated by Ajv at config-load; see docs/adr/0002-config-is-ajv-validated.md.",
   "type": "object",
-  "required": [
-    "name",
-    "rootUrl",
-    "scope",
-    "crawl",
-    "sample",
-    "scan"
-  ],
+  "required": ["name", "rootUrl", "scope", "crawl", "sample", "scan"],
   "additionalProperties": false,
   "properties": {
     "name": {
@@ -30,16 +23,10 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "mode"
-      ],
+      "required": ["mode"],
       "properties": {
         "mode": {
-          "enum": [
-            "same-hostname",
-            "same-origin",
-            "allowed-hosts"
-          ],
+          "enum": ["same-hostname", "same-origin", "allowed-hosts"],
           "description": "Crawl scope discipline. `same-hostname` (default) is safest for public sites."
         },
         "allowedHosts": {
@@ -243,11 +230,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "width",
-              "height"
-            ],
+            "required": ["id", "width", "height"],
             "properties": {
               "id": {
                 "type": "string",
@@ -265,12 +248,7 @@
           }
         },
         "waitUntil": {
-          "enum": [
-            "load",
-            "domcontentloaded",
-            "networkidle",
-            "commit"
-          ]
+          "enum": ["load", "domcontentloaded", "networkidle", "commit"]
         },
         "timeoutMs": {
           "type": "integer",
@@ -336,16 +314,10 @@
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "type",
-                    "values"
-                  ],
+                  "required": ["type", "values"],
                   "properties": {
                     "type": {
-                      "enum": [
-                        "tag",
-                        "rule"
-                      ]
+                      "enum": ["tag", "rule"]
                     },
                     "values": {
                       "type": "array",
@@ -365,9 +337,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "urlPattern"
-                ],
+                "required": ["urlPattern"],
                 "properties": {
                   "urlPattern": {
                     "type": "string",
@@ -404,16 +374,10 @@
                       },
                       {
                         "type": "object",
-                        "required": [
-                          "type",
-                          "values"
-                        ],
+                        "required": ["type", "values"],
                         "properties": {
                           "type": {
-                            "enum": [
-                              "tag",
-                              "rule"
-                            ]
+                            "enum": ["tag", "rule"]
                           },
                           "values": {
                             "type": "array",
@@ -443,10 +407,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "name",
-          "startUrl"
-        ],
+        "required": ["name", "startUrl"],
         "properties": {
           "name": {
             "type": "string",
@@ -459,10 +420,7 @@
           "pattern": {
             "oneOf": [
               {
-                "enum": [
-                  "blank-submit",
-                  "partial-submit"
-                ]
+                "enum": ["blank-submit", "partial-submit"]
               },
               {
                 "type": "null"
@@ -495,9 +453,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "selector"
-              ],
+              "required": ["selector"],
               "properties": {
                 "selector": {
                   "type": "string"
@@ -546,10 +502,7 @@
           "description": "Legacy alias for `reporters: [markdown]`; ignored when `reporters` is set."
         },
         "screenshotFormat": {
-          "enum": [
-            "png",
-            "jpeg"
-          ]
+          "enum": ["png", "jpeg"]
         },
         "screenshotQuality": {
           "type": "integer",
@@ -563,22 +516,14 @@
             "impacts": {
               "type": "array",
               "items": {
-                "enum": [
-                  "critical",
-                  "serious",
-                  "moderate",
-                  "minor"
-                ]
+                "enum": ["critical", "serious", "moderate", "minor"]
               },
               "uniqueItems": true
             },
             "classifications": {
               "type": "array",
               "items": {
-                "enum": [
-                  "primary-automated-finding",
-                  "best-practice-or-manual-review"
-                ]
+                "enum": ["primary-automated-finding", "best-practice-or-manual-review"]
               },
               "uniqueItems": true
             },
@@ -590,11 +535,7 @@
         },
         "validateExports": {
           "type": "string",
-          "enum": [
-            "off",
-            "warn",
-            "error"
-          ],
+          "enum": ["off", "warn", "error"],
           "default": "warn",
           "description": "Write-time validation of exporter payloads against their vendored contracts (currently portal-export). 'warn' logs schema violations and still writes; 'error' makes the reporter fail instead of emitting an invalid file; 'off' skips the check."
         },
@@ -625,10 +566,7 @@
         "httpCredentials": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "username",
-            "password"
-          ],
+          "required": ["username", "password"],
           "properties": {
             "username": {
               "type": "string"
@@ -672,18 +610,10 @@
           }
         },
         "wcagVersion": {
-          "enum": [
-            "2.0",
-            "2.1",
-            "2.2"
-          ]
+          "enum": ["2.0", "2.1", "2.2"]
         },
         "conformanceTarget": {
-          "enum": [
-            "A",
-            "AA",
-            "AAA"
-          ]
+          "enum": ["A", "AA", "AAA"]
         },
         "atBaseline": {
           "type": "array",
@@ -707,20 +637,10 @@
     "action": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "action"
-      ],
+      "required": ["action"],
       "properties": {
         "action": {
-          "enum": [
-            "goto",
-            "click",
-            "fill",
-            "press",
-            "waitFor",
-            "screenshot",
-            "axe"
-          ]
+          "enum": ["goto", "click", "fill", "press", "waitFor", "screenshot", "axe"]
         },
         "url": {
           "type": "string"

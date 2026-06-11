@@ -8,6 +8,47 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Added
 
+- **`report-builder-starter` reporter** (`report-builder-draft.json`) — emits a
+  myweb-report-builder `DraftReportSchema`-compliant starter draft directly
+  from the run summary: site-derived finding IDs (`legacy-events -> LE-001`),
+  impact->severity->tier mapping, violations AND needs-review incompletes as
+  flagged draft findings (incompletes excluded from recommendations),
+  criteria outcomes filtered to the consumer enum with notTested coverage and
+  scan warnings carried as appendices, manual checks from the shared backlog
+  items, per-page screenshots as typed evidence. Contract vendored at
+  `schemas/report-builder-draft.schema.json`, GENERATED from the consumer's
+  own Zod schema via `z.toJSONSchema` (regeneration command in `_meta`).
+- **`summary.executionHealth`** — scan/process/pre-scan failures inverted into
+  the summary (pages fully scanned / degraded / failed with per-viewport
+  errors, page-view counts, process failures, pre-scan action failures,
+  crawl-cap truncation) and rendered by every reporter: html/markdown gain a
+  "Scan health" section (omitted on clean runs), junit emits
+  `<error type="scan-failure">` testcases (suite `errors` attribute only when
+  non-zero), portal-export forwards the block in `scanOptions`. Every failure
+  also rides the existing `scanWarnings` channel.
+- **`summary.scoreBasis` + `summary.manualReviewIssues` (portal export)** —
+  the dashboard score now ships with its adjudication context
+  (`{passed, failed, cantTell, inapplicable, notTested}`) and the
+  manual-review split, instead of a bare `averageScore`.
+- **`evidence.failureSummary` end-to-end** — axe's own diagnosis of why a node
+  fails (or needs review) now flows from scan nodes through summarize examples
+  into portal-export evidence and instances (the portal displays it when
+  present). Evidence strings are pre-trimmed to the portal's 2000-char
+  ingestion limit.
+- **`reporting.validateExports`** (`off | warn | error`, default `warn`) —
+  write-time validation of exporter payloads against their vendored contracts
+  (portal-export + report-builder-starter). `error` fails the reporter instead
+  of emitting an invalid file.
+- **`reporting.maxIncompleteExamplesPerRule`** (default 25) — bounds the
+  condensed incomplete-evidence examples at the artefact source
+  (`liftIncompleteSummaries`); `nodesCount` always keeps the true total.
+- **`src/data/wcag-sc-names.json`** — all 87 WCAG 2.2 SC handles
+  (W3C-derived), paired with the now-exported `SC_LEVEL_MAP` and locked by a
+  key-set consistency test.
+- **`inventory-metadata.json` gains `maxPagesConfigured`/`reachedMaxPages`** —
+  crawl-cap truncation is now distinguishable from a complete crawl and
+  surfaces as a scan warning.
+
 - **`portal-export` reporter** (`portal-export.json`) — emits the MyAccess
   Portal "canonical-scan" envelope (`scanMetadata` / `summary` / `rawFindings`)
   for direct upload, with no manual transformation. Compliance-affecting
@@ -28,6 +69,23 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Changed
 
+- **`samplePagesScanned` redefined to PAGES** (unique pages with at least one
+  successful view); the previous value counted page-view entries (pages x
+  viewports) INCLUDING failures, so a 5-page 2-viewport audit reported 10
+  "pages scanned" and failed pages inflated coverage claims.
+  `pageViewsScanned` is carried alongside, and the portal's
+  `scanOptions.pagesScanned` now receives the truthful figure.
+- **`sample.json` lives under the run's `--out-dir`** (previously resolved
+  against the process CWD, so runs launched from one shell cross-contaminated
+  each other's sample handoff regardless of out-dirs). Scripts that read the
+  repo-root `sample.json` should point at `<out-dir>/sample.json`.
+- **`samplingMethodNotes` is synthesized when the config leaves it blank** —
+  built from the sample stage's recorded counts (structured/random, pool
+  percent, seed, inventory size) so WCAG-EM Step 3 provenance is never an
+  empty string (which also broke the report-builder evidence chain).
+- **`manual-backlog` items are now exported as structured data**
+  (`buildManualBacklogItems`); the rendered markdown is byte-identical.
+
 - **axe `incomplete` (needs-review) results now retain condensed
   `{ target, html }` node evidence end-to-end** — scan captures it into
   `incompleteDetail[].examples`, summarize threads it into
@@ -43,23 +101,50 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Fixed
 
+- **`waitFor` pre-scan/process action now honors its `selector`** — it slept
+  `timeoutMs ?? 500` and ignored the selector entirely, while the README's SPA
+  guidance documented hydration-marker polling. With a selector it now polls
+  `page.waitForSelector` (explicit `timeoutMs` wins, else the shared step
+  budget); selector-less sleeps are unchanged.
+- **Corrupt artefacts no longer masquerade as empty ones** — `readJsonMaybe`
+  distinguishes missing (silent fallback) from present-but-unreadable (loud
+  `warn` + fallback), so a truncated `axe-results.json` can no longer produce
+  an exit-0 "clean" report without a trace.
+- **Artefact writes are atomic** (`writeJson`/`writeText` use temp +
+  same-directory rename) — a crash mid-write leaves the previous file, never a
+  truncated one.
+
 - Markdown reporter's incomplete "Example HTML" is whitespace-collapsed and
   backtick-neutralised, so multi-line / backtick-bearing axe `outerHTML` can no
   longer corrupt the inline code span.
+
+### Counts glossary
+
+Four numbers describe scan output; they answer different questions:
+
+- **pages** (`samplePagesScanned`) — unique URLs with at least one successful
+  scan view; the WCAG-EM coverage figure.
+- **page-views** (`pageViewsScanned`) — successful (URL x viewport) scans;
+  multi-viewport runs scan each page several times.
+- **occurrences** (`findings[].occurrences`) — per-node rule hits summed
+  across page-views; render-state-dependent (hidden carousel slides do not
+  count) and NOT deduplicated across viewports.
+- **instances** (`portal-export rawFindings[].occurrenceCount`) — distinct
+  affected elements, deduped by (url, selector) across viewports.
 
 ### Roadmap
 
 - Portal contract source-of-truth — replace the empirically-derived
   `portal-canonical-scan.schema.json` with the portal's published schema plus a
   `contractVersion` negotiated at upload, so drift is caught at the boundary
-  rather than via a failed upload.
+  rather than via a failed upload. (`reporting.validateExports` now gates
+  against the vendored copy at write time; the published-schema swap remains.)
 - Per-rule remediation library — seed remediation templates keyed by axe
   `ruleId` so `portal-export` cards arrive pre-populated (the portal's
   "actionable" gate currently needs manual remediation).
 - `occurrenceCount` semantics — reconcile/rename the distinct-element count
   (`portal-export`) vs the Σ-`nodesCount` shown in `summary.json`/html/markdown.
-- Incomplete-evidence cap — config knob to bound `axe-results.json` on
-  incomplete-heavy sites.
+  (Documented in the counts glossary above; the rename/reconcile remains.)
 - Baseline/regression mode — diff successive audits to surface new and
   resolved findings between runs.
 - Plugin API — public extension surface for custom reporters and crawl

@@ -30,9 +30,6 @@ test('wcag-sc-names keys exactly match SC_LEVEL_MAP keys', async () => {
   const levelKeys = Object.keys(SC_LEVEL_MAP).sort();
   assert.deepEqual(nameKeys, levelKeys, 'name map and level map must cover the same SCs');
   for (const [sc, scName] of Object.entries(names)) {
-    assert.ok(
-      typeof scName === 'string' && scName.length > 0,
-      `${sc} carries a non-empty handle`,
-    );
+    assert.ok(typeof scName === 'string' && scName.length > 0, `${sc} carries a non-empty handle`);
   }
 });

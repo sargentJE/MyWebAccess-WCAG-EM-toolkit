@@ -75,10 +75,7 @@ const registry = new Map([
   [earlJsonldReporter.name, /** @type {ReporterModule} */ (earlJsonldReporter)],
   [junitReporter.name, /** @type {ReporterModule} */ (junitReporter)],
   [portalExportReporter.name, /** @type {ReporterModule} */ (portalExportReporter)],
-  [
-    reportBuilderStarterReporter.name,
-    /** @type {ReporterModule} */ (reportBuilderStarterReporter),
-  ],
+  [reportBuilderStarterReporter.name, /** @type {ReporterModule} */ (reportBuilderStarterReporter)],
 ]);
 
 // SECTION: Public API

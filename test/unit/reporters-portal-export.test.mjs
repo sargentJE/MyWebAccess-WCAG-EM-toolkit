@@ -831,7 +831,12 @@ test('portal-export: validateExports=error rejects a contract-breaking payload b
   const summary = baseSummary({
     groupedFindingCount: 1,
     findings: [
-      finding({ id: 'image-alt', impact: 'critical', pages: ['https://example.com/'], examples: [] }),
+      finding({
+        id: 'image-alt',
+        impact: 'critical',
+        pages: ['https://example.com/'],
+        examples: [],
+      }),
     ],
   });
   await assert.rejects(
@@ -853,7 +858,12 @@ test('portal-export: validateExports=warn logs and still writes (default behavio
   const summary = baseSummary({
     groupedFindingCount: 1,
     findings: [
-      finding({ id: 'image-alt', impact: 'critical', pages: ['https://example.com/'], examples: [] }),
+      finding({
+        id: 'image-alt',
+        impact: 'critical',
+        pages: ['https://example.com/'],
+        examples: [],
+      }),
     ],
   });
   await portalReporter.emit(summary, ctx);

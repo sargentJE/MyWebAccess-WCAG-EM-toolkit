@@ -55,28 +55,37 @@ All commands accept `--config <path>`, `--out-dir <path>`,
 Start from [`configs/example-site.json`](./configs/example-site.json)
 and adapt to your site. Key fields:
 
-| Field                         | Purpose                                                                             |
-| ----------------------------- | ----------------------------------------------------------------------------------- |
-| `rootUrl`                     | Starting URL for the crawler                                                        |
-| `crawl.maxPages`              | Maximum pages to discover                                                           |
-| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                         |
-| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                           |
-| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export` |
-| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                          |
+| Field                         | Purpose                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `rootUrl`                     | Starting URL for the crawler                                                                                  |
+| `crawl.maxPages`              | Maximum pages to discover                                                                                     |
+| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                                                   |
+| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                                                     |
+| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export`, `report-builder-starter` |
+| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                                                    |
 
 See [`schemas/config.schema.json`](./schemas/config.schema.json) for
 the full configuration reference.
 
 ## Reporters
 
-| Reporter        | Output file          | Description                                                                                  |
-| --------------- | -------------------- | -------------------------------------------------------------------------------------------- |
-| `json`          | `summary.json`       | Structured summary with findings and incomplete results                                      |
-| `markdown`      | `summary.md`         | Human-readable Markdown summary with incomplete-review section                               |
-| `html`          | `summary.html`       | Standalone HTML report with dark mode and needs-review section                               |
-| `earl-jsonld`   | `earl.jsonld`        | W3C EARL JSON-LD assertions with WCAG-EM evaluation metadata                                 |
-| `junit`         | `junit.xml`          | JUnit XML for CI — `cantTell` results emit as failures                                       |
-| `portal-export` | `portal-export.json` | MyAccess Portal canonical-scan envelope for direct upload (compliance summary + rawFindings) |
+| Reporter                 | Output file                 | Description                                                                                 |
+| ------------------------ | --------------------------- | ------------------------------------------------------------------------------------------- |
+| `json`                   | `summary.json`              | Structured summary with findings, incomplete results, and execution health                  |
+| `markdown`               | `summary.md`                | Human-readable Markdown summary with scan-health and incomplete-review sections             |
+| `html`                   | `summary.html`              | Standalone HTML report with dark mode, scan-health and needs-review sections                |
+| `earl-jsonld`            | `earl.jsonld`               | W3C EARL JSON-LD assertions with WCAG-EM evaluation metadata                                |
+| `junit`                  | `junit.xml`                 | JUnit XML for CI — `cantTell` emits as failures; scan failures as `<error>` testcases       |
+| `portal-export`          | `portal-export.json`        | MyAccess Portal canonical-scan envelope (compliance summary + scoreBasis + rawFindings)     |
+| `report-builder-starter` | `report-builder-draft.json` | myweb-report-builder DraftReportSchema starter draft (flagged findings, checks, appendices) |
+
+Reports never count a failed page as scanned: `samplePagesScanned` is unique
+pages with at least one successful view, `pageViewsScanned` counts
+page-per-viewport scans, and `summary.executionHealth` itemises failed or
+degraded pages, process failures, and pre-scan action failures (rendered as a
+"Scan health" section when a run was not clean). See the counts glossary in
+[`CHANGELOG.md`](./CHANGELOG.md) for how pages, page-views, occurrences, and
+instances differ.
 
 In addition to the reporter outputs, the summarize stage also writes:
 

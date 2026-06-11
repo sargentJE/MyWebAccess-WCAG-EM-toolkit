@@ -341,7 +341,10 @@ test('junit reporter: execution failures emit <error type="scan-failure"> + erro
 });
 
 test('junit reporter: clean runs keep the historical testsuite tag (no errors attribute)', async (t) => {
-  const xml = await emitAndRead(t, { findings: [], executionHealth: { pagesFailed: [], pagesDegraded: [] } });
+  const xml = await emitAndRead(t, {
+    findings: [],
+    executionHealth: { pagesFailed: [], pagesDegraded: [] },
+  });
   assert.match(xml, /<testsuite name="WCAG-EM Audit" tests="0" failures="0" time="0">/);
   assert.ok(!xml.includes('errors='), 'errors attribute must be omitted when zero');
 });

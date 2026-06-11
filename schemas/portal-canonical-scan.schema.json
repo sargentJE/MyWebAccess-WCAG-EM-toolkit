@@ -4,18 +4,11 @@
   "title": "MyAccess Portal canonical-scan payload",
   "$comment": "Empirically derived from MyAccess Portal upload behaviour (the `portal-export` reporter target). NOT an official portal schema \u2014 it guards `portal-export.json` against regressions in the contract we have confirmed via live uploads, and cannot predict undiscovered portal requirements. See the portal-export reporter and docs/adr/0007-wcag-em-summary-shape.md.",
   "type": "object",
-  "required": [
-    "scanMetadata",
-    "summary",
-    "rawFindings"
-  ],
+  "required": ["scanMetadata", "summary", "rawFindings"],
   "properties": {
     "scanMetadata": {
       "type": "object",
-      "required": [
-        "url",
-        "timestamp"
-      ],
+      "required": ["url", "timestamp"],
       "properties": {
         "url": {
           "type": "string",
@@ -30,10 +23,7 @@
           "type": "string"
         },
         "toolVersion": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "scanOptions": {
           "type": "object"
@@ -42,11 +32,7 @@
     },
     "summary": {
       "type": "object",
-      "required": [
-        "totalIssues",
-        "reportedTotal",
-        "scoreSource"
-      ],
+      "required": ["totalIssues", "reportedTotal", "scoreSource"],
       "properties": {
         "totalIssues": {
           "type": "integer",
@@ -58,12 +44,7 @@
         },
         "distribution": {
           "type": "object",
-          "required": [
-            "critical",
-            "high",
-            "medium",
-            "low"
-          ],
+          "required": ["critical", "high", "medium", "low"],
           "properties": {
             "critical": {
               "type": "integer",
@@ -84,10 +65,7 @@
           }
         },
         "averageScore": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "minimum": 0,
           "maximum": 100
         },
@@ -123,13 +101,7 @@
               "minimum": 0
             }
           },
-          "required": [
-            "passed",
-            "failed",
-            "cantTell",
-            "inapplicable",
-            "notTested"
-          ]
+          "required": ["passed", "failed", "cantTell", "inapplicable", "notTested"]
         }
       }
     },
@@ -142,67 +114,41 @@
   },
   "$defs": {
     "evidence": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "properties": {
         "html": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "pageUrl": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "target": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "failureSummary": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
     "instance": {
       "type": "object",
-      "required": [
-        "url"
-      ],
+      "required": ["url"],
       "properties": {
         "url": {
           "type": "string",
           "minLength": 1
         },
         "selector": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "evidence": {
           "type": "object",
           "properties": {
             "html": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "failureSummary": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             }
           }
         }
@@ -227,36 +173,20 @@
           "minLength": 1
         },
         "impact": {
-          "enum": [
-            "critical",
-            "serious",
-            "moderate",
-            "minor"
-          ]
+          "enum": ["critical", "serious", "moderate", "minor"]
         },
         "priorityLabel": {
-          "enum": [
-            "Critical",
-            "High",
-            "Medium",
-            "Low"
-          ]
+          "enum": ["Critical", "High", "Medium", "Low"]
         },
         "message": {
           "type": "string",
           "minLength": 1
         },
         "description": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "selector": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "wcag": {
           "type": "array",
@@ -268,10 +198,7 @@
           "$ref": "#/$defs/evidence"
         },
         "confidence": {
-          "enum": [
-            "automated",
-            "manual-review"
-          ]
+          "enum": ["automated", "manual-review"]
         },
         "occurrenceCount": {
           "type": "integer",
@@ -281,10 +208,7 @@
           "type": "boolean"
         },
         "findingKind": {
-          "enum": [
-            "violation",
-            "manual-review"
-          ]
+          "enum": ["violation", "manual-review"]
         },
         "instances": {
           "type": "array",
@@ -302,26 +226,17 @@
           "if": {
             "properties": {
               "impact": {
-                "enum": [
-                  "critical",
-                  "serious"
-                ]
+                "enum": ["critical", "serious"]
               }
             },
-            "required": [
-              "impact"
-            ]
+            "required": ["impact"]
           },
           "then": {
-            "required": [
-              "evidence"
-            ],
+            "required": ["evidence"],
             "properties": {
               "evidence": {
                 "type": "object",
-                "required": [
-                  "html"
-                ],
+                "required": ["html"],
                 "properties": {
                   "html": {
                     "type": "string",
@@ -334,15 +249,11 @@
                 "minItems": 1,
                 "contains": {
                   "type": "object",
-                  "required": [
-                    "evidence"
-                  ],
+                  "required": ["evidence"],
                   "properties": {
                     "evidence": {
                       "type": "object",
-                      "required": [
-                        "html"
-                      ],
+                      "required": ["html"],
                       "properties": {
                         "html": {
                           "type": "string",

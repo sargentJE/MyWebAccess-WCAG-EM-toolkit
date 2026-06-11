@@ -98,8 +98,7 @@ export function buildManualBacklogItems({ findings, inventory = [], processes = 
     },
     {
       section: CORE,
-      label:
-        'Captions and transcripts: audio/video has synchronized captions or full transcript',
+      label: 'Captions and transcripts: audio/video has synchronized captions or full transcript',
     },
     {
       section: CORE,

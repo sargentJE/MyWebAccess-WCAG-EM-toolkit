@@ -57,7 +57,8 @@ function baseSummary(overrides = {}) {
     wcagEmSummary: {
       wcagVersion: '2.2',
       conformanceTarget: 'AA',
-      samplingMethodNotes: 'Structured sample of 3 page(s) plus 1 random page(s), per WCAG-EM Step 3.',
+      samplingMethodNotes:
+        'Structured sample of 3 page(s) plus 1 random page(s), per WCAG-EM Step 3.',
       technologiesReliedUpon: ['HTML', 'CSS'],
       evaluator: { name: 'Jamie Sargent', contact: 'jamie@example.com' },
       criteriaOutcomes: [],
@@ -175,7 +176,10 @@ test('starter: evidence carries axe content (with failureSummary) and code marku
   assert.equal(code.language, 'html');
   assert.equal(code.content, '<img class="hero" src="x.jpg">');
   for (const e of evidence) {
-    assert.ok(e.content || e.path || e.observed, `evidence "${e.label}" satisfies content|path|observed`);
+    assert.ok(
+      e.content || e.path || e.observed,
+      `evidence "${e.label}" satisfies content|path|observed`,
+    );
     if (e.type === 'screenshot') assert.ok(e.alt, 'screenshot evidence carries alt');
   }
 });
