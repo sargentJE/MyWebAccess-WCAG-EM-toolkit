@@ -48,7 +48,9 @@ import { withActAndWcagMetadata } from './axe-utils.mjs';
 // field in each criterion outcome. Only covers SCs up to WCAG 2.2. When a rule
 // references an SC we don't have a level for (unlikely — would mean a newer
 // WCAG version than 2.2), the verdict is still emitted with `level: null`.
-const SC_LEVEL_MAP = /** @type {const} */ ({
+// Exported since the report-builder-starter reporter (it pairs these levels
+// with src/data/wcag-sc-names.json; a unit test keeps the two key sets aligned).
+export const SC_LEVEL_MAP = /** @type {const} */ ({
   // Principle 1 — Perceivable
   '1.1.1': 'A',
   '1.2.1': 'A',
@@ -158,13 +160,15 @@ const SC_LEVEL_MAP = /** @type {const} */ ({
  * Produce the WCAG-EM Step 5 per-SC summary.
  *
  * Note on naming: the second parameter is a *bundle of raw results*, not a
- * draft of the returned summary. `rawResults = { axeResults, processResults }`
- * is the input feedstock; the return value is the inverted per-SC summary.
+ * draft of the returned summary. `rawResults = { axeResults, processResults,
+ * sampleMetadata }` is the input feedstock; the return value is the inverted
+ * per-SC summary.
  *
  * @param {{ config: Record<string, any> }} ctx
  * @param {{
  *   axeResults?: any[],
  *   processResults?: any[],
+ *   sampleMetadata?: Record<string, any>,
  * }} rawResults - Bundle of raw axe + process results. Not a draft summary.
  * @returns {{
  *   criteriaOutcomes: CriterionOutcome[],
@@ -183,6 +187,10 @@ export function toWcagEmSummary(ctx, rawResults) {
   const wcagEmConfig = ctx?.config?.wcagEm ?? {};
   const axeResults = Array.isArray(rawResults?.axeResults) ? rawResults.axeResults : [];
   const processResults = Array.isArray(rawResults?.processResults) ? rawResults.processResults : [];
+  const sampleMetadata =
+    rawResults?.sampleMetadata && typeof rawResults.sampleMetadata === 'object'
+      ? rawResults.sampleMetadata
+      : {};
 
   /** @type {string[]} */
   const scanWarnings = [];
@@ -377,8 +385,12 @@ export function toWcagEmSummary(ctx, rawResults) {
     technologiesReliedUpon: Array.isArray(wcagEmConfig.technologiesReliedUpon)
       ? [...wcagEmConfig.technologiesReliedUpon]
       : [],
-    samplingMethodNotes:
-      typeof wcagEmConfig.samplingMethodNotes === 'string' ? wcagEmConfig.samplingMethodNotes : '',
+    // NOTE: synthesized from sample-metadata when the config leaves it blank
+    // (2026-06 review C4): the toolkit KNOWS the sampling method, and the
+    // previous `''` default broke the report-builder chain (its schema treats
+    // present-but-empty as invalid). WCAG-EM Step 3 provenance should never
+    // be empty when the sample stage recorded how the sample was built.
+    samplingMethodNotes: resolveSamplingMethodNotes(wcagEmConfig, sampleMetadata),
     evaluator: {
       name: typeof wcagEmConfig.evaluator?.name === 'string' ? wcagEmConfig.evaluator.name : '',
       contact:
@@ -388,6 +400,41 @@ export function toWcagEmSummary(ctx, rawResults) {
 }
 
 // SECTION: Internal helpers
+
+/**
+ * Resolve `samplingMethodNotes`: the auditor's own wording when configured,
+ * otherwise a sentence synthesized from the sample stage's recorded counts —
+ * never an empty string when any sampling provenance exists.
+ *
+ * @param {{ samplingMethodNotes?: string }} wcagEmConfig
+ * @param {Record<string, any>} sampleMetadata - `inventory/sample-metadata.json` contents.
+ * @returns {string}
+ */
+function resolveSamplingMethodNotes(wcagEmConfig, sampleMetadata) {
+  if (
+    typeof wcagEmConfig.samplingMethodNotes === 'string' &&
+    wcagEmConfig.samplingMethodNotes.trim().length > 0
+  ) {
+    return wcagEmConfig.samplingMethodNotes;
+  }
+  const structured = sampleMetadata?.structuredCount;
+  const random = sampleMetadata?.randomCount;
+  if (typeof structured !== 'number' || typeof random !== 'number') {
+    // No sample-metadata available (e.g. summarize over a partial out-dir):
+    // keep the historical empty string rather than inventing provenance.
+    return '';
+  }
+  const percent = Number(sampleMetadata.randomPercent ?? 0) * 100;
+  const seed = sampleMetadata.randomSeed;
+  const inventoryCount = sampleMetadata.inventoryCount;
+  const parts = [
+    `Structured sample of ${structured} page(s) (config-selected and auto-suggested cluster representatives)`,
+    `plus ${random} random page(s) (${Number.isFinite(percent) ? Math.round(percent) : '?'}% pool, seed ${seed ?? 'n/a'})`,
+  ];
+  const scope =
+    typeof inventoryCount === 'number' ? ` from a ${inventoryCount}-page crawl inventory` : '';
+  return `${parts.join(' ')}${scope}, per WCAG-EM Step 3.`;
+}
 
 /**
  * EARL outcome decision tree. Order matters — earliest match wins so

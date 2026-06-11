@@ -570,7 +570,7 @@ export async function run(ctx) {
   // toWcagEmSummary ingests the widened axe artefact (passesDetail etc.)
   // and emits EARL-aligned criteriaOutcomes. scanWarnings surfaces infra
   // failures that did not elevate to SC verdicts.
-  const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults });
+  const wcagEmSummary = toWcagEmSummary(ctx, { axeResults, processResults, sampleMetadata });
 
   // ANCHOR: ExecutionHealth — invert stage-recorded failures into the summary
   // (2026-06 review C1). samplePagesScanned counts PAGES with at least one

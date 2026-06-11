@@ -529,7 +529,8 @@
               "html",
               "earl-jsonld",
               "junit",
-              "portal-export"
+              "portal-export",
+              "report-builder-starter"
             ]
           },
           "uniqueItems": true

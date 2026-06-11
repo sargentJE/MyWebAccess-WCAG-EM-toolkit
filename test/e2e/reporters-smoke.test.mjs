@@ -100,9 +100,17 @@ test(
       overrides: {
         // DEFAULTS.reporting.reporters is absent — summarize.mjs applies
         // `?? ['json','markdown']` inline. Smoke must explicitly opt-in to
-        // all 5 reporters so the full pipeline is exercised.
+        // all 7 reporters so the full pipeline is exercised.
         reporting: {
-          reporters: ['json', 'markdown', 'html', 'earl-jsonld', 'junit'],
+          reporters: [
+            'json',
+            'markdown',
+            'html',
+            'earl-jsonld',
+            'junit',
+            'portal-export',
+            'report-builder-starter',
+          ],
         },
       },
     });
@@ -161,5 +169,16 @@ test(
     const junit = await readFile(path.join(reportsDir, 'junit.xml'), 'utf8');
     assert.match(junit, /<\?xml\b/, 'junit.xml should be XML');
     assert.match(junit, /<testsuite\b/, 'junit.xml should have a <testsuite>');
+
+    const portal = JSON.parse(await readFile(path.join(reportsDir, 'portal-export.json'), 'utf8'));
+    assert.ok(portal.scanMetadata && Array.isArray(portal.rawFindings), 'portal envelope shape');
+    assert.ok(portal.summary.scoreBasis, 'portal export carries the adjudication basis');
+
+    const draft = JSON.parse(
+      await readFile(path.join(reportsDir, 'report-builder-draft.json'), 'utf8'),
+    );
+    assert.equal(draft.schemaVersion, '1.0', 'report-builder draft schemaVersion');
+    assert.ok(Array.isArray(draft.findings) && draft.findings.length > 0, 'draft carries findings');
+    assert.ok(draft.draftMeta?.generatedFrom, 'draft records its source run');
   },
 );

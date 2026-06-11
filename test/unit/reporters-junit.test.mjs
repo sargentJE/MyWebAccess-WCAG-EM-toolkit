@@ -305,7 +305,15 @@ test('junit reporter: incompleteFindings emit <failure type="incomplete"> entrie
 test('junit reporter: registry now lists junit', () => {
   const names = listReporters();
   assert.ok(names.includes('junit'), 'junit registered in the registry');
-  assert.deepEqual(names, ['earl-jsonld', 'html', 'json', 'junit', 'markdown', 'portal-export']);
+  assert.deepEqual(names, [
+    'earl-jsonld',
+    'html',
+    'json',
+    'junit',
+    'markdown',
+    'portal-export',
+    'report-builder-starter',
+  ]);
 });
 
 test('junit reporter: execution failures emit <error type="scan-failure"> + errors attribute', async (t) => {

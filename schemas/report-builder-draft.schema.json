@@ -1,0 +1,1015 @@
+{
+  "_meta": {
+    "contractVersion": "1.0",
+    "description": "DraftReportSchema from myweb-report-builder, generated via zod v4 z.toJSONSchema. Cross-field refinements (finding-ID uniqueness, evidence content-or-path-or-observed, screenshot alt) are NOT representable here and are enforced by the report-builder-starter reporter + the consumer Zod parse.",
+    "sourceRepo": "myweb-report-builder@0.1.0",
+    "sourceFile": "src/schemas/report.schema.js#DraftReportSchema",
+    "zodVersion": "4.4.3",
+    "regenerate": "node --input-type=module -e \"import {z} from 'zod'; import {DraftReportSchema} from './src/schemas/report.schema.js'; console.log(JSON.stringify(z.toJSONSchema(DraftReportSchema,{unrepresentable:'any',io:'input'}),null,2))\" (run in the myweb-report-builder repo)"
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "reportType": {
+      "type": "string",
+      "enum": [
+        "combined-audit",
+        "technical-audit",
+        "retest"
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "websiteUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issueDate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "standard": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Red",
+            "Amber",
+            "Green",
+            "Draft",
+            "Final"
+          ]
+        },
+        "preparedBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceBatch": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "title",
+        "client",
+        "project",
+        "issueDate",
+        "standard",
+        "version",
+        "status",
+        "preparedBy"
+      ],
+      "additionalProperties": false
+    },
+    "executiveSummary": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "overallStatus": {
+          "type": "string",
+          "enum": [
+            "Red",
+            "Amber",
+            "Green",
+            "Draft",
+            "Final"
+          ]
+        },
+        "keyMetrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "label",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "actionPriorities": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "guardrail": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "summary",
+        "overallStatus",
+        "keyMetrics",
+        "guardrail"
+      ],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "websiteOrProduct": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pagesTested": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "journeysTested": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "devices": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "browsers": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "assistiveTechnologies": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "standard": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exclusions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "samplingMethod": {
+          "type": "string",
+          "minLength": 1
+        },
+        "technologiesReliedUpon": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "websiteOrProduct",
+        "pagesTested",
+        "standard",
+        "samplingMethod"
+      ],
+      "additionalProperties": false
+    },
+    "methodology": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "automatedTools": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "manualChecks": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "userTestingApproach": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conformanceCaveat": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "summary",
+        "conformanceCaveat"
+      ],
+      "additionalProperties": false
+    },
+    "sourceRun": {
+      "type": "object",
+      "properties": {
+        "sourceFolder": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toolName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toolVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "axeCoreVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceFiles": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "criteriaOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "A",
+              "AA",
+              "AAA"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "cantTell",
+              "inapplicable"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relatedFindingIds": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "criterion",
+          "level",
+          "outcome"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "userTesting": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "testers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "profile": {
+                "type": "string",
+                "minLength": 1
+              },
+              "assistiveTechnology": {
+                "type": "string",
+                "minLength": 1
+              },
+              "device": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rating": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quote": {
+                "type": "string",
+                "minLength": 1
+              },
+              "positive": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "profile",
+              "assistiveTechnology",
+              "device"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "journeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "Completed",
+                  "Completed with difficulty",
+                  "Blocked",
+                  "Not tested"
+                ]
+              },
+              "notes": {
+                "type": "string",
+                "minLength": 1
+              },
+              "relatedFindingIds": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "outcome",
+              "notes"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "summary",
+        "testers",
+        "journeys"
+      ],
+      "additionalProperties": false
+    },
+    "manualChecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "Passed",
+              "Failed",
+              "Needs review",
+              "Not tested"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relatedFindingIds": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "label",
+          "outcome"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "Tier 1",
+              "Tier 2",
+              "Tier 3",
+              "Advisory"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timeframe": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "findingId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "action": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "owner": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "impact": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "tier",
+          "title",
+          "timeframe",
+          "summary",
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "standardsContext": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "summary",
+        "references"
+      ],
+      "additionalProperties": false
+    },
+    "nextSteps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "appendices": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "draftMeta": {
+      "type": "object",
+      "properties": {
+        "generatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generatedFrom": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "generatedAt",
+        "generatedFrom",
+        "instructions"
+      ],
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Z]{1,4}-?\\d{1,4}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "Critical",
+              "Serious",
+              "Moderate",
+              "Minor",
+              "Advisory"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Pass",
+              "Fail",
+              "Partially resolved",
+              "Not retested"
+            ]
+          },
+          "priorityTier": {
+            "type": "string",
+            "enum": [
+              "Tier 1",
+              "Tier 2",
+              "Tier 3",
+              "Advisory"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "affectedArea": {
+            "type": "string",
+            "minLength": 1
+          },
+          "affectedPages": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "wcag": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "AA",
+                    "AAA",
+                    "Best practice"
+                  ]
+                }
+              },
+              "required": [
+                "criterion",
+                "name",
+                "level"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "userImpact": {
+            "type": "string",
+            "minLength": 1
+          },
+          "technicalIssue": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recommendation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "manual-observation",
+                    "screen-reader-output",
+                    "code",
+                    "screenshot",
+                    "axe",
+                    "tester-quote",
+                    "process",
+                    "dom-snapshot"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "content": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "tool": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "language": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "alt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pageUrl": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "expected": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "observed": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "sourceType": {
+                      "type": "string",
+                      "enum": [
+                        "automated",
+                        "manual",
+                        "user-testing",
+                        "assistive-technology",
+                        "process",
+                        "authored"
+                      ]
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sourceFile": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "ruleId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "classification": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "pageUrls": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "targets": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "occurrenceCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "sourceType"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "type",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "sourceReferences": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sourceType": {
+                  "type": "string",
+                  "enum": [
+                    "automated",
+                    "manual",
+                    "user-testing",
+                    "assistive-technology",
+                    "process",
+                    "authored"
+                  ]
+                },
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sourceFile": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "ruleId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "classification": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pageUrls": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "targets": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "occurrenceCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "sourceType"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "relatedJourneyIds": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "draftStatus": {
+            "type": "string",
+            "enum": [
+              "generated",
+              "reviewed",
+              "discarded"
+            ]
+          },
+          "includeInReport": {
+            "type": "boolean"
+          },
+          "needsManualReview": {
+            "type": "boolean"
+          },
+          "reviewNotes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceRuleId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "axeImpact": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "serious",
+              "moderate",
+              "minor"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "severity",
+          "status",
+          "affectedArea",
+          "wcag",
+          "userImpact",
+          "technicalIssue",
+          "recommendation",
+          "evidence",
+          "draftStatus",
+          "includeInReport",
+          "needsManualReview"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "reportType",
+    "meta",
+    "executiveSummary",
+    "scope",
+    "methodology",
+    "criteriaOutcomes",
+    "userTesting",
+    "manualChecks",
+    "recommendations",
+    "standardsContext",
+    "nextSteps",
+    "draftMeta",
+    "findings"
+  ],
+  "additionalProperties": false
+}

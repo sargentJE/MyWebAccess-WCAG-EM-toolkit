@@ -171,7 +171,7 @@ export interface WCAGEMAccessibilityToolkitConfig {
     stepTimeoutMs?: number;
   }[];
   reporting?: {
-    reporters?: ("json" | "markdown" | "html" | "earl-jsonld" | "junit" | "portal-export")[];
+    reporters?: ("json" | "markdown" | "html" | "earl-jsonld" | "junit" | "portal-export" | "report-builder-starter")[];
     includePasses?: boolean;
     groupBestPracticeSeparately?: boolean;
     /**
