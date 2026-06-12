@@ -18,6 +18,9 @@ router — see CHANGELOG [Unreleased])_
 - [x] Docs sprint (2026-06 docs review execution): accuracy repairs, three
       guides under docs/guides/, CONTRIBUTING.md, README slim-and-route,
       committed process example + two docs drift-guard tests.
+- [ ] Enforce the ADR-0001 coverage floors (70% src/lib, 50% src/commands) as
+      an actual CI step — ci.yml's header claimed a check that never existed
+      (caught by the docs-sprint post-execution review).
 - [ ] schema `$id` advertises `github.com/jamiesargent/...` — not the real
       `sargentJE/MyWebAccess-WCAG-EM-toolkit` remote. Fixing touches Ajv ref
       identity; do as its own change.

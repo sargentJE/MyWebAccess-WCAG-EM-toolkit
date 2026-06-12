@@ -21,10 +21,12 @@ npm run test:e2e      # pipeline e2e against local fixture servers
 npm run format:check  # prettier, markdown included
 ```
 
-`npm run test:coverage` reports per-module coverage; CI enforces floors
-(70% line on `src/lib`, 50% on `src/commands`). A husky pre-commit hook
-regenerates `src/types/config.d.ts` from the config schema — commit the
-regenerated file when the schema changes.
+`npm run test:coverage` reports per-module coverage; the project targets
+70% line coverage on `src/lib` and 50% on `src/commands` (ADR-0001) —
+check the report when touching those trees (CI does not yet enforce the
+floors automatically). A husky pre-commit hook regenerates
+`src/types/config.d.ts` from the config schema — commit the regenerated
+file when the schema changes.
 
 ## Conventions
 

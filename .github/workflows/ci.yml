@@ -3,8 +3,9 @@
 #
 # Enforces the gate from ADR-0001: `npm run lint && npm run typecheck &&
 # npm test` must be green on every commit. Also includes a non-blocking
-# `npm audit --production` step and a coverage floor check (70% src/lib,
-# 50% src/commands).
+# `npm audit --production` step. Coverage floors (70% src/lib, 50%
+# src/commands) are an ADR-0001 target checked via `npm run test:coverage`;
+# automated CI enforcement is an open board item.
 #
 # Node version follows .nvmrc (currently 22); CI uses the exact same minor.
 # ============================================================================
