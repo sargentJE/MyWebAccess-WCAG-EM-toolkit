@@ -58,14 +58,6 @@ export function buildScreenshotPath(screenshotsDir, url, viewport, format = 'png
 }
 
 /**
- * `liftRuleSummaries` and `liftIncompleteSummaries` now live in
- * `lib/axe-artifact.mjs` (shared with `process-runner.mjs` so both scan paths
- * emit one artefact contract). Re-exported here for the widening tests that
- * import `liftRuleSummaries` from this module.
- */
-export { liftRuleSummaries };
-
-/**
  * Filter action objects by their compiled `regex` against a URL. Actions
  * with no `regex` attached (i.e. no `urlPattern` in schema) run
  * unconditionally; actions with `regex` only run when the URL matches.

@@ -17,7 +17,7 @@
 // SECTION: Imports
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { liftRuleSummaries } from '../../src/commands/scan.mjs';
+import { liftRuleSummaries } from '../../src/lib/axe-artifact.mjs';
 
 // SECTION: Tests
 
