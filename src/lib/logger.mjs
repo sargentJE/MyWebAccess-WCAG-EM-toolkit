@@ -17,6 +17,7 @@
 
 // SECTION: Imports
 import pino from 'pino';
+import { TOOL_IDENTITY } from './version.mjs';
 
 // SECTION: Constants
 
@@ -67,7 +68,17 @@ export function createLogger(options = {}) {
     name: options.name ?? 'wcag-em',
     level,
     redact: { paths: REDACT_PATHS, remove: true },
-    base: { pid: process.pid },
+    // ANCHOR: ToolIdentityBindings — provenance on every JSON log record, so
+    // piped/persisted logs are attributable to a toolkit + axe-core version
+    // the same way emitted artefacts are (Layer 3b carry-forward). Pretty/TTY
+    // mode hides them via the transport ignore list below — they are for
+    // machines, not eyeballs.
+    base: {
+      pid: process.pid,
+      tool: TOOL_IDENTITY.name,
+      toolVersion: TOOL_IDENTITY.version,
+      axeCore: TOOL_IDENTITY.axeCore,
+    },
     timestamp: pino.stdTimeFunctions.isoTime,
   };
 
@@ -80,7 +91,7 @@ export function createLogger(options = {}) {
           destination: 2, // stderr
           colorize: true,
           translateTime: 'HH:MM:ss.l',
-          ignore: 'pid,hostname,name',
+          ignore: 'pid,hostname,name,tool,toolVersion,axeCore',
         },
       }),
     );
