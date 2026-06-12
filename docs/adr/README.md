@@ -20,17 +20,18 @@ rejected_.
 | [0007](./0007-wcag-em-summary-shape.md)           | WCAG-EM Step 5 summary shape                                       | accepted | 2026-04    |
 | [0008](./0008-pluggable-reporters.md)             | Pluggable reporter runtime (internal at v1.0)                      | accepted | 2026-04-30 |
 | [0009](./0009-earl-jsonld-output.md)              | EARL JSON-LD as the default RDF serialisation                      | accepted | 2026-04-30 |
-| [0012](./0012-extensibility-is-internal.md)       | Extensibility is internal for v1.0                                 | accepted | 2026-04    |
 | [0010](./0010-project-layout.md)                  | Project layout                                                     | accepted | 2026-05-14 |
 | [0011](./0011-v1-release-boundary.md)             | v1.0 release boundary                                              | accepted | 2026-05-14 |
+| [0012](./0012-extensibility-is-internal.md)       | Extensibility is internal for v1.0                                 | accepted | 2026-04    |
 | [0013](./0013-crawlee-localhost-investigation.md) | Crawlee localhost-fixture hang investigation and resolution        | accepted | 2026-05-09 |
 | [0014](./0014-packaging-decisions.md)             | Packaging decisions                                                | accepted | 2026-05-14 |
 | [0015](./0015-publish-and-deprecation-policy.md)  | Publish and deprecation policy                                     | accepted | 2026-05-14 |
+| [0016](./0016-incomplete-node-evidence.md)        | Incomplete-node evidence (amended 2026-06)                         | accepted | 2026-06-07 |
 
 ## Numbering convention
 
-ADR numbers are append-only. All reserved seats through 0015 are
-now filled. The next available number is **0016**.
+ADR numbers are append-only. All reserved seats through 0016 are
+now filled. The next available number is **0017**.
 
 ## Citation convention
 
@@ -41,7 +42,7 @@ references survive refactors that line numbers don't. See commit
 
 ## Adding a new ADR
 
-1. Pick the next available number (sequence resumes at 0016).
+1. Pick the next available number (sequence resumes at 0017).
 2. Copy the template from any recent ADR (0007 / 0008 / 0009 are
    current-style references).
 3. Fill `Status`, `Date`, `Deciders`, `Consulted`, then the

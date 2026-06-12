@@ -43,8 +43,8 @@ npx wcag-em audit --config configs/example-site.json
 | `wcag-em discover`       | 1     | Crawl and build the URL inventory            |
 | `wcag-em sample`         | 2     | Select the structured + random sample        |
 | `wcag-em scan`           | 3     | Run axe-core over sample pages               |
-| `wcag-em scan-processes` | 3b    | Exercise and scan interactive processes      |
-| `wcag-em summarize`      | 4     | Aggregate findings and produce reports       |
+| `wcag-em scan-processes` | 4     | Exercise and scan interactive processes      |
+| `wcag-em summarize`      | 5     | Aggregate findings and produce reports       |
 | `wcag-em audit`          | All   | Run the full pipeline (discover → summarize) |
 
 All commands accept `--config <path>`, `--out-dir <path>`,
@@ -95,6 +95,9 @@ In addition to the reporter outputs, the summarize stage also writes:
   checklist for the manual-review phase.
 - **`grouped-by-rule.json`** / **`grouped-by-component.json`** — machine-
   readable finding breakdowns for integration with other tools.
+- **`random-vs-structured-comparison.json`** — sample-composition diagnostic:
+  rule IDs and clusters found only in the random sample, with an
+  expand-structured-sample recommendation flag.
 - **`manual-backlog.md`** — findings-aware manual-review backlog.
 
 ### Uploading to the MyAccess Portal

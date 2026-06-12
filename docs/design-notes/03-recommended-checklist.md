@@ -46,8 +46,8 @@ Use this as the mark-up version of the decisions already chosen for this build.
 
 - [x] JSON summary is the source of truth
 - [x] Markdown report is included
-- [ ] HTML report is deferred
-- [ ] EARL export is deferred
+- [x] HTML report is included (shipped post-checklist; originally deferred)
+- [x] EARL export is included (shipped post-checklist; originally deferred)
 - [x] Grouping by rule ID is included
 - [x] Grouping by likely component is included
 

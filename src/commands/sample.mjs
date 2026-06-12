@@ -10,8 +10,8 @@
  *   - Process expansion: force-includes `startUrl` + `relatedUrls` for
  *     configured processes.
  *
- * The union of the three buckets is written to `sample.json` at repo root —
- * the single handoff file consumed by `scan`.
+ * The union of the three buckets is written to `sample.json` under the run's
+ * out-dir — the single handoff file consumed by `scan`.
  *
  * NOTE: this command warns on `structuredMissingFromInventory` —
  * silent in v0.3, now surfaced via `ctx.logger.warn`.
