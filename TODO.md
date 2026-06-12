@@ -21,9 +21,12 @@ review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
 - [ ] Enforce the ADR-0001 coverage floors (70% src/lib, 50% src/commands) as
       an actual CI step — ci.yml's header claimed a check that never existed
       (caught by the docs-sprint post-execution review).
-- [ ] schema `$id` advertises `github.com/jamiesargent/...` — not the real
+- [x] schema `$id` advertises `github.com/jamiesargent/...` — not the real
       `sargentJE/MyWebAccess-WCAG-EM-toolkit` remote. Fixing touches Ajv ref
       identity; do as its own change.
+      _Done 2026-06-12 as its own commit: both schemas corrected; verified no
+      code or cross-schema ref resolves either URL, full suite (which
+      compiles both schemas) green._
 
 ## Active
 
@@ -49,10 +52,13 @@ review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
       bump, so caching behavior is intact. The integrations-guide sample
       workflow pins were bumped in the same pass (upload-artifact → v6:
       its v5 still declares node20 despite "Node 24 support" notes)._
-- [ ] **npm audit: 14 moderate advisories**, all via transitive `ws`
+- [x] **npm audit: 14 moderate advisories**, all via transitive `ws`
       (uninitialized memory disclosure, GHSA-58qx-3vcg-4xpx); `npm audit fix`
       reports a clean path. Apply, re-run the full gate + e2e (ws sits under
       the crawler/Playwright tree).
+      _Done 2026-06-12 (maintenance pass): lockfile-only fix within existing
+      ranges, npm audit now reports zero vulnerabilities; full gate INCLUDING
+      e2e re-run green._
 
 ## P1 — reliability & contract
 
@@ -142,8 +148,10 @@ review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
 
 ## P3 — polish & tech-debt
 
-- [ ] Drop the `scan.mjs` `liftRuleSummaries` re-export; repoint the widening
-      tests at `src/lib/axe-artifact.mjs`. _Review-confirmed (scan.mjs:66)._
+- [x] Drop the `scan.mjs` `liftRuleSummaries` re-export; repoint the widening
+      tests at `src/lib/axe-artifact.mjs`. _Review-confirmed (scan.mjs:66).
+      Done 2026-06-12 (maintenance pass): single importer repointed, shim
+      removed, no behavioural change._
 - [ ] Add a process-sourced incomplete-evidence end-to-end test (a needs-review
       finding originating from a `process-results.json` state, through to
       `portal-export` / html).
@@ -182,8 +190,11 @@ review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
       `actIds` on 56/104 rules via `axe.getRules()` — derive the map from axe
       metadata in `scripts/refresh-rule-maps.mjs` instead of expanding by hand,
       and add a CI drift check (map generated against 4.11.2; installed 4.11.3).
-- [ ] `tool-identity` propagation into Pino log base bindings (currently stamped
+- [x] `tool-identity` propagation into Pino log base bindings (currently stamped
       on emitted artefacts only).
+      _Done 2026-06-12 (maintenance pass): tool/toolVersion/axeCore on every
+      JSON log record; TTY pretty output unchanged (transport ignore list);
+      locked by the new logger unit tests._
 
 ## Consumer-side notes (tracked here until moved to their boards)
 
