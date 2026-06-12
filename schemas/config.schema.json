@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jamiesargent/wcag-em-a11y-toolkit/schema/config.schema.json",
+  "$id": "https://github.com/sargentJE/MyWebAccess-WCAG-EM-toolkit/schema/config.schema.json",
   "title": "WCAG-EM Accessibility Toolkit Config",
   "description": "Per-site configuration for the WCAG-EM-aligned automated accessibility testing toolkit. Validated by Ajv at config-load; see docs/adr/0002-config-is-ajv-validated.md.",
   "type": "object",

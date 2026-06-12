@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jamiesargent/wcag-em-a11y-toolkit/schema/portal-canonical-scan.schema.json",
+  "$id": "https://github.com/sargentJE/MyWebAccess-WCAG-EM-toolkit/schema/portal-canonical-scan.schema.json",
   "title": "MyAccess Portal canonical-scan payload",
   "$comment": "Empirically derived from MyAccess Portal upload behaviour (the `portal-export` reporter target). NOT an official portal schema \u2014 it guards `portal-export.json` against regressions in the contract we have confirmed via live uploads, and cannot predict undiscovered portal requirements. See the portal-export reporter and docs/adr/0007-wcag-em-summary-shape.md.",
   "type": "object",
