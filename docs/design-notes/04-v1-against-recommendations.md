@@ -1,5 +1,11 @@
 # V1 Against Recommended V2
 
+> **Design-time record (April 2026).** These notes captured the v2 design
+> framework while the toolkit was being built and are kept for history;
+> details may no longer match the shipped behaviour. For current usage see
+> the [guides](../guides/) and [README](../../README.md); for current
+> decisions see the [ADRs](../adr/).
+
 ## V1 already proved
 
 - root-URL discovery works

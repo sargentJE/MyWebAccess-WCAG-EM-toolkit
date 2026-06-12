@@ -8,6 +8,27 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Added
 
+- **Documentation guides** (`docs/guides/`) — the how-to-use genre the 2026-06
+  docs review found missing: a [config authoring guide](docs/guides/config-guide.md)
+  (every schema field with defaults, the process step DSL specification,
+  beforeScan/SPA recipes, storageState capture walkthrough, three worked
+  profiles incl. the production client-audit workflow), a
+  [user manual](docs/guides/user-manual.md) (output-files reference, exit
+  codes, Scan health interpretation, troubleshooting keyed to verbatim
+  messages), and an [integrations guide](docs/guides/integrations.md)
+  (portal pre-upload checklist + what ingestion rewrites, report-builder
+  draft lifecycle, CI recipe). README slimmed to a router; SPA and
+  client-audit content single-sourced into the config guide. CONTRIBUTING.md
+  added; design-notes carry design-time vintage banners.
+- **`configs/example-site-with-processes.json`** — first committed example
+  exercising custom process `steps`, `partial-submit` `fields`, and
+  `beforeScan` `urlPattern` conditionals (illustrative URLs).
+- **Docs drift guards** — `test/unit/configs-valid.test.mjs` (every committed
+  config must pass the full loadConfig path; explicit registration list) and
+  `test/unit/docs-config-coverage.test.mjs` (every config-schema field must
+  appear backticked in the config guide; schema-aware walker with a negative
+  fixture case). An undocumented new knob now fails the gate by name.
+
 - **`report-builder-starter` reporter** (`report-builder-draft.json`) — emits a
   myweb-report-builder `DraftReportSchema`-compliant starter draft directly
   from the run summary: site-derived finding IDs (`legacy-events -> LE-001`),

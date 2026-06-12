@@ -1,5 +1,11 @@
 # Decision Points and Recommended Answers
 
+> **Design-time record (April 2026).** These notes captured the v2 design
+> framework while the toolkit was being built and are kept for history;
+> details may no longer match the shipped behaviour. For current usage see
+> the [guides](../guides/) and [README](../../README.md); for current
+> decisions see the [ADRs](../adr/).
+
 This file breaks down the V1/V2 decision points and the recommendation now baked into this build.
 
 ## Scope model

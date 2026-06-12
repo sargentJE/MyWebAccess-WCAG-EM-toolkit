@@ -9,7 +9,18 @@ roadmap, the Layer-3b carry-forwards, the post-`portal-export` review, and the
 ([docs/reviews/2026-06-toolkit-review.md](docs/reviews/2026-06-toolkit-review.md),
 which carries evidence, the full roadmap rationale, and the Sprint 1 plan).
 
-_Last updated: 2026-06-10 (Sprint 1 "Truthful outputs" T1-T7 landed on `feat/truthful-outputs`)_
+_Last updated: 2026-06-11 (Sprint 1 "Truthful outputs" merged to main; docs
+sprint D1-D6 landed on `docs/guides-sprint`: guides + drift guards + README
+router — see CHANGELOG [Unreleased])_
+
+## Docs
+
+- [x] Docs sprint (2026-06 docs review execution): accuracy repairs, three
+      guides under docs/guides/, CONTRIBUTING.md, README slim-and-route,
+      committed process example + two docs drift-guard tests.
+- [ ] schema `$id` advertises `github.com/jamiesargent/...` — not the real
+      `sargentJE/MyWebAccess-WCAG-EM-toolkit` remote. Fixing touches Ajv ref
+      identity; do as its own change.
 
 ## Active
 

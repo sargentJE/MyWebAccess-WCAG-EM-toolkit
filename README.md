@@ -36,6 +36,17 @@ npx playwright install chromium
 npx wcag-em audit --config configs/example-site.json
 ```
 
+## Documentation
+
+| Guide                                                   | Covers                                                                                       |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [User manual](./docs/guides/user-manual.md)             | Running the pipeline, every output file, exit codes, Scan health, troubleshooting            |
+| [Config authoring guide](./docs/guides/config-guide.md) | Every config field, the process step DSL, SPA recipes, auth setup, production audit workflow |
+| [Integrations guide](./docs/guides/integrations.md)     | MyAccess Portal upload, report-builder drafts, CI usage                                      |
+| [CONTRIBUTING](./CONTRIBUTING.md)                       | Development setup, conventions, adding to the toolkit                                        |
+| [Architecture decisions](./docs/adr/)                   | Why the toolkit works the way it does (MADR records)                                         |
+| [CHANGELOG](./CHANGELOG.md)                             | What changed per release, plus the pages/page-views/occurrences/instances counts glossary    |
+
 ## CLI commands
 
 | Command                  | Stage | Description                                  |
@@ -60,12 +71,17 @@ and adapt to your site. Key fields:
 | `rootUrl`                     | Starting URL for the crawler                                                                                  |
 | `crawl.maxPages`              | Maximum pages to discover                                                                                     |
 | `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                                                   |
+| `crawl.documentLinkPatterns`  | Non-HTML links to skip (PDF/archive/media preset; set `[]` to crawl documents)                                |
 | `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                                                     |
 | `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export`, `report-builder-starter` |
 | `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                                                    |
 
-See [`schemas/config.schema.json`](./schemas/config.schema.json) for
-the full configuration reference.
+Every field is documented in the
+[config authoring guide](./docs/guides/config-guide.md) — including the
+process step DSL, SPA tuning recipes, authenticated-scan setup, and a
+production client-audit workflow. The formal reference is
+[`schemas/config.schema.json`](./schemas/config.schema.json); a guard test
+keeps guide and schema in sync.
 
 ## Reporters
 
@@ -100,15 +116,10 @@ In addition to the reporter outputs, the summarize stage also writes:
   expand-structured-sample recommendation flag.
 - **`manual-backlog.md`** — findings-aware manual-review backlog.
 
-### Uploading to the MyAccess Portal
-
-Enable the `portal-export` reporter to write `portal-export.json` in the
-portal's canonical-scan format, then upload it at the portal's scan-upload
-screen (drag-drop or "Paste JSON instead"). It carries per-element HTML
-evidence, WCAG SC references, and per-page instances. Compliance-affecting
-violations drive the dashboard compliance score; best-practice and axe
-needs-review items are emitted as manual-review cards that do not affect the
-score. Remediation is added by the admin in the portal's enrichment UI.
+The portal and report-builder exports each have an operator workflow —
+pre-upload checks, what the portal rewrites on ingestion, the draft authoring
+lifecycle — covered in the
+[integrations guide](./docs/guides/integrations.md).
 
 ## TypeScript support
 
@@ -119,115 +130,16 @@ import type { WCAGEMAccessibilityToolkitConfig } from 'wcag-em-a11y-toolkit';
 import { runAudit, buildContext } from 'wcag-em-a11y-toolkit';
 ```
 
-## Configuring for SPAs
+## SPAs and client audits
 
-Single-page applications (React, Vue, Angular, Svelte, etc.) typically
-hydrate their DOM AFTER `domcontentloaded` fires. The toolkit's default
-`scan.waitUntil: "domcontentloaded"` is SPA-friendly for sites that
-render server-side and then hydrate, but client-rendered SPAs that
-build the DOM entirely in JavaScript need different tuning to ensure
-axe-core scans the fully-rendered tree.
+Single-page applications need tuning before axe sees the real DOM (load
+states, hydration markers, cookie-banner dismissal) — the recipes live in the
+[config guide's beforeScan section](./docs/guides/config-guide.md#4-beforescan-recipes-spas-cookie-banners-modals).
 
-Three knobs cover most cases:
-
-```json
-{
-  "scan": {
-    "waitUntil": "networkidle",
-    "timeoutMs": 90000,
-    "beforeScan": {
-      "actions": [
-        { "action": "waitFor", "selector": "[data-hydrated]" },
-        { "action": "click", "selector": "button[data-cookie-accept]" }
-      ]
-    }
-  },
-  "crawl": {
-    "maxConcurrency": 2,
-    "requestTimeoutSecs": 90
-  }
-}
-```
-
-- **`scan.waitUntil: "networkidle"`** waits for 500ms of network
-  silence before axe runs. Adds 1-3s per page versus
-  `"domcontentloaded"` but ensures lazy-loaded content is in the DOM.
-- **`scan.timeoutMs: 90000`** (default 60000) gives heavy hydration
-  more headroom; raise further for SPAs with slow third-party
-  dependencies (analytics, chat widgets, etc.).
-- **`scan.beforeScan.actions[]`** runs pre-axe hooks: `waitFor` polls
-  for a hydration marker (a data attribute the SPA sets after first
-  render), `click` dismisses cookie banners or modals that overlay
-  the page. Per-URL matching via `urlPattern` is also supported.
-- **`crawl.maxConcurrency: 2`** (default 5) prevents SPA scanning
-  from saturating the auditor's CPU when JavaScript hydration is
-  expensive.
-- **`scan.axe.overrides[]`** lets specific SPA routes use different
-  rule/tag sets — for example, disabling `region` on a single-pane
-  application shell that intentionally has no landmarks.
-
-## Configuring for client audits
-
-For paid client work, start from
-[`configs/example-site-best-practice.json`](./configs/example-site-best-practice.json)
-rather than the bare-bones `example-site.json`. The sidecar opts in to
-axe-core's `best-practice` tag (covers `landmark-one-main`, `region`,
-`heading-order`, `page-has-heading-one` — universally-expected auditor
-concerns), enables the five baseline reporters (add `portal-export` /
-`report-builder-starter` per client need), and stamps WCAG 2.2 AA conformance
-fields for proper WCAG-EM Step 5 reporting.
-
-After copying the sidecar, the four most important per-site overrides:
-
-```json
-{
-  "sample": {
-    "structuredManual": [
-      "https://client.example/",
-      "https://client.example/contact",
-      "https://client.example/checkout",
-      "https://client.example/accessibility-statement"
-    ]
-  },
-  "reporting": {
-    "failOnFindings": {
-      "impacts": ["critical", "serious"],
-      "threshold": 1
-    }
-  },
-  "crawl": { "requestDelayMs": 500 },
-  "wcagEm": {
-    "evaluator": { "name": "Your Name", "contact": "you@firm.example" },
-    "technologiesReliedUpon": ["HTML", "CSS", "JavaScript", "WAI-ARIA"],
-    "samplingMethodNotes": "Sample covers homepage, primary user journeys, and the accessibility statement; supplemented by toolkit auto-suggest and a 10% random pool."
-  }
-}
-```
-
-- **`sample.structuredManual`** is the WCAG-EM Step 3a curated sample.
-  Replace the placeholder URLs above with the client's actual critical
-  paths: homepage, primary user journeys (contact, checkout, sign-up,
-  search), policy pages (privacy, terms, accessibility statement), and
-  any known pain-points the client flagged at scoping. The sidecar
-  deliberately ships this field empty so a copy-paste user can't
-  accidentally inherit `example.com` URLs.
-- **`reporting.failOnFindings`** controls CI exit codes. Threshold `1`
-  with impacts `["critical", "serious"]` fails the build on any
-  high-severity finding — appropriate for sites with a baseline. For a
-  first-time audit on a site with known issues, raise the threshold or
-  scope to `["critical"]` only so the run produces a report rather than
-  a hard fail.
-- **`crawl.requestDelayMs`** sets per-request politeness. Default
-  `250` ms in the sidecar; production sites under traffic load may
-  benefit from `500-1000` ms. Always honour the site's robots.txt
-  manually before running.
-- **`wcagEm.evaluator`** is required for WCAG-EM Step 5 conformance
-  reporting — fill in your name and contact so the EARL JSON-LD and
-  `wcag-em-summary.json` artefacts carry proper provenance.
-- **`crawl.documentLinkPatterns`** defaults to skipping
-  `.pdf` / `.docx` / `.zip` / etc. (saves ~27s on document-heavy
-  sites). For docs-site audits where PDFs are the deliverables under
-  review, set this to `[]` to crawl them as page-equivalents.
+For paid client work — the best-practice rule profile, WCAG-EM scoping,
+process definitions, politeness, and the full recon-to-exports workflow — see
+the
+[config guide's production audit profile](./docs/guides/config-guide.md#production-client-audit-the-myweb-access-workflow).
 
 ## What this toolkit does not claim
 
@@ -247,8 +159,10 @@ After copying the sidecar, the four most important per-site overrides:
 | `src/data/`          | Static data (ACT rule map, WCAG SC metadata)    |
 | `schemas/`           | JSON Schema for config + portal-export contract |
 | `configs/`           | Example site configurations                     |
+| `docs/guides/`       | User manual, config guide, integrations guide   |
 | `docs/adr/`          | Architecture decision records                   |
-| `docs/design-notes/` | Original design framework                       |
+| `docs/design-notes/` | Original design framework (historical)          |
+| `docs/reviews/`      | Systematic review records                       |
 | `test/`              | Unit, e2e, and fixture tests                    |
 
 ## Architecture decisions
