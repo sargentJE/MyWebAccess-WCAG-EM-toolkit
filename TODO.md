@@ -9,9 +9,9 @@ roadmap, the Layer-3b carry-forwards, the post-`portal-export` review, and the
 ([docs/reviews/2026-06-toolkit-review.md](docs/reviews/2026-06-toolkit-review.md),
 which carries evidence, the full roadmap rationale, and the Sprint 1 plan).
 
-_Last updated: 2026-06-11 (Sprint 1 "Truthful outputs" merged to main; docs
-sprint D1-D6 landed on `docs/guides-sprint`: guides + drift guards + README
-router — see CHANGELOG [Unreleased])_
+_Last updated: 2026-06-12 (pre-push board accuracy audit: every open item
+re-verified against code; Sprint 1 merged to main; docs sprint D1-D6 +
+review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
 
 ## Docs
 
@@ -34,6 +34,18 @@ router — see CHANGELOG [Unreleased])_
       during the review; the board + review doc are now the canonical record).
 - [x] Approve and schedule Sprint 1 "Truthful outputs" (top-cluster plan in the
       review doc: T1-T7).
+
+## Maintenance (time-sensitive)
+
+- [ ] **GitHub Actions Node 24 runtime — deadline 2026-06-16.** Every CI run
+      warns that `actions/checkout@v4` / `actions/setup-node@v4` run on
+      Node 20; GitHub forces actions onto Node 24 from June 16 and removes
+      Node 20 from runners 2026-09-16. Bump to versions supporting Node 24
+      (or set the opt-in env), then watch both jobs green.
+- [ ] **npm audit: 14 moderate advisories**, all via transitive `ws`
+      (uninitialized memory disclosure, GHSA-58qx-3vcg-4xpx); `npm audit fix`
+      reports a clean path. Apply, re-run the full gate + e2e (ws sits under
+      the crawler/Playwright tree).
 
 ## P1 — reliability & contract
 
@@ -68,13 +80,19 @@ router — see CHANGELOG [Unreleased])_
       `priorityScore`, `manualReviewIssues`) and truncates (2000-char evidence)
       — the risk is silent shadowing, not rejection. Authoritative source:
       portal `backend/src/scans/ingestion/scan-ingestion.types.ts`
-      (`canonicalSchemaVersion: 'scan-canonical/v1'` already exists)._
+      (`canonicalSchemaVersion: 'scan-canonical/v1'` already exists). Partial
+      progress (Sprint 1 T5): `reporting.validateExports` now gates emission
+      against the vendored copy at write time; the published-schema swap and
+      payload `contractVersion` remain (verified absent 2026-06-12)._
 - [ ] **`occurrenceCount` semantics.** Reconcile (or rename) the distinct-element
       count emitted by `portal-export` vs the Σ-`nodesCount` shown in
       `summary.json` / html / markdown, so auditors diffing artefacts see
       consistent numbers. _Review-confirmed (probe P4); single-viewport runs
       mask it, multi-viewport runs diverge. Also note render-state dependence:
-      hidden carousel slides undercounted `image-alt` on the live AU run._
+      hidden carousel slides undercounted `image-alt` on the live AU run.
+      Partial progress: the CHANGELOG counts glossary now DOCUMENTS the four
+      numbers; the reconcile/rename itself remains (verified divergent
+      2026-06-12)._
 - [x] **Incomplete-evidence size cap.** Add `reporting.maxIncompleteExamplesPerRule`
       (default generous) applied in `liftIncompleteSummaries`, to bound
       `axe-results.json` on incomplete-heavy sites. _Review-confirmed: cap
@@ -91,7 +109,10 @@ router — see CHANGELOG [Unreleased])_
       portal's `remediation.proposals` slot arrives empty and is preserved._
 - [ ] **WCAG SC tag coverage.** Map the rules that currently emit `wcag: []`
       (best-practice / experimental) to SCs where one applies, to satisfy the
-      portal's "provide WCAG criteria tags" prompt.
+      portal's "provide WCAG criteria tags" prompt. _Report-builder side
+      mitigated (the starter draft synthesizes the consumer's own
+      Best-practice reference when a rule has no SC); the portal-side
+      `wcag: []` gap remains._
 - [x] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36 of the 56 A/AA
       SCs notTested and nothing in the payload conveying it (live AU run). Emit
       `{passed, failed, cantTell, notTested, inapplicable}` + `manualReviewIssues`.
@@ -106,7 +127,11 @@ router — see CHANGELOG [Unreleased])_
 - [ ] **Feature-aware manual backlog.** Live AU join: backlog covered 8/13
       manual-class barrier categories, missing carousel, modal, data tables,
       abbreviations, link-text quality — all detectable at discover time
-      (discover already counts forms/landmarks/search). Review C6.
+      (discover already counts forms/landmarks/search; verified 2026-06-12 it
+      still detects none of the missing five). Review C6. _Enabler landed in
+      the docs sprint: backlog items are now structured data
+      (`buildManualBacklogItems`), so detection-driven items have a clean
+      insertion point._
 
 ## P3 — polish & tech-debt
 
