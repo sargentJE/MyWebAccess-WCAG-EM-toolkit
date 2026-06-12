@@ -1,0 +1,84 @@
+{
+  "name": "example-site-with-processes",
+  "rootUrl": "https://example.com/",
+  "scope": { "mode": "same-hostname" },
+  "crawl": {
+    "maxPages": 30,
+    "maxConcurrency": 2,
+    "requestDelayMs": 250
+  },
+  "sample": {
+    "structuredManual": ["https://example.com/", "https://example.com/contact"],
+    "autoSuggest": { "enabled": true, "perCluster": 1 },
+    "randomPercentOfStructured": 0.1,
+    "minRandomPages": 1,
+    "randomSeed": 1
+  },
+  "scan": {
+    "viewports": [
+      { "id": "desktop", "width": 1280, "height": 800 },
+      { "id": "reflow", "width": 320, "height": 800 }
+    ],
+    "waitUntil": "domcontentloaded",
+    "timeoutMs": 60000,
+    "retries": 1,
+    "fullPageScreenshots": true,
+    "beforeScan": {
+      "actions": [
+        { "action": "click", "selector": "button[data-cookie-accept]" },
+        {
+          "action": "waitFor",
+          "selector": "[data-hydrated]",
+          "urlPattern": "^https://example\\.com/app",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    "axe": {
+      "withTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
+    }
+  },
+  "processes": [
+    {
+      "name": "contact-blank-submit",
+      "startUrl": "https://example.com/contact",
+      "pattern": "blank-submit",
+      "forceInclude": true,
+      "selectors": { "submit": "form#contact button[type='submit']" }
+    },
+    {
+      "name": "newsletter-partial-submit",
+      "startUrl": "https://example.com/newsletter",
+      "pattern": "partial-submit",
+      "forceInclude": true,
+      "fields": [{ "selector": "input[name='email']", "value": "invalid-email" }],
+      "selectors": { "submit": "form#newsletter button[type='submit']" }
+    },
+    {
+      "name": "site-search-custom-steps",
+      "startUrl": "https://example.com/",
+      "forceInclude": true,
+      "stepTimeoutMs": 20000,
+      "steps": [
+        { "action": "goto", "url": "https://example.com/" },
+        { "action": "fill", "selector": "input[name='q']", "value": "accessibility" },
+        { "action": "press", "key": "Enter" },
+        { "action": "waitFor", "selector": "#search-results" },
+        { "action": "screenshot", "name": "results" },
+        { "action": "axe", "state": "search-results" }
+      ]
+    }
+  ],
+  "reporting": {
+    "reporters": ["json", "markdown", "html"],
+    "failOnFindings": {
+      "impacts": ["critical", "serious"],
+      "threshold": 1
+    }
+  },
+  "wcagEm": {
+    "evaluator": { "name": "Your Name", "contact": "you@firm.example" },
+    "wcagVersion": "2.2",
+    "conformanceTarget": "AA"
+  }
+}
