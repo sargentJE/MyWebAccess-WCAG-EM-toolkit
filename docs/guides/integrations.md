@@ -121,13 +121,13 @@ Minimal GitHub Actions job:
 a11y-audit:
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
       with: { node-version: 22 }
     - run: npm ci
     - run: npx playwright install chromium
     - run: npx wcag-em audit --config configs/ci-smoke.json --out-dir output/ci
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       if: always()
       with: { name: a11y-reports, path: output/ci/reports }
 ```

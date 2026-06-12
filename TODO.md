@@ -37,11 +37,18 @@ review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
 
 ## Maintenance (time-sensitive)
 
-- [ ] **GitHub Actions Node 24 runtime — deadline 2026-06-16.** Every CI run
+- [x] **GitHub Actions Node 24 runtime — deadline 2026-06-16.** Every CI run
       warns that `actions/checkout@v4` / `actions/setup-node@v4` run on
       Node 20; GitHub forces actions onto Node 24 from June 16 and removes
       Node 20 from runners 2026-09-16. Bump to versions supporting Node 24
       (or set the opt-in env), then watch both jobs green.
+      _Done 2026-06-12 (PR #5): checkout/setup-node/cache v4→v5 — all three
+      declare node24 (`cache@v4` shared the root cause though the runner
+      warning didn't name it). Both jobs green on the PR run; Playwright
+      cache key `playwright-chromium-Linux-1.59.1` restored across the
+      bump, so caching behavior is intact. The integrations-guide sample
+      workflow pins were bumped in the same pass (upload-artifact → v6:
+      its v5 still declares node20 despite "Node 24 support" notes)._
 - [ ] **npm audit: 14 moderate advisories**, all via transitive `ws`
       (uninitialized memory disclosure, GHSA-58qx-3vcg-4xpx); `npm audit fix`
       reports a clean path. Apply, re-run the full gate + e2e (ws sits under
