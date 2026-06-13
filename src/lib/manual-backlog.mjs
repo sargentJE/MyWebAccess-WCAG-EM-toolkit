@@ -28,6 +28,12 @@
  * @property {any[]} findings - Grouped findings from `summary.findings` (rule-level).
  * @property {any[]} [inventory] - Discovery inventory (optional; used for landmarks heuristic).
  * @property {any[]} [processes] - Configured processes; each becomes a walkthrough item.
+ * @property {Array<{ url: string, viewport?: string, screenshot?: string }>} [screenshots]
+ *   - E7: per-view screenshots; pages captured at multiple viewports become
+ *     "screenshots to eyeball" (responsive overlap/clipping candidates).
+ * @property {{ challengePages?: string[], documents?: Array<{ url: string, type?: string }> }} [manualReview]
+ *   - E7: the could-not-auto-audit hand-off — challenge/blocked pages (after §0a)
+ *     and documents (PDFs) a browser cannot axe-scan.
  */
 
 /**
@@ -41,7 +47,13 @@
  * @param {BuildManualBacklogArgs} args
  * @returns {Array<{ section: string, label: string }>}
  */
-export function buildManualBacklogItems({ findings, inventory = [], processes = [] }) {
+export function buildManualBacklogItems({
+  findings,
+  inventory = [],
+  processes = [],
+  screenshots = [],
+  manualReview = {},
+}) {
   const findingIds = new Set(
     (Array.isArray(findings) ? findings : []).map((f) => (typeof f?.id === 'string' ? f.id : '')),
   );
@@ -133,6 +145,52 @@ export function buildManualBacklogItems({ findings, inventory = [], processes = 
       items.push({
         section: 'Process walkthroughs',
         label: `Complete walkthrough of process: **${name}**`,
+      });
+    }
+  }
+
+  // E7: screenshots to eyeball — pages captured at MORE THAN ONE viewport are
+  // responsive-overlap / clipping candidates (compare desktop vs reflow).
+  /** @type {Map<string, Set<string>>} */
+  const viewportsByUrl = new Map();
+  for (const s of Array.isArray(screenshots) ? screenshots : []) {
+    if (!s?.url || !s?.screenshot) continue;
+    const set = viewportsByUrl.get(s.url) ?? new Set();
+    set.add(typeof s.viewport === 'string' ? s.viewport : 'default');
+    viewportsByUrl.set(s.url, set);
+  }
+  const multiViewport = [...viewportsByUrl.entries()]
+    .filter(([, vps]) => vps.size > 1)
+    .map(([url]) => url)
+    .sort();
+  if (multiViewport.length > 0) {
+    const SHOTS = 'Screenshots to eyeball (responsive overlap / clipping)';
+    for (const url of multiViewport) {
+      items.push({
+        section: SHOTS,
+        label: `Compare desktop vs reflow captures for overlap/clipping: ${url}`,
+      });
+    }
+  }
+
+  // E7: manual-review queue — the could-not-auto-audit hand-off. Challenge/blocked
+  // pages (after the §0a strategy) + documents (PDFs) a browser cannot
+  // meaningfully axe-scan. Makes "could not auto-audit" an explicit, actionable
+  // list rather than an absence.
+  const challengePages = Array.isArray(manualReview?.challengePages)
+    ? manualReview.challengePages
+    : [];
+  const documents = Array.isArray(manualReview?.documents) ? manualReview.documents : [];
+  if (challengePages.length > 0 || documents.length > 0) {
+    const QUEUE = 'Manual-review queue (could not auto-audit)';
+    for (const url of [...challengePages].sort()) {
+      items.push({ section: QUEUE, label: `Review by hand — automated audit was blocked: ${url}` });
+    }
+    for (const doc of documents) {
+      const type = typeof doc?.type === 'string' ? doc.type.toUpperCase() : 'document';
+      items.push({
+        section: QUEUE,
+        label: `Review ${type} by hand (not browser-auditable): ${doc?.url ?? ''}`,
       });
     }
   }

@@ -159,3 +159,60 @@ test('buildManualBacklog: AU Lane B items present even when axe findings have pa
   assert.match(md, /Captions and transcripts/);
   assert.match(md, /Focus indicator visibility/);
 });
+
+// SECTION: E7 — evidence-driven sections
+
+test('buildManualBacklog (E7): multi-viewport pages become screenshots-to-eyeball items', () => {
+  const md = buildManualBacklog({
+    findings: [],
+    screenshots: [
+      { url: 'https://x.com/a', viewport: 'desktop', screenshot: '/s/a-desktop.png' },
+      { url: 'https://x.com/a', viewport: 'reflow', screenshot: '/s/a-reflow.png' },
+      { url: 'https://x.com/b', viewport: 'desktop', screenshot: '/s/b-desktop.png' },
+    ],
+  });
+  assert.match(md, /## Screenshots to eyeball/);
+  assert.match(md, /overlap\/clipping: https:\/\/x\.com\/a/);
+  assert.doesNotMatch(
+    md,
+    /https:\/\/x\.com\/b/,
+    'a single-viewport page is not a responsive-overlap candidate',
+  );
+});
+
+test('buildManualBacklog (E7): challenge pages + documents form the manual-review queue', () => {
+  const md = buildManualBacklog({
+    findings: [],
+    manualReview: {
+      challengePages: ['https://x.com/event/2', 'https://x.com/event/1'],
+      documents: [{ url: 'https://x.com/newsletter.pdf', type: 'pdf' }],
+    },
+  });
+  assert.match(md, /## Manual-review queue \(could not auto-audit\)/);
+  const idx1 = md.indexOf('/event/1');
+  const idx2 = md.indexOf('/event/2');
+  assert.ok(idx1 > 0 && idx2 > idx1, 'challenge pages listed in sorted order');
+  assert.match(md, /Review PDF by hand .*newsletter\.pdf/);
+});
+
+test('buildManualBacklog (E7): no evidence args → new sections omitted (not empty)', () => {
+  const md = buildManualBacklog({ findings: [] });
+  assert.doesNotMatch(md, /Screenshots to eyeball/);
+  assert.doesNotMatch(md, /Manual-review queue/);
+});
+
+test('buildManualBacklog (E7): deterministic + trailing newline with the evidence args', () => {
+  const args = {
+    findings: [{ id: 'region', impact: 'moderate' }],
+    screenshots: [
+      { url: 'https://x.com/a', viewport: 'desktop', screenshot: '/s/1.png' },
+      { url: 'https://x.com/a', viewport: 'reflow', screenshot: '/s/2.png' },
+    ],
+    manualReview: {
+      challengePages: ['https://x.com/c'],
+      documents: [{ url: 'https://x.com/d.pdf', type: 'pdf' }],
+    },
+  };
+  assert.strictEqual(buildManualBacklog(args), buildManualBacklog(args));
+  assert.ok(buildManualBacklog(args).endsWith('\n'));
+});

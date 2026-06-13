@@ -653,8 +653,13 @@ export async function run(ctx) {
     ...wcagEmSummary,
   });
 
-  // ANCHOR: ManualBacklog — findings-aware. Replaces the original static
-  // template. Prepend the markdown tool-identity header.
+  // ANCHOR: ManualBacklog — findings-aware + evidence-driven (E7). Prepend the
+  // markdown tool-identity header.
+  const documentInventory = await readJsonMaybe(
+    path.join(paths.inventoryDir, 'document-inventory.json'),
+    /** @type {Record<string, any>} */ ({}),
+    logger,
+  );
   await writeText(
     path.join(paths.reportsDir, 'manual-backlog.md'),
     toolIdentityMarkdownHeader() +
@@ -662,6 +667,19 @@ export async function run(ctx) {
         findings: groupedFindings,
         inventory,
         processes: config.processes ?? [],
+        // E7: multi-viewport screenshots → "screenshots to eyeball" (responsive
+        // overlap candidates); keyed by the redirect-folded identity.
+        screenshots: axeResults
+          .filter((r) => isAuditableView(r) && typeof r.screenshot === 'string')
+          .map((r) => ({ url: viewIdentity(r), viewport: r.viewport, screenshot: r.screenshot })),
+        // E7: the could-not-auto-audit hand-off — challenge/blocked pages (after
+        // §0a) + the PDF document inventory.
+        manualReview: {
+          challengePages: (executionHealth.pagesUnauditable ?? []).map(
+            (/** @type {any} */ p) => p.url,
+          ),
+          documents: Array.isArray(documentInventory?.documents) ? documentInventory.documents : [],
+        },
       }),
   );
 
