@@ -73,6 +73,7 @@ const DEFAULTS = {
       urls: [],
       commonPaths: ['/sitemap.xml', '/sitemap_index.xml'],
       maxUrls: 500,
+      maxSitemapDocs: 50,
     },
     excludeUrlPatterns: [],
     documentLinkPatterns: DEFAULT_DOCUMENT_LINK_PATTERNS,

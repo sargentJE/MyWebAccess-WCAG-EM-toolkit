@@ -6,24 +6,6 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
-### Changed
-
-- **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
-  the scanner cannot audit — Cloudflare/WAF **challenge** interstitials and
-  **empty** documents — are classified at the scan/process write-site
-  (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
-  verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
-  portal-export / report-builder / html reporters), not just `summary.json`.
-  _Breaking for diff-based consumers:_ such pages drop out of findings and stop
-  incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
-  findings for false **passes**, `wcag-em-summary.json` gains an
-  `automatedCoverage` block (`status` + `pagesSelected`/`pagesAudited` +
-  `scopeExclusions`); `executionHealth` gains
-  `pagesUnauditable`/`challengePages`/`processStepFailures`; and
-  `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
-  config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
-  `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
-
 ### Added
 
 - **Documentation guides** (`docs/guides/`) — the how-to-use genre the 2026-06
@@ -108,6 +90,34 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Changed
 
+- **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
+  the scanner cannot audit — Cloudflare/WAF **challenge** interstitials and
+  **empty** documents — are classified at the scan/process write-site
+  (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
+  verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
+  portal-export / report-builder / html reporters), not just `summary.json`.
+  _Breaking for diff-based consumers:_ such pages drop out of findings and stop
+  incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
+  findings for false **passes**, `wcag-em-summary.json` gains an
+  `automatedCoverage` block (`status` + `pagesSelected`/`pagesAudited` +
+  `scopeExclusions`); `executionHealth` gains
+  `pagesUnauditable`/`challengePages`/`processStepFailures`; and
+  `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
+  config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
+  `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
+- **Fair, deterministic, recursion-aware sitemap seeding (E2, ADR-0018).**
+  `getSitemapSeeds` no longer drains its `maxUrls` budget in config order (which
+  starved later sitemaps — a live run seeded 6 of 230 blog posts). It now
+  expands the `<sitemapindex>` tree (classifying documents by root element, not
+  URL extension), bounds total document fetches (`sitemapSeeding.maxSitemapDocs`,
+  default 50), then allocates the budget **round-robin across leaf sitemaps** so
+  one large sitemap can't shut out the rest. `inventory-metadata.json` gains a
+  `sitemaps` block (per-leaf `found`/`contributed`/`clipped`,
+  `reachedSitemapCap`, `neverReached`). Fetches stay sequential and leaves/locs
+  are sorted, so seeds are reproducible for a fixed `randomSeed` — but a prior
+  run's sample will not byte-reproduce. _Note:_ seed fairness is not Step-3c
+  **sample** fairness; the random tier still draws from the whole inventory
+  (residual skew is surfaced by E1's `automatedCoverage`, not hidden).
 - **`samplePagesScanned` redefined to PAGES** (unique pages with at least one
   successful view); the previous value counted page-view entries (pages x
   viewports) INCLUDING failures, so a 5-page 2-viewport audit reported 10
