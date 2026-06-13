@@ -102,6 +102,36 @@ export function captureDiscoveryMetadata(flags) {
   };
 }
 
+/**
+ * Bucket a crawl-request failure into a coarse reason for inventory-metadata
+ * telemetry (E1). Keeps the inventory's failure visibility low-cardinality so a
+ * reader sees "12 timeouts, 3 network" rather than 15 unique stack traces.
+ *
+ * @param {unknown} error - The error Crawlee passed to failedRequestHandler.
+ * @param {{ errorMessages?: string[] }} [request] - Fallback message source.
+ * @returns {'timeout' | 'network' | 'http-error' | 'navigation' | 'other'}
+ */
+export function classifyCrawlFailure(error, request) {
+  const fromError = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const fromRequest =
+    request && Array.isArray(request.errorMessages)
+      ? (request.errorMessages[request.errorMessages.length - 1] ?? '')
+      : '';
+  const msg = String(fromError || fromRequest).toLowerCase();
+  if (msg.includes('timeout') || msg.includes('timed out')) return 'timeout';
+  if (
+    msg.includes('net::') ||
+    msg.includes('econn') ||
+    msg.includes('enotfound') ||
+    msg.includes('dns') ||
+    msg.includes('socket')
+  )
+    return 'network';
+  if (/\b[45]\d\d\b/.test(msg)) return 'http-error';
+  if (msg.includes('navigation') || msg.includes('goto')) return 'navigation';
+  return 'other';
+}
+
 // SECTION: Public API
 
 /**
@@ -122,6 +152,11 @@ export async function run(ctx) {
   const excludedByPattern = new Set();
   /** @type {Set<string>} */
   const excludedByExtension = new Set();
+  // E1: crawl-failure visibility — count + bucket failed requests so crawl loss
+  // lands in inventory-metadata (sibling to the excludedBy* counts), not just logs.
+  let failedRequestCount = 0;
+  /** @type {Map<string, number>} */
+  const failureReasons = new Map();
   const seeds = [normalizeUrl(config.rootUrl)];
 
   // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap.
@@ -226,8 +261,11 @@ export async function run(ctx) {
       });
     },
 
-    failedRequestHandler({ request }) {
-      logger.warn({ url: request.url }, 'crawl request failed');
+    failedRequestHandler({ request, error }) {
+      failedRequestCount += 1;
+      const reason = classifyCrawlFailure(error, request);
+      failureReasons.set(reason, (failureReasons.get(reason) ?? 0) + 1);
+      logger.warn({ url: request.url, reason }, 'crawl request failed');
     },
   });
 
@@ -280,6 +318,10 @@ export async function run(ctx) {
     outOfScopeLinkCount: excludedOutOfScope.size,
     excludedByPatternCount: excludedByPattern.size,
     excludedByExtensionCount: excludedByExtension.size,
+    // E1: crawl-request failures (timeouts, network, http errors) bucketed by
+    // reason — previously warn-only and invisible to every report.
+    failedRequestCount,
+    failureReasons: Object.fromEntries([...failureReasons.entries()].sort()),
     // NOTE: cap visibility (2026-06 review C1). Without these two fields a
     // reader cannot distinguish "thorough crawl found N pages" from "crawl
     // hit the ceiling at N" — summarize surfaces reachedMaxPages as a
