@@ -53,6 +53,10 @@ export interface WCAGEMAccessibilityToolkitConfig {
       urls?: string[];
       commonPaths?: string[];
       maxUrls?: number;
+      /**
+       * Anti-amplification cap on sitemap DOCUMENTS fetched while expanding the index tree. Default 50.
+       */
+      maxSitemapDocs?: number;
     };
   };
   discovery?: {

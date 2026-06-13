@@ -23,6 +23,19 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
   config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
   `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
+- **Fair, deterministic, recursion-aware sitemap seeding (E2, ADR-0018).**
+  `getSitemapSeeds` no longer drains its `maxUrls` budget in config order (which
+  starved later sitemaps — a live run seeded 6 of 230 blog posts). It now
+  expands the `<sitemapindex>` tree (classifying documents by root element, not
+  URL extension), bounds total document fetches (`sitemapSeeding.maxSitemapDocs`,
+  default 50), then allocates the budget **round-robin across leaf sitemaps** so
+  one large sitemap can't shut out the rest. `inventory-metadata.json` gains a
+  `sitemaps` block (per-leaf `found`/`contributed`/`clipped`,
+  `reachedSitemapCap`, `neverReached`). Fetches stay sequential and leaves/locs
+  are sorted, so seeds are reproducible for a fixed `randomSeed` — but a prior
+  run's sample will not byte-reproduce. _Note:_ seed fairness is not Step-3c
+  **sample** fairness; the random tier still draws from the whole inventory
+  (residual skew is surfaced by E1's `automatedCoverage`, not hidden).
 - **Redirect-aware scanning (E4, ADR-0019).** `scan.mjs` captures the
   post-redirect `finalUrl` and a per-viewport seen-set folds a redirect source +
   target into one audited page (a live run double-counted `/contact-us` + its

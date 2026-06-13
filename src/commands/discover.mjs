@@ -206,11 +206,12 @@ export async function run(ctx) {
   // URLs that would otherwise have been seeded — out-of-scope and pattern-excluded
   // URLs are silently dropped (matches existing sitemap-loop behaviour, which
   // tracks neither in telemetry).
-  for (const url of await getSitemapSeeds(
+  const sitemapResult = await getSitemapSeeds(
     config.rootUrl,
     config.crawl.sitemapSeeding,
     config.scope,
-  )) {
+  );
+  for (const url of sitemapResult.seeds) {
     if (!urlAllowedByScope(url, config.rootUrl, config.scope)) continue;
     const seedDocType = documentTypeOf(url);
     if (seedDocType) documentLinks.set(url, seedDocType);
@@ -380,6 +381,16 @@ export async function run(ctx) {
     // reason — previously warn-only and invisible to every report.
     failedRequestCount,
     failureReasons: Object.fromEntries([...failureReasons.entries()].sort()),
+    // E2: per-sitemap seed telemetry. reachedSitemapCap is the seed-cap analogue
+    // of reachedMaxPages (the crawl ceiling): it distinguishes a thorough seed
+    // list from one clipped by maxUrls, and neverReached flags sitemap docs left
+    // unfetched by the anti-amplification bound.
+    sitemaps: {
+      perSitemap: sitemapResult.perSitemap,
+      reachedSitemapCap: sitemapResult.reachedSitemapCap,
+      neverReached: sitemapResult.neverReached,
+      docsFetched: sitemapResult.sitemapDocsFetched,
+    },
     // NOTE: cap visibility (2026-06 review C1). Without these two fields a
     // reader cannot distinguish "thorough crawl found N pages" from "crawl
     // hit the ceiling at N" — summarize surfaces reachedMaxPages as a

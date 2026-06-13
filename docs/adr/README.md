@@ -8,32 +8,33 @@ rejected_.
 
 ## Index
 
-| #                                                 | Title                                                              | Status   | Date       |
-| ------------------------------------------------- | ------------------------------------------------------------------ | -------- | ---------- |
-| [0000](./0000-record-architecture-decisions.md)   | Record architecture decisions                                      | accepted | 2026-04    |
-| [0001](./0001-project-conventions.md)             | Project conventions (Node 22, JS+JSDoc, flat ESLint, no telemetry) | accepted | 2026-04    |
-| [0002](./0002-config-is-ajv-validated.md)         | Configuration is Ajv-validated                                     | accepted | 2026-04    |
-| [0003](./0003-commander-cli.md)                   | Commander-based CLI                                                | accepted | 2026-04    |
-| [0004](./0004-pino-structured-logging.md)         | Pino structured logging                                            | accepted | 2026-04    |
-| [0005](./0005-fail-fast-on-config.md)             | Fail fast on config                                                | accepted | 2026-04    |
-| [0006](./0006-multi-viewport-axe-runs.md)         | Multi-viewport axe runs                                            | accepted | 2026-04    |
-| [0007](./0007-wcag-em-summary-shape.md)           | WCAG-EM Step 5 summary shape                                       | accepted | 2026-04    |
-| [0008](./0008-pluggable-reporters.md)             | Pluggable reporter runtime (internal at v1.0)                      | accepted | 2026-04-30 |
-| [0009](./0009-earl-jsonld-output.md)              | EARL JSON-LD as the default RDF serialisation                      | accepted | 2026-04-30 |
-| [0010](./0010-project-layout.md)                  | Project layout                                                     | accepted | 2026-05-14 |
-| [0011](./0011-v1-release-boundary.md)             | v1.0 release boundary                                              | accepted | 2026-05-14 |
-| [0012](./0012-extensibility-is-internal.md)       | Extensibility is internal for v1.0                                 | accepted | 2026-04    |
-| [0013](./0013-crawlee-localhost-investigation.md) | Crawlee localhost-fixture hang investigation and resolution        | accepted | 2026-05-09 |
-| [0014](./0014-packaging-decisions.md)             | Packaging decisions                                                | accepted | 2026-05-14 |
-| [0015](./0015-publish-and-deprecation-policy.md)  | Publish and deprecation policy                                     | accepted | 2026-05-14 |
-| [0016](./0016-incomplete-node-evidence.md)        | Incomplete-node evidence (amended 2026-06)                         | accepted | 2026-06-07 |
-| [0017](./0017-page-outcome-could-not-audit.md)    | Page-outcome: a first-class could-not-audit status                 | accepted | 2026-06-13 |
-| [0019](./0019-redirect-aware-scanning.md)         | Redirect-aware scanning (final-URL identity)                       | accepted | 2026-06-13 |
+| #                                                    | Title                                                              | Status   | Date       |
+| ---------------------------------------------------- | ------------------------------------------------------------------ | -------- | ---------- |
+| [0000](./0000-record-architecture-decisions.md)      | Record architecture decisions                                      | accepted | 2026-04    |
+| [0001](./0001-project-conventions.md)                | Project conventions (Node 22, JS+JSDoc, flat ESLint, no telemetry) | accepted | 2026-04    |
+| [0002](./0002-config-is-ajv-validated.md)            | Configuration is Ajv-validated                                     | accepted | 2026-04    |
+| [0003](./0003-commander-cli.md)                      | Commander-based CLI                                                | accepted | 2026-04    |
+| [0004](./0004-pino-structured-logging.md)            | Pino structured logging                                            | accepted | 2026-04    |
+| [0005](./0005-fail-fast-on-config.md)                | Fail fast on config                                                | accepted | 2026-04    |
+| [0006](./0006-multi-viewport-axe-runs.md)            | Multi-viewport axe runs                                            | accepted | 2026-04    |
+| [0007](./0007-wcag-em-summary-shape.md)              | WCAG-EM Step 5 summary shape                                       | accepted | 2026-04    |
+| [0008](./0008-pluggable-reporters.md)                | Pluggable reporter runtime (internal at v1.0)                      | accepted | 2026-04-30 |
+| [0009](./0009-earl-jsonld-output.md)                 | EARL JSON-LD as the default RDF serialisation                      | accepted | 2026-04-30 |
+| [0010](./0010-project-layout.md)                     | Project layout                                                     | accepted | 2026-05-14 |
+| [0011](./0011-v1-release-boundary.md)                | v1.0 release boundary                                              | accepted | 2026-05-14 |
+| [0012](./0012-extensibility-is-internal.md)          | Extensibility is internal for v1.0                                 | accepted | 2026-04    |
+| [0013](./0013-crawlee-localhost-investigation.md)    | Crawlee localhost-fixture hang investigation and resolution        | accepted | 2026-05-09 |
+| [0014](./0014-packaging-decisions.md)                | Packaging decisions                                                | accepted | 2026-05-14 |
+| [0015](./0015-publish-and-deprecation-policy.md)     | Publish and deprecation policy                                     | accepted | 2026-05-14 |
+| [0016](./0016-incomplete-node-evidence.md)           | Incomplete-node evidence (amended 2026-06)                         | accepted | 2026-06-07 |
+| [0017](./0017-page-outcome-could-not-audit.md)       | Page-outcome: a first-class could-not-audit status                 | accepted | 2026-06-13 |
+| [0018](./0018-fair-deterministic-sitemap-seeding.md) | Fair, deterministic, recursion-aware sitemap seeding               | accepted | 2026-06-13 |
+| [0019](./0019-redirect-aware-scanning.md)            | Redirect-aware scanning (final-URL identity)                       | accepted | 2026-06-13 |
 
 ## Numbering convention
 
 ADR numbers are append-only. All reserved seats through 0019 are
-now filled (0018 lands on the E2 branch). The next available number is **0020**.
+now filled. The next available number is **0020**.
 
 ## Citation convention
 

@@ -69,12 +69,13 @@ validation.
 
 `sitemapSeeding` sub-fields:
 
-| Field         | Default                                  | Notes                                           |
-| ------------- | ---------------------------------------- | ----------------------------------------------- |
-| `enabled`     | `true`                                   | Seed the crawl queue from sitemaps.             |
-| `urls`        | `[]`                                     | Explicit sitemap URLs (override discovery).     |
-| `commonPaths` | `["/sitemap.xml", "/sitemap_index.xml"]` | Probed relative to `rootUrl` when `urls` empty. |
-| `maxUrls`     | `500`                                    | Cap on seeded URLs.                             |
+| Field            | Default                                  | Notes                                                                                                                                                                                                                                 |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`        | `true`                                   | Seed the crawl queue from sitemaps.                                                                                                                                                                                                   |
+| `urls`           | `[]`                                     | Explicit sitemap URLs (override discovery).                                                                                                                                                                                           |
+| `commonPaths`    | `["/sitemap.xml", "/sitemap_index.xml"]` | Probed relative to `rootUrl` when `urls` empty.                                                                                                                                                                                       |
+| `maxUrls`        | `500`                                    | Cap on seeded URLs. Seeds are allocated **round-robin across leaf sitemaps** (sorted by URL) so one large sitemap can't starve the rest; `inventory-metadata.json` records per-sitemap `contributed`/`clipped` + `reachedSitemapCap`. |
+| `maxSitemapDocs` | `50`                                     | Anti-amplification cap on sitemap **documents** fetched while expanding nested `<sitemapindex>` trees; unfetched children are recorded as `neverReached`.                                                                             |
 
 ### `discovery` — per-page metadata capture (Stage 1)
 
