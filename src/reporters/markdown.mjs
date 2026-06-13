@@ -52,6 +52,9 @@ function renderScanHealth(health) {
   const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
   const unauditable = Array.isArray(health.pagesUnauditable) ? health.pagesUnauditable : [];
   const stepFailures = Array.isArray(health.processStepFailures) ? health.processStepFailures : [];
+  const structuredMissing = Array.isArray(health.structuredMissingFromInventory)
+    ? health.structuredMissingFromInventory
+    : [];
   const truncated = health.reachedMaxPages === true;
   if (
     failed.length === 0 &&
@@ -60,6 +63,7 @@ function renderScanHealth(health) {
     preScanFailures.length === 0 &&
     unauditable.length === 0 &&
     stepFailures.length === 0 &&
+    structuredMissing.length === 0 &&
     !truncated
   ) {
     return [];
@@ -96,6 +100,13 @@ function renderScanHealth(health) {
   for (const p of stepFailures) {
     lines.push(
       `- Process "${p.name}" step "${p.state}" failed at ${p.startUrl}: ${p.error ?? 'unknown error'}`,
+    );
+  }
+  for (const m of structuredMissing) {
+    lines.push(
+      m.reason === 'blocked'
+        ? `- Force-included sample URL blocked (challenge), not audited: ${m.url}`
+        : `- Force-included sample URL not in crawl inventory: ${m.url}`,
     );
   }
   lines.push('');

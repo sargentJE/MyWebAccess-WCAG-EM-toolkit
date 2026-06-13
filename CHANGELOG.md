@@ -35,6 +35,17 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   Portal-export / report-builder already avoid the double-count (the duplicate is
   skipped via `isAuditableView`); re-keying their labels to the final URL is a
   deferred companion-coordinated follow-up.
+- **Override visibility + document inventory (E5).** Force-included structured
+  URLs missing from the crawl inventory are now surfaced in `executionHealth` +
+  the Scan-health block + `scanWarnings`, **annotated** `blocked` (landed on a
+  challenge → re-scan) vs `not-in-inventory` (crawl did not reach it → widen
+  scope) — previously a silent `logger.warn`. `documentLinkPatterns` keeps its
+  array-replace semantics (a documented cross-subsystem invariant), but a new
+  one-shot warning fires when an override stops skipping PDFs (they would be
+  crawled as pages). A new `document-inventory.json` lists in-scope
+  accessibility-reviewable documents (PDFs / office docs) for the E7 manual-review
+  queue — detected independently of the skip-config, so they are never
+  crawled-as-pages silently nor dropped.
 
 ### Added
 

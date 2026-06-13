@@ -241,3 +241,36 @@ test('E1: per-state process step failures are surfaced (the hidden step-failure 
     'a process-step warning is emitted',
   );
 });
+
+test('E5: structuredMissingFromInventory is surfaced + annotated (blocked vs not-in-inventory)', () => {
+  const { executionHealth, warnings } = buildExecutionHealth({
+    axeResults: [
+      {
+        url: 'https://site.example/blocked',
+        viewport: 'desktop',
+        pageOutcome: 'challenge',
+        violations: [],
+      },
+    ],
+    processResults: [],
+    sampleMetadata: {
+      finalSampleCount: 2,
+      structuredMissingFromInventory: [
+        'https://site.example/blocked',
+        'https://site.example/typo-page',
+      ],
+    },
+    inventoryMetadata: {},
+  });
+  const missing = executionHealth.structuredMissingFromInventory;
+  const blocked = missing.find((/** @type {any} */ m) => m.url.endsWith('/blocked'));
+  const notInInv = missing.find((/** @type {any} */ m) => m.url.endsWith('/typo-page'));
+  // A force-included URL that landed on a challenge is `blocked` (re-scan);
+  // one the crawl never reached is `not-in-inventory` (widen the crawl).
+  assert.strictEqual(blocked.reason, 'blocked');
+  assert.strictEqual(notInInv.reason, 'not-in-inventory');
+  assert.ok(warnings.some((w) => w.includes('/blocked') && w.includes('blocked')));
+  assert.ok(
+    warnings.some((w) => w.includes('/typo-page') && w.includes('not in the crawl inventory')),
+  );
+});
