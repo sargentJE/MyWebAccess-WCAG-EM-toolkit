@@ -46,6 +46,13 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   accessibility-reviewable documents (PDFs / office docs) for the E7 manual-review
   queue — detected independently of the skip-config, so they are never
   crawled-as-pages silently nor dropped.
+- **Evidence-driven manual backlog (E7).** `manual-backlog.md` gains two
+  evidence sections (appended deterministically, no config flag): _Screenshots to
+  eyeball_ — pages captured at more than one viewport, the responsive
+  overlap/clipping candidates; and a _Manual-review queue (could not auto-audit)_
+  listing the challenge/blocked pages (after the §0a strategy) and the
+  `document-inventory.json` PDFs a browser cannot axe-scan. "Could not
+  auto-audit" is now an explicit, actionable hand-off rather than an absence.
 
 ### Added
 
