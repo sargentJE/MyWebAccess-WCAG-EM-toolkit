@@ -41,6 +41,7 @@
 
 // SECTION: Imports
 import { withActAndWcagMetadata } from './axe-utils.mjs';
+import { isAuditableView } from './scan-results.mjs';
 
 // SECTION: Constants
 
@@ -300,6 +301,11 @@ export function toWcagEmSummary(ctx, rawResults) {
   }
 
   for (const page of axeResults) {
+    // E1: a could-not-audit page-view must not flip SC verdicts — its empty
+    // violation/pass arrays would otherwise mark criteria as assessed (or, with
+    // residual fake violations, flip a real criterion to failed). Excluded here;
+    // the coverage gap is disclosed by the conformance-claim layer.
+    if (!isAuditableView(page)) continue;
     ingestPage(
       String(page?.url ?? ''),
       page?.violations ?? [],
@@ -310,7 +316,9 @@ export function toWcagEmSummary(ctx, rawResults) {
   }
 
   for (const proc of processResults) {
+    if (!isAuditableView(proc)) continue;
     for (const state of proc?.states ?? []) {
+      if (!isAuditableView(state)) continue;
       const stateUrl = `${proc?.startUrl ?? ''}#${state?.state ?? 'state'}`;
       ingestPage(
         stateUrl,

@@ -22,6 +22,7 @@ import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { groupFindings } from '../lib/group-findings.mjs';
+import { viewStatus } from '../lib/scan-results.mjs';
 import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
@@ -111,6 +112,9 @@ export function buildExecutionHealth({
   const preScanFailures = [];
   let pageViewsScanned = 0;
   let pageViewsFailed = 0;
+  let pageViewsUnauditable = 0;
+  /** @type {Map<string, Array<{ viewport: any, outcome: string, reason: any }>>} */
+  const unauditableByUrl = new Map();
 
   for (const entry of Array.isArray(axeResults) ? axeResults : []) {
     // NOTE: never crash health accounting on a malformed entry — a failed
@@ -123,16 +127,35 @@ export function buildExecutionHealth({
     } catch {
       url = rawUrl ?? '(unknown-url)';
     }
+
+    // E1: three-way split. A could-not-audit view (challenge / empty /
+    // redirect-duplicate) is neither scanned nor failed — it goes in a distinct
+    // bucket so coverage counters and the fully-scanned/degraded/failed page
+    // classification never see it (and so an all-challenge page is NOT counted
+    // as "fully scanned"). An execution error keeps its existing failed-path.
+    const status = viewStatus(entry);
+    if (status !== 'auditable' && status !== 'errored') {
+      pageViewsUnauditable += 1;
+      const views = unauditableByUrl.get(url) ?? [];
+      views.push({
+        viewport: entry.viewport ?? null,
+        outcome: typeof entry?.pageOutcome === 'string' ? entry.pageOutcome : status,
+        reason: entry?.degradedReason ?? null,
+      });
+      unauditableByUrl.set(url, views);
+      continue;
+    }
+
     let rec = byUrl.get(url);
     if (!rec) {
       rec = { ok: [], failed: [] };
       byUrl.set(url, rec);
     }
-    if (typeof entry?.error === 'string') {
+    if (status === 'errored') {
       pageViewsFailed += 1;
       rec.failed.push({
         viewport: entry.viewport ?? null,
-        error: entry.error,
+        error: typeof entry?.error === 'string' ? entry.error : 'could not audit',
         attempts: entry.attempts ?? null,
       });
     } else {
@@ -168,6 +191,11 @@ export function buildExecutionHealth({
   pagesDegraded.sort(byUrlAsc);
   preScanFailures.sort(byUrlAsc);
 
+  /** @type {Array<{ url: string, views: any[] }>} */
+  const pagesUnauditable = [...unauditableByUrl.entries()]
+    .map(([url, views]) => ({ url, views }))
+    .sort(byUrlAsc);
+
   /** @type {Array<{ name: any, startUrl: any, error: string }>} */
   const processFailures = [];
   for (const proc of Array.isArray(processResults) ? processResults : []) {
@@ -180,6 +208,28 @@ export function buildExecutionHealth({
     }
   }
 
+  // E1: per-state step failures (mirrors preScanFailures). The pre-existing
+  // processFailures only catches a process-level `error`; a process whose goto
+  // or an interior step errored records it as a degraded STATE, which a clean
+  // executionHealth previously hid (the 12-step-failure defect).
+  /** @type {Array<{ name: any, startUrl: any, state: string, error: any }>} */
+  const processStepFailures = [];
+  for (const proc of Array.isArray(processResults) ? processResults : []) {
+    for (const state of Array.isArray(proc?.states) ? proc.states : []) {
+      if (state?.state === 'error' || state?.state === 'step-timeout') {
+        processStepFailures.push({
+          name: proc.name ?? null,
+          startUrl: proc.startUrl ?? null,
+          state: state.state,
+          error: state.error ?? null,
+        });
+      }
+    }
+  }
+  processStepFailures.sort((a, b) =>
+    String(a.startUrl) < String(b.startUrl) ? -1 : String(a.startUrl) > String(b.startUrl) ? 1 : 0,
+  );
+
   const maxPagesConfigured = inventoryMetadata?.maxPagesConfigured ?? null;
   const reachedMaxPages = inventoryMetadata?.reachedMaxPages === true;
 
@@ -189,9 +239,17 @@ export function buildExecutionHealth({
     pagesFullyScanned,
     pagesDegraded,
     pagesFailed,
+    // E1: pages that could not be audited (challenge/empty/redirect-duplicate)
+    // — distinct from pagesFailed (execution faults), mirroring junit's
+    // error-vs-failure split. challengePages is the count routed to manual review.
+    pagesUnauditable,
+    challengePages: pagesUnauditable.filter((p) => p.views.some((v) => v.outcome === 'challenge'))
+      .length,
     pageViewsScanned,
     pageViewsFailed,
+    pageViewsUnauditable,
     processFailures,
+    processStepFailures,
     preScanFailures,
     maxPagesConfigured,
     reachedMaxPages,
@@ -215,6 +273,17 @@ export function buildExecutionHealth({
   for (const p of preScanFailures) {
     warnings.push(
       `pre-scan action "${p.action}" ${p.state} on ${p.url} [${p.viewport}] — axe scanned the page without the intended setup`,
+    );
+  }
+  for (const p of pagesUnauditable) {
+    const outcomes = [...new Set(p.views.map((v) => v.outcome))].join(', ');
+    warnings.push(
+      `could not audit (${outcomes}): ${p.url} — excluded from findings and SC verdicts, routed to manual review`,
+    );
+  }
+  for (const p of processStepFailures) {
+    warnings.push(
+      `process "${p.name}" step "${p.state}" failed at ${p.startUrl}: ${p.error ?? 'unknown error'}`,
     );
   }
   if (reachedMaxPages) {

@@ -29,6 +29,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { readJsonMaybe, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
+import { isAuditableView } from '../lib/scan-results.mjs';
 import { TOOL_IDENTITY } from '../lib/version.mjs';
 import { sortFindings } from './_sort.mjs';
 import { safeUrl, html } from './_template.mjs';
@@ -386,7 +387,8 @@ async function loadScreenshotMap(ctx) {
   for (const entry of axeResults) {
     const url = typeof entry?.url === 'string' ? normalizeUrl(entry.url) : null;
     const shot = entry?.screenshot;
-    if (typeof url !== 'string' || typeof shot !== 'string') continue;
+    // E1: a could-not-audit view has no real screenshot to map.
+    if (typeof url !== 'string' || typeof shot !== 'string' || !isAuditableView(entry)) continue;
     if (!map.has(url)) map.set(url, []);
     /** @type {string[]} */ (map.get(url)).push(shot);
   }
