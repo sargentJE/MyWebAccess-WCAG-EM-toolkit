@@ -22,6 +22,7 @@
 // SECTION: Imports
 import { normalizeUrl, selectorComponentHint } from './urls.mjs';
 import { classifyRule, withActAndWcagMetadata } from './axe-utils.mjs';
+import { isAuditableView } from './scan-results.mjs';
 
 // SECTION: Public API
 
@@ -133,6 +134,9 @@ export function groupFindings(axeResults, processResults, deps) {
   }
 
   for (const pageResult of axeResults) {
+    // E1: a could-not-audit page-view (challenge/empty/errored/redirect-dup)
+    // carries no real findings and must not enter the grouped output.
+    if (!isAuditableView(pageResult)) continue;
     const pageUrl = normalizeUrl(pageResult.url);
     for (const violation of pageResult.violations || []) {
       for (const node of violation.nodes || []) {
@@ -151,8 +155,12 @@ export function groupFindings(axeResults, processResults, deps) {
   }
 
   for (const processResult of processResults) {
+    if (!isAuditableView(processResult)) continue;
     const processUrl = normalizeUrl(processResult.startUrl);
     for (const state of processResult.states || []) {
+      // E1: skip degraded/errored states — they reflect a broken process step,
+      // not a genuine accessibility finding.
+      if (!isAuditableView(state)) continue;
       for (const violation of state.violations || []) {
         for (const node of violation.nodes || []) {
           const target = Array.isArray(node.target) ? node.target.join(' | ') : null;

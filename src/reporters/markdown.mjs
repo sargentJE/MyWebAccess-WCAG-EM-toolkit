@@ -68,12 +68,16 @@ function renderScanHealth(health) {
   const degraded = Array.isArray(health.pagesDegraded) ? health.pagesDegraded : [];
   const processFailures = Array.isArray(health.processFailures) ? health.processFailures : [];
   const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
+  const unauditable = Array.isArray(health.pagesUnauditable) ? health.pagesUnauditable : [];
+  const stepFailures = Array.isArray(health.processStepFailures) ? health.processStepFailures : [];
   const truncated = health.reachedMaxPages === true;
   if (
     failed.length === 0 &&
     degraded.length === 0 &&
     processFailures.length === 0 &&
     preScanFailures.length === 0 &&
+    unauditable.length === 0 &&
+    stepFailures.length === 0 &&
     !truncated
   ) {
     return [];
@@ -101,6 +105,17 @@ function renderScanHealth(health) {
       `- Pre-scan action "${p.action}" ${p.state} on ${p.url} [${p.viewport}] — page scanned without intended setup.`,
     );
   }
+  for (const p of unauditable) {
+    const outcomes = [...new Set((p.views ?? []).map((/** @type {any} */ v) => v.outcome))].join(
+      ', ',
+    );
+    lines.push(`- Could not audit (${outcomes}) — review by hand: ${p.url}`);
+  }
+  for (const p of stepFailures) {
+    lines.push(
+      `- Process "${p.name}" step "${p.state}" failed at ${p.startUrl}: ${p.error ?? 'unknown error'}`,
+    );
+  }
   lines.push('');
   return lines;
 }
@@ -121,6 +136,9 @@ export async function emit(summary, ctx) {
     randomSampleIntroducedNewClusters: [],
     expandStructuredSampleRecommended: false,
   };
+  // E1 DISCLOSE: automated-coverage honesty line (so a clean result is never
+  // read as complete coverage when pages were excluded).
+  const cov = summary.wcagEmSummary?.automatedCoverage;
 
   const lines = [
     toolIdentityMarkdownHeader().trimEnd(),
@@ -146,6 +164,13 @@ export async function emit(summary, ctx) {
       : []),
     `- Process runs: ${summary.processRuns}`,
     `- Grouped findings: ${summary.groupedFindingCount}`,
+    ...(cov
+      ? [
+          `- Automated coverage: ${cov.status}${cov.adequate ? '' : ' — PARTIAL'} (${cov.pagesAudited}${
+            cov.pagesSelected != null ? `/${cov.pagesSelected}` : ''
+          } selected pages audited${cov.pagesExcluded ? `; ${cov.pagesExcluded} excluded — see Scan health` : ''})`,
+        ]
+      : []),
     '',
     ...renderScanHealth(summary.executionHealth),
     '## Random vs structured sample comparison',

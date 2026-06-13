@@ -99,6 +99,45 @@ export function classifyPageOutcome({
   return { outcome: 'ok', reason: 'real content' };
 }
 
+/**
+ * Re-check predicate for the §0a wait-for-auto-solve path: after a bounded wait
+ * for a managed challenge to clear, decide whether the page NOW shows real
+ * content. Because we already know the page WAS a challenge, evidence rules are
+ * looser than initial detection — a persistent interstitial title (merely
+ * corroborating in {@link classifyPageOutcome}) is here sufficient to conclude
+ * the challenge has NOT cleared. Judged from page state only: a managed
+ * challenge auto-navigates client-side, so the original response headers are
+ * stale by this point.
+ *
+ * @param {{ title?: string, bodyText?: string }} signals
+ * @returns {boolean} True if the page looks like real, auditable content now.
+ */
+export function challengeCleared({ title = '', bodyText = '' } = {}) {
+  if (INTERSTITIAL_TITLE.test(String(title))) return false;
+  if (String(bodyText).trim().length === 0) return false;
+  return true;
+}
+
+/**
+ * Compute the challenge-detection host allowlist from config: the audited site's
+ * host (always) plus any extra `scan.challenge.hosts`. Shared by the scan and
+ * process write-sites so they classify identically. The authoritative
+ * `cf-mitigated` check ignores this list.
+ *
+ * @param {Record<string, any>} config
+ * @returns {string[]}
+ */
+export function challengeHostsFor(config) {
+  let rootHost = '';
+  try {
+    rootHost = new URL(config?.rootUrl).host.toLowerCase();
+  } catch {
+    rootHost = '';
+  }
+  const extra = Array.isArray(config?.scan?.challenge?.hosts) ? config.scan.challenge.hosts : [];
+  return [rootHost, ...extra].filter(Boolean);
+}
+
 // SECTION: Internal helpers
 
 // Known bot-challenge interstitial titles (Cloudflare, AWS WAF, generic).

@@ -6,6 +6,24 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Changed
+
+- **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
+  the scanner cannot audit — Cloudflare/WAF **challenge** interstitials and
+  **empty** documents — are classified at the scan/process write-site
+  (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
+  verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
+  portal-export / report-builder / html reporters), not just `summary.json`.
+  _Breaking for diff-based consumers:_ such pages drop out of findings and stop
+  incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
+  findings for false **passes**, `wcag-em-summary.json` gains an
+  `automatedCoverage` block (`status` + `pagesSelected`/`pagesAudited` +
+  `scopeExclusions`); `executionHealth` gains
+  `pagesUnauditable`/`challengePages`/`processStepFailures`; and
+  `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
+  config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
+  `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
+
 ### Added
 
 - **Documentation guides** (`docs/guides/`) — the how-to-use genre the 2026-06

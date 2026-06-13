@@ -28,6 +28,7 @@ import { writeJson } from '../lib/fs-utils.mjs';
 import { fileSafeFromUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
 import { liftRuleSummaries, liftIncompleteSummaries } from '../lib/axe-artifact.mjs';
+import { classifyPageOutcome, challengeCleared, challengeHostsFor } from '../lib/page-guard.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
 import { applyAuth } from '../lib/auth.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
@@ -127,6 +128,42 @@ async function runPreScanActions({
   });
 }
 
+/**
+ * Browser-context probe (runs inside `page.evaluate`, mirroring
+ * `captureDiscoveryMetadata`): the rendered body text used by the E1 classifier
+ * to detect empty / interstitial documents.
+ *
+ * @returns {string}
+ */
+export function readBodyText() {
+  /* global document */
+  return document.body?.innerText ?? '';
+}
+
+/**
+ * Gather page signals and classify the landed page (E1). A thin browser wrapper
+ * over `classifyPageOutcome` that extracts primitives from the Playwright page +
+ * navigation response, keeping the classifier itself browser-free and
+ * unit-tested. Pass `response: null` on the auto-solve re-check (stale headers).
+ *
+ * @param {import('playwright').Page} page
+ * @param {import('playwright').Response | null} response
+ * @param {string[]} challengeHosts
+ * @returns {Promise<import('../lib/page-guard.mjs').PageOutcome>}
+ */
+async function classifyLandedPage(page, response, challengeHosts) {
+  const title = await page.title().catch(() => '');
+  const bodyText = await page.evaluate(readBodyText).catch(() => '');
+  return classifyPageOutcome({
+    status: response ? response.status() : undefined,
+    headers: response ? response.headers() : {},
+    title,
+    bodyText,
+    url: page.url(),
+    challengeHosts,
+  });
+}
+
 // SECTION: Public API
 
 /**
@@ -146,6 +183,12 @@ export async function run(ctx) {
 
   const viewports = resolveViewports(config, logger);
   logger.info({ viewports: viewports.map((vp) => vp.id) }, 'scan viewports');
+
+  // E1: challenge-detection inputs (config-derived, computed once). The audited
+  // host is always allowlisted for the title+status heuristic; cf-mitigated is
+  // host-independent. waitForAutoSolveMs (default 0) bounds the §0a auto-solve wait.
+  const challengeWaitMs = Number(config.scan?.challenge?.waitForAutoSolveMs ?? 0);
+  const challengeHosts = challengeHostsFor(config);
 
   // ANCHOR: AuthContextOptions — Playwright newContext options derived from
   // config.auth (storageState, httpCredentials, extraHTTPHeaders). Synchronous
@@ -168,10 +211,47 @@ export async function run(ctx) {
    * @returns {Promise<any>}
    */
   async function runForPage(page, url, viewport) {
-    await page.goto(url, {
+    const response = await page.goto(url, {
       waitUntil: config.scan.waitUntil,
       timeout: config.scan.timeoutMs,
     });
+
+    // E1: classify the landed page BEFORE spending axe + a screenshot on it. A
+    // challenge/empty page is recorded as a pageOutcome with empty violations —
+    // it is NOT thrown: Cloudflare returns HTTP 200 so goto resolves, and
+    // throwing would burn a scan retry and mis-bucket the page as failed
+    // (§5.7). Header/status are primary; title/body corroborate.
+    let outcome = await classifyLandedPage(page, response, challengeHosts);
+    if (outcome.outcome === 'challenge' && challengeWaitMs > 0) {
+      // §0a: a managed challenge often auto-clears in a real browser. Wait, then
+      // re-check from page state (the auto-solve navigation is client-side, so
+      // the original response headers are stale).
+      await page.waitForTimeout(challengeWaitMs).catch(() => {});
+      const reTitle = await page.title().catch(() => '');
+      const reBody = await page.evaluate(readBodyText).catch(() => '');
+      if (challengeCleared({ title: reTitle, bodyText: reBody })) {
+        outcome = { outcome: 'ok', reason: 'challenge auto-cleared after wait' };
+      }
+    }
+    if (outcome.outcome !== 'ok') {
+      // Empty violations + a pageOutcome so every consumer (via isAuditableView)
+      // excludes it from findings, counters and SC verdicts; the manual-review
+      // queue (E7) picks it up. Detail arrays mirror the ok-page shape.
+      return {
+        title: await page.title().catch(() => ''),
+        pageOutcome: outcome.outcome,
+        degradedReason: outcome.reason,
+        screenshot: null,
+        violations: [],
+        passes: 0,
+        incomplete: 0,
+        inapplicable: 0,
+        passesDetail: [],
+        incompleteDetail: [],
+        inapplicableDetail: [],
+        _preScanStates: [],
+      };
+    }
 
     // Honour reporting.screenshotFormat + screenshotQuality.
     // Playwright's page.screenshot rejects `quality` when type is png, so

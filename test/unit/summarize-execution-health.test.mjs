@@ -156,3 +156,88 @@ test('a clean run produces an empty-failure block and zero warnings', () => {
   assert.deepStrictEqual(executionHealth.preScanFailures, []);
   assert.deepStrictEqual(warnings, []);
 });
+
+// SECTION: E1 — could-not-audit accounting
+
+test('E1: a challenge page-view is unauditable, not scanned, and never fully-scanned', () => {
+  const { executionHealth, warnings } = buildExecutionHealth({
+    axeResults: [
+      { url: 'https://site.example/ok', viewport: 'desktop', violations: [] },
+      {
+        url: 'https://site.example/event',
+        viewport: 'desktop',
+        pageOutcome: 'challenge',
+        degradedReason: 'cf-mitigated',
+        violations: [],
+      },
+      {
+        url: 'https://site.example/event',
+        viewport: 'reflow',
+        pageOutcome: 'challenge',
+        degradedReason: 'cf-mitigated',
+        violations: [],
+      },
+    ],
+    processResults: [],
+    sampleMetadata: { finalSampleCount: 2 },
+    inventoryMetadata: {},
+  });
+  assert.strictEqual(executionHealth.pageViewsScanned, 1, 'only the ok view counts as scanned');
+  assert.strictEqual(executionHealth.pageViewsUnauditable, 2, 'two challenge views');
+  assert.strictEqual(executionHealth.challengePages, 1, 'one distinct challenge page');
+  assert.strictEqual(executionHealth.pagesUnauditable.length, 1);
+  assert.strictEqual(executionHealth.pagesUnauditable[0].url, 'https://site.example/event');
+  // The all-challenge page must NOT be in byUrl, so it cannot inflate
+  // pagesInSample or be miscounted as fully scanned.
+  assert.strictEqual(executionHealth.pagesInSample, 1, 'all-challenge page is not in byUrl');
+  assert.strictEqual(executionHealth.pagesFullyScanned, 1, 'only the ok page is fully scanned');
+  assert.ok(
+    warnings.some((w) => w.includes('could not audit') && w.includes('/event')),
+    'a manual-review warning is emitted for the challenge page',
+  );
+});
+
+test('E1 (H5 regression): an execution error stays in pagesFailed, not the unauditable bucket', () => {
+  const { executionHealth } = buildExecutionHealth({
+    axeResults: [
+      {
+        url: 'https://site.example/boom',
+        viewport: 'desktop',
+        error: 'page.goto: Timeout 60000ms exceeded',
+        violations: [],
+      },
+    ],
+    processResults: [],
+    sampleMetadata: {},
+    inventoryMetadata: {},
+  });
+  assert.strictEqual(executionHealth.pagesFailed.length, 1, 'error -> pagesFailed');
+  assert.strictEqual(executionHealth.pagesUnauditable.length, 0, 'error is NOT unauditable');
+  assert.strictEqual(executionHealth.pageViewsFailed, 1);
+  assert.strictEqual(executionHealth.pageViewsUnauditable, 0);
+});
+
+test('E1: per-state process step failures are surfaced (the hidden step-failure defect)', () => {
+  const { executionHealth, warnings } = buildExecutionHealth({
+    axeResults: [],
+    processResults: [
+      {
+        name: 'checkout',
+        startUrl: 'https://site.example/checkout',
+        states: [
+          { state: 'loaded', violations: [] },
+          { state: 'error', error: 'click timed out' },
+        ],
+      },
+    ],
+    sampleMetadata: {},
+    inventoryMetadata: {},
+  });
+  assert.strictEqual(executionHealth.processStepFailures.length, 1);
+  assert.strictEqual(executionHealth.processStepFailures[0].state, 'error');
+  assert.strictEqual(executionHealth.processStepFailures[0].name, 'checkout');
+  assert.ok(
+    warnings.some((w) => w.includes('checkout') && w.includes('error')),
+    'a process-step warning is emitted',
+  );
+});

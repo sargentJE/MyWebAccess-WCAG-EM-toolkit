@@ -33,6 +33,7 @@ import Ajv2020Module from 'ajv/dist/2020.js';
 import addFormatsModule from 'ajv-formats';
 import { writeJson, readJsonMaybe } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
+import { isAuditableView } from '../lib/scan-results.mjs';
 import { sortFindings } from './_sort.mjs';
 
 const Ajv2020 = /** @type {any} */ (Ajv2020Module).default ?? /** @type {any} */ (Ajv2020Module);
@@ -278,15 +279,22 @@ async function loadInstanceMap(ctx) {
   /** @type {any[]} */
   const axe = await readJsonMaybe(path.join(dir, 'axe-results.json'), [], logger);
   for (const entry of Array.isArray(axe) ? axe : []) {
+    // E1: skip could-not-audit page-views so the portal's authoritative
+    // instance list never carries challenge/empty-page rows.
+    if (!isAuditableView(entry)) continue;
     const url = typeof entry?.url === 'string' ? normalizeUrl(entry.url) : null;
     if (url) ingest(entry, url);
   }
   /** @type {any[]} */
   const proc = await readJsonMaybe(path.join(dir, 'process-results.json'), [], logger);
   for (const entry of Array.isArray(proc) ? proc : []) {
+    if (!isAuditableView(entry)) continue;
     const url = typeof entry?.startUrl === 'string' ? normalizeUrl(entry.startUrl) : null;
     if (!url) continue;
-    for (const state of Array.isArray(entry.states) ? entry.states : []) ingest(state, url);
+    for (const state of Array.isArray(entry.states) ? entry.states : []) {
+      if (!isAuditableView(state)) continue;
+      ingest(state, url);
+    }
   }
   // Dedupe by (url, selector) — collapses viewport repeats — then sort.
   for (const map of [violations, incompletes]) {

@@ -27,6 +27,7 @@ import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { fileSafeFromUrl } from './urls.mjs';
 import { liftRuleSummaries, liftIncompleteSummaries } from './axe-artifact.mjs';
+import { classifyPageOutcome, challengeHostsFor } from './page-guard.mjs';
 
 // SECTION: Constants
 
@@ -61,6 +62,11 @@ export const DISPATCH_ACTIONS = Object.freeze([
  *   - Viewport the process is being executed under. Threaded from
  *     `scan-processes.mjs`'s outer viewport loop so screenshot filenames
  *     can disambiguate desktop vs reflow captures of the same state.
+ * @property {import('playwright').Response | null} [lastResponse] - E1: the most
+ *   recent navigation Response, set by the `goto` step and read by the `axe`
+ *   step to classify the landed page (goto and axe are separate steps sharing
+ *   only this ctx). Overwritten on every goto so a multi-goto process classifies
+ *   against the latest navigation.
  */
 
 /**
@@ -73,7 +79,15 @@ export const DISPATCH_ACTIONS = Object.freeze([
  * @property {number} [passes] - axe passes count when state is an axe run.
  * @property {number} [incomplete] - axe incomplete count when state is axe.
  * @property {number} [inapplicable] - axe inapplicable count when state is axe.
+ * @property {any[]} [passesDetail] - axe pass summaries when state is an axe run.
+ * @property {any[]} [incompleteDetail] - axe incomplete summaries when state is axe.
+ * @property {any[]} [inapplicableDetail] - axe inapplicable summaries when state is axe.
  * @property {string} [error] - Error message when state is `error` or timeout.
+ * @property {boolean} [degraded] - E1: a prior step errored, so this state's page
+ *   setup is incomplete and its findings are of uncertain provenance.
+ * @property {string} [pageOutcome] - E1: `'challenge'` / `'empty'` when the step
+ *   landed on a non-auditable page (axe was skipped).
+ * @property {string} [degradedReason] - E1: human-readable reason for pageOutcome.
  */
 
 /**
@@ -113,9 +127,18 @@ export class StepTimeoutError extends Error {
 export async function runProcessSteps(processDef, steps, ctx) {
   /** @type {StepResult[]} */
   const states = [];
+  // E1: once a step errors, every subsequent recorded state ran against a page
+  // whose intended setup did not complete — tag it `degraded` so reporters can
+  // flag findings of uncertain provenance (the failed step itself surfaces via
+  // executionHealth.processStepFailures).
+  let priorStepErrored = false;
   for (const step of steps) {
     const result = await runStep(step, ctx);
-    if (result) states.push(result);
+    if (result) {
+      if (priorStepErrored) result.degraded = true;
+      states.push(result);
+      if (result.state === 'error' || result.state === 'step-timeout') priorStepErrored = true;
+    }
   }
   return states;
 }
@@ -189,7 +212,9 @@ async function dispatch(step, ctx) {
   const { page, config, paths, processDef, viewport } = ctx;
   switch (step.action) {
     case 'goto':
-      await page.goto(step.url, {
+      // E1: retain the navigation Response so a later `axe` step can classify
+      // the landed page. Overwritten on every goto (latest-navigation wins).
+      ctx.lastResponse = await page.goto(step.url, {
         waitUntil: config.scan.waitUntil,
         timeout: config.scan.timeoutMs,
       });
@@ -246,6 +271,24 @@ async function dispatch(step, ctx) {
     }
 
     case 'axe': {
+      // E1: a process step that lands on a challenge/empty page must not produce
+      // false findings (mirrors the page-scan write-site). Record a pageOutcome
+      // state with empty violations instead of running axe.
+      const outcome = await classifyProcessPage(ctx);
+      if (outcome.outcome !== 'ok') {
+        return {
+          state: step.state ?? 'state',
+          pageOutcome: outcome.outcome,
+          degradedReason: outcome.reason,
+          violations: [],
+          passes: 0,
+          incomplete: 0,
+          inapplicable: 0,
+          passesDetail: [],
+          incompleteDetail: [],
+          inapplicableDetail: [],
+        };
+      }
       const axe = await runAxe(page, config?.reporting?.maxIncompleteExamplesPerRule);
       return { state: step.state ?? 'state', ...axe };
     }
@@ -253,6 +296,40 @@ async function dispatch(step, ctx) {
     default:
       return { state: 'error', name: step.action, error: `unknown action: ${step.action}` };
   }
+}
+
+/**
+ * Browser-context probe (runs in `page.evaluate`): rendered body text, for the
+ * E1 empty/interstitial check on the process path.
+ *
+ * @returns {string}
+ */
+function processBodyText() {
+  /* global document */
+  return document.body?.innerText ?? '';
+}
+
+/**
+ * Classify the current process page (E1). `goto` and `axe` are separate steps,
+ * so the navigation Response is threaded via `ctx.lastResponse`; falls back to
+ * page-state-only classification when no goto ran (no headers/status available).
+ *
+ * @param {StepContext} ctx
+ * @returns {Promise<import('./page-guard.mjs').PageOutcome>}
+ */
+async function classifyProcessPage(ctx) {
+  const { page } = ctx;
+  const response = ctx.lastResponse ?? null;
+  const title = await page.title().catch(() => '');
+  const bodyText = await page.evaluate(processBodyText).catch(() => '');
+  return classifyPageOutcome({
+    status: response ? response.status() : undefined,
+    headers: response ? response.headers() : {},
+    title,
+    bodyText,
+    url: page.url(),
+    challengeHosts: challengeHostsFor(ctx.config),
+  });
 }
 
 /**

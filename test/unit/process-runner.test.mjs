@@ -13,7 +13,7 @@
 // SECTION: Imports
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { runStep, StepTimeoutError } from '../../src/lib/process-runner.mjs';
+import { runStep, runProcessSteps, StepTimeoutError } from '../../src/lib/process-runner.mjs';
 
 // SECTION: Helpers
 
@@ -238,4 +238,50 @@ test('timeout handle is cleared when step resolves first (no dangling timer)', a
   await runStep({ action: 'click', selector: 'button' }, ctx);
   const elapsed = Date.now() - started;
   assert.ok(elapsed < 200, `expected quick return (<200ms); got ${elapsed}ms`);
+});
+
+// SECTION: E1 — process-path page-outcome
+
+test('E1 (§5.5): an axe step on a Cloudflare challenge records pageOutcome, not findings', async () => {
+  const challengeResponse = {
+    status: () => 403,
+    headers: () => ({ 'cf-mitigated': 'challenge', 'cf-ray': 'abc123' }),
+  };
+  const ctx = /** @type {any} */ ({
+    page: {
+      goto: async () => challengeResponse,
+      title: async () => 'Just a moment...',
+      evaluate: async () => 'Checking your browser before accessing the site',
+      url: () => 'https://example.com/events/blocked',
+    },
+    config: { rootUrl: 'https://example.com/', scan: { waitUntil: 'load', timeoutMs: 5000 } },
+    logger: { info() {}, warn() {}, error() {}, debug() {} },
+    processDef: { name: 'events', startUrl: 'https://example.com/events/' },
+    viewport: { id: 'desktop', width: 1280, height: 800 },
+  });
+  // goto threads ctx.lastResponse (cf-mitigated); axe classifies it and skips
+  // running the real axe engine.
+  await runStep({ action: 'goto', url: 'https://example.com/events/blocked' }, ctx);
+  const axeState = /** @type {any} */ (
+    await runStep({ action: 'axe', state: 'events-landing' }, ctx)
+  );
+  assert.strictEqual(axeState.pageOutcome, 'challenge', 'state carries the challenge outcome');
+  assert.deepStrictEqual(axeState.violations, [], 'no findings from a challenge page');
+  assert.strictEqual(axeState.state, 'events-landing', 'the user-supplied state label is kept');
+});
+
+test('E1: states recorded after an errored step are tagged degraded', async () => {
+  const { ctx } = buildStepCtx();
+  const states = await runProcessSteps(
+    ctx.processDef,
+    [
+      { action: 'mystery' }, // unknown action -> { state: 'error', ... }
+      { action: 'screenshot', name: 'after' }, // recorded after the error
+    ],
+    ctx,
+  );
+  assert.strictEqual(states.length, 2);
+  assert.strictEqual(states[0].state, 'error');
+  assert.strictEqual(states[0].degraded, undefined, 'the failing step itself is not degraded');
+  assert.strictEqual(states[1].degraded, true, 'a state recorded after the error is degraded');
 });

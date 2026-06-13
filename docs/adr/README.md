@@ -27,11 +27,12 @@ rejected_.
 | [0014](./0014-packaging-decisions.md)             | Packaging decisions                                                | accepted | 2026-05-14 |
 | [0015](./0015-publish-and-deprecation-policy.md)  | Publish and deprecation policy                                     | accepted | 2026-05-14 |
 | [0016](./0016-incomplete-node-evidence.md)        | Incomplete-node evidence (amended 2026-06)                         | accepted | 2026-06-07 |
+| [0017](./0017-page-outcome-could-not-audit.md)    | Page-outcome: a first-class could-not-audit status                 | accepted | 2026-06-13 |
 
 ## Numbering convention
 
-ADR numbers are append-only. All reserved seats through 0016 are
-now filled. The next available number is **0017**.
+ADR numbers are append-only. All reserved seats through 0017 are
+now filled. The next available number is **0018**.
 
 ## Citation convention
 
@@ -42,7 +43,7 @@ references survive refactors that line numbers don't. See commit
 
 ## Adding a new ADR
 
-1. Pick the next available number (sequence resumes at 0017).
+1. Pick the next available number (sequence resumes at 0018).
 2. Copy the template from any recent ADR (0007 / 0008 / 0009 are
    current-style references).
 3. Fill `Status`, `Date`, `Deciders`, `Consulted`, then the
