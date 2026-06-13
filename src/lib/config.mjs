@@ -106,6 +106,14 @@ const DEFAULTS = {
     timeoutMs: 60000,
     retries: 1,
     fullPageScreenshots: true,
+    // E1: challenge handling. Detection is always on (cf-mitigated authoritative
+    // + the audited host's own host for the title+status heuristic); these only
+    // tune the bounded wait and extra allowlisted hosts. wait defaults to 0
+    // (opt-in) — the robust path is a WAF bypass header via auth.extraHTTPHeaders.
+    challenge: {
+      waitForAutoSolveMs: 0,
+      hosts: [],
+    },
     axe: {
       include: [],
       exclude: [],

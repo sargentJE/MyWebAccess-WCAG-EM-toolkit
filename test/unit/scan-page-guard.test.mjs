@@ -13,7 +13,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyPageOutcome } from '../../src/lib/page-guard.mjs';
+import { classifyPageOutcome, challengeCleared } from '../../src/lib/page-guard.mjs';
 
 const HOST = 'www.myvision.org.uk';
 const allow = [HOST];
@@ -114,4 +114,27 @@ test('classifyPageOutcome: a thin-but-nonempty 404 without challenge signals sta
     challengeHosts: allow,
   });
   assert.equal(r.outcome, 'ok');
+});
+
+// SECTION: challengeCleared (§0a auto-solve re-check)
+
+test('challengeCleared: real content (non-interstitial title + body) is cleared', () => {
+  assert.equal(
+    challengeCleared({ title: 'Our events', bodyText: 'Full programme of events this autumn...' }),
+    true,
+  );
+});
+
+test('challengeCleared: a persistent interstitial title is NOT cleared', () => {
+  assert.equal(
+    challengeCleared({
+      title: 'Just a moment...',
+      bodyText: 'Checking your browser before access',
+    }),
+    false,
+  );
+});
+
+test('challengeCleared: an empty body is NOT cleared', () => {
+  assert.equal(challengeCleared({ title: 'Loading', bodyText: '   \n ' }), false);
 });

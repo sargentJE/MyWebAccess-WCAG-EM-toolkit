@@ -123,6 +123,19 @@ export interface WCAGEMAccessibilityToolkitConfig {
     beforeScan?: {
       actions?: Action[];
     };
+    /**
+     * Bot/WAF challenge handling (E1). Detection is header/status-primary (Cloudflare cf-mitigated is authoritative); this configures the bounded wait-for-auto-solve and the host allowlist for the weaker title+status heuristic. For a WAF bypass use auth.extraHTTPHeaders; for a cf_clearance cookie use auth.storageState.
+     */
+    challenge?: {
+      /**
+       * Max ms to wait for a managed challenge to auto-clear and reveal real content before recording pageOutcome: challenge. 0 disables the wait.
+       */
+      waitForAutoSolveMs?: number;
+      /**
+       * Extra hosts (beyond the audited site's host) to apply the title+status challenge heuristic to. The authoritative cf-mitigated check is host-independent.
+       */
+      hosts?: string[];
+    };
     axe?: {
       include?: string[];
       exclude?: string[];

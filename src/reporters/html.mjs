@@ -191,12 +191,16 @@ function renderScanHealth(summary) {
   const degraded = Array.isArray(health.pagesDegraded) ? health.pagesDegraded : [];
   const processFailures = Array.isArray(health.processFailures) ? health.processFailures : [];
   const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
+  const unauditable = Array.isArray(health.pagesUnauditable) ? health.pagesUnauditable : [];
+  const stepFailures = Array.isArray(health.processStepFailures) ? health.processStepFailures : [];
   const truncated = health.reachedMaxPages === true;
   if (
     failed.length === 0 &&
     degraded.length === 0 &&
     processFailures.length === 0 &&
     preScanFailures.length === 0 &&
+    unauditable.length === 0 &&
+    stepFailures.length === 0 &&
     !truncated
   ) {
     return '';
@@ -217,6 +221,15 @@ function renderScanHealth(summary) {
   }
   for (const p of preScanFailures) {
     out += html`<li>Pre-scan action "${p.action}" ${p.state} on <code>${p.url}</code> [${p.viewport}] — page scanned without intended setup.</li>\n`;
+  }
+  for (const p of unauditable) {
+    const outcomes = [...new Set((p.views ?? []).map((/** @type {any} */ v) => v.outcome))].join(
+      ', ',
+    );
+    out += html`<li>Could not audit (${outcomes}) — review by hand: <code>${p.url}</code></li>\n`;
+  }
+  for (const p of stepFailures) {
+    out += html`<li>Process "${p.name}" step "${p.state}" failed at <code>${p.startUrl}</code>: ${p.error ?? 'unknown error'}</li>\n`;
   }
   out += `</ul>\n`;
   return out;
