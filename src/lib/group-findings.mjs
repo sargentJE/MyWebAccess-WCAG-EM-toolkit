@@ -22,7 +22,7 @@
 // SECTION: Imports
 import { normalizeUrl, selectorComponentHint } from './urls.mjs';
 import { classifyRule, withActAndWcagMetadata } from './axe-utils.mjs';
-import { isAuditableView } from './scan-results.mjs';
+import { isAuditableView, viewIdentity } from './scan-results.mjs';
 
 // SECTION: Public API
 
@@ -67,9 +67,19 @@ export function groupFindings(axeResults, processResults, deps) {
   const structuredClusters = new Set();
 
   /**
-   * @param {{ sourceType: string, pageUrl: string, rule: any, target: string | null, html: string | null, failureSummary?: string | null }} f
+   * @param {{ sourceType: string, pageUrl: string, sampleKey?: string, rule: any, target: string | null, html: string | null, failureSummary?: string | null }} f
+   *   - `pageUrl` is the redirect-folded group/inventory key (E4 `viewIdentity`);
+   *     `sampleKey` is the original sample URL used for tier membership.
    */
-  function addRuleFinding({ sourceType, pageUrl, rule, target, html, failureSummary = null }) {
+  function addRuleFinding({
+    sourceType,
+    pageUrl,
+    sampleKey,
+    rule,
+    target,
+    html,
+    failureSummary = null,
+  }) {
     const key = rule.id;
     if (!groupedByRule.has(key)) {
       const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig });
@@ -101,9 +111,14 @@ export function groupFindings(axeResults, processResults, deps) {
     if (inv?.clusterKey) entry.clusters.add(inv.clusterKey);
     if (entry.examples.length < 5) entry.examples.push({ pageUrl, target, html, failureSummary });
 
-    if (structuredSet.has(pageUrl)) structuredRuleIds.add(rule.id);
-    if (structuredSet.has(pageUrl) && inv?.clusterKey) structuredClusters.add(inv.clusterKey);
-    if (randomSet.has(pageUrl) && inv?.clusterKey) randomClusters.add(inv.clusterKey);
+    // E4 carve-out: sample-tier membership uses the ORIGINAL sample URL
+    // (sampleKey), not the redirect-folded group key — structured-sample.txt /
+    // random-sample.txt list the URLs that were scanned, so a redirected
+    // structured page must still be attributed to its tier.
+    const tierKey = sampleKey ?? pageUrl;
+    if (structuredSet.has(tierKey)) structuredRuleIds.add(rule.id);
+    if (structuredSet.has(tierKey) && inv?.clusterKey) structuredClusters.add(inv.clusterKey);
+    if (randomSet.has(tierKey) && inv?.clusterKey) randomClusters.add(inv.clusterKey);
   }
 
   /**
@@ -137,13 +152,17 @@ export function groupFindings(axeResults, processResults, deps) {
     // E1: a could-not-audit page-view (challenge/empty/errored/redirect-dup)
     // carries no real findings and must not enter the grouped output.
     if (!isAuditableView(pageResult)) continue;
-    const pageUrl = normalizeUrl(pageResult.url);
+    // E4: group + inventory-lookup by the redirect-folded identity (finalUrl ??
+    // url); attribute sample-tier membership by the original sample URL.
+    const pageUrl = viewIdentity(pageResult);
+    const sampleKey = normalizeUrl(pageResult.url);
     for (const violation of pageResult.violations || []) {
       for (const node of violation.nodes || []) {
         const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
         addRuleFinding({
           sourceType: 'page-scan',
           pageUrl,
+          sampleKey,
           rule: violation,
           target,
           html: node.html ?? null,
@@ -167,6 +186,7 @@ export function groupFindings(axeResults, processResults, deps) {
           addRuleFinding({
             sourceType: `process:${processResult.name}:${state.state}`,
             pageUrl: processUrl,
+            sampleKey: processUrl,
             rule: violation,
             target,
             html: node.html ?? null,

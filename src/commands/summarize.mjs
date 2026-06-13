@@ -22,7 +22,7 @@ import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { groupFindings } from '../lib/group-findings.mjs';
-import { viewStatus } from '../lib/scan-results.mjs';
+import { isAuditableView, viewIdentity, viewStatus } from '../lib/scan-results.mjs';
 import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
@@ -120,20 +120,23 @@ export function buildExecutionHealth({
     // NOTE: never crash health accounting on a malformed entry — a failed
     // page-view with a missing/invalid url still counts under a sentinel
     // rather than throwing (normalizeUrl rejects non-URLs) or vanishing.
-    const rawUrl = typeof entry?.url === 'string' && entry.url ? entry.url : null;
-    let url;
-    try {
-      url = rawUrl ? normalizeUrl(rawUrl) : '(unknown-url)';
-    } catch {
-      url = rawUrl ?? '(unknown-url)';
-    }
-
-    // E1: three-way split. A could-not-audit view (challenge / empty /
-    // redirect-duplicate) is neither scanned nor failed — it goes in a distinct
-    // bucket so coverage counters and the fully-scanned/degraded/failed page
-    // classification never see it (and so an all-challenge page is NOT counted
-    // as "fully scanned"). An execution error keeps its existing failed-path.
     const status = viewStatus(entry);
+    // E4: a redirect-duplicate was already audited under its canonical (final)
+    // URL — fold it (don't double-count or mis-bucket it as unauditable).
+    if (status === 'redirect-duplicate') continue;
+
+    // E4: key by the redirect-folded identity (finalUrl ?? url) so a redirect
+    // source + target fold to one page, consistent with the grouped findings.
+    // NOTE: never crash health accounting on a malformed entry — fall back to a
+    // sentinel (viewIdentity already try/catches normalization).
+    const rawId = entry?.finalUrl ?? entry?.url;
+    const url = typeof rawId === 'string' && rawId ? viewIdentity(entry) : '(unknown-url)';
+
+    // E1: three-way split. A could-not-audit view (challenge / empty) is neither
+    // scanned nor failed — it goes in a distinct bucket so coverage counters and
+    // the fully-scanned/degraded/failed page classification never see it (and so
+    // an all-challenge page is NOT counted as "fully scanned"). An execution
+    // error keeps its existing failed-path.
     if (status !== 'auditable' && status !== 'errored') {
       pageViewsUnauditable += 1;
       const views = unauditableByUrl.get(url) ?? [];
@@ -429,7 +432,8 @@ export async function run(ctx) {
   /** @type {Map<string, any>} */
   const incompletesByRule = new Map();
   for (const pageResult of axeResults) {
-    const pageUrl = normalizeUrl(pageResult.url);
+    if (!isAuditableView(pageResult)) continue;
+    const pageUrl = viewIdentity(pageResult);
     for (const inc of pageResult.incompleteDetail ?? []) {
       if (inc.nodesCount === 0) continue;
       const key = inc.id;
@@ -455,8 +459,10 @@ export async function run(ctx) {
     }
   }
   for (const processResult of processResults) {
+    if (!isAuditableView(processResult)) continue;
     const processUrl = normalizeUrl(processResult.startUrl);
     for (const state of processResult.states || []) {
+      if (!isAuditableView(state)) continue;
       for (const inc of state.incompleteDetail ?? []) {
         if (inc.nodesCount === 0) continue;
         const key = inc.id;
@@ -529,7 +535,9 @@ export async function run(ctx) {
 
   /** @type {Set<string>} */
   const ruleIdsSeenInRandom = new Set();
-  for (const pageResult of axeResults.filter((item) => randomSet.has(normalizeUrl(item.url)))) {
+  for (const pageResult of axeResults.filter(
+    (item) => isAuditableView(item) && randomSet.has(normalizeUrl(item.url)),
+  )) {
     for (const violation of pageResult.violations || []) ruleIdsSeenInRandom.add(violation.id);
   }
   const newRuleIdsOnlyInRandom = [...ruleIdsSeenInRandom]

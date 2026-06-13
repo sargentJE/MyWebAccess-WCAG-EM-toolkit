@@ -23,6 +23,18 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
   config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
   `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
+- **Redirect-aware scanning (E4, ADR-0019).** `scan.mjs` captures the
+  post-redirect `finalUrl` and a per-viewport seen-set folds a redirect source +
+  target into one audited page (a live run double-counted `/contact-us` + its
+  `301 → /get-in-touch` target). Grouping, execution-health, and incomplete
+  findings key page identity on `finalUrl ?? url`, which also fixes a
+  pre-existing inventory-lookup miss for redirected pages. Sample-tier
+  membership keeps the original sample URL, so a redirected structured page stays
+  in the random-vs-structured comparison. `summary.findings[].pages` (and so
+  EARL `earl:subject` / JUnit case names) now carry the final URL.
+  Portal-export / report-builder already avoid the double-count (the duplicate is
+  skipped via `isAuditableView`); re-keying their labels to the final URL is a
+  deferred companion-coordinated follow-up.
 
 ### Added
 

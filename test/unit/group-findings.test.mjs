@@ -136,3 +136,56 @@ test('groupFindings: caps examples at 5 per rule while still counting all occurr
   assert.equal(groupedByRule.get('r').examples.length, 5);
   assert.equal(groupedByRule.get('r').occurrences, 8);
 });
+
+test('groupFindings (E4): redirect folds to final URL + sample-tier carve-out + dedup skip', () => {
+  // A structured page /contact-us that redirects to /get-in-touch. The inventory
+  // is keyed by the FINAL url (discover captures page.url()); the structured
+  // sample lists the SOURCE url that was scanned.
+  const d = {
+    actMap: {},
+    inventoryByUrl: new Map([
+      [
+        'https://x.com/get-in-touch',
+        {
+          url: 'https://x.com/get-in-touch',
+          pageType: 'form-or-contact',
+          clusterKey: 'form-or-contact::get-in-touch',
+        },
+      ],
+    ]),
+    structuredSet: new Set(['https://x.com/contact-us']),
+    randomSet: new Set(),
+    reportingConfig: {},
+  };
+  const axe = [
+    {
+      url: 'https://x.com/contact-us',
+      finalUrl: 'https://x.com/get-in-touch',
+      violations: [
+        {
+          id: 'label',
+          impact: 'critical',
+          tags: ['wcag2a', 'wcag412'],
+          nodes: [{ target: ['input'], html: '<input>' }],
+        },
+      ],
+    },
+    // The redirect duplicate (scanned via /get-in-touch directly) — excluded.
+    {
+      url: 'https://x.com/get-in-touch',
+      finalUrl: 'https://x.com/get-in-touch',
+      redirectedToAlreadyScanned: true,
+      violations: [],
+    },
+  ];
+  const { groupedByRule, structuredRuleIds } = groupFindings(axe, [], d);
+  const label = groupedByRule.get('label');
+  // FH1: folds to ONE page, and the surviving URL is the FINAL (canonical) one.
+  assert.equal(label.pages.size, 1, 'redirect source + target fold to one page');
+  assert.deepEqual([...label.pages], ['https://x.com/get-in-touch']);
+  // Inventory lookup (final-URL-keyed) resolves, so pageType is picked up.
+  assert.equal(label.pageTypes.has('form-or-contact'), true);
+  // H2 carve-out: the redirected STRUCTURED page is still attributed to its tier
+  // (membership keyed by the original sample URL, not the folded identity).
+  assert.equal(structuredRuleIds.has('label'), true);
+});
