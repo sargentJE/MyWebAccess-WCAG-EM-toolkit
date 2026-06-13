@@ -25,7 +25,7 @@ import { chromium } from 'playwright';
 import AxeBuilderImport from '@axe-core/playwright';
 const AxeBuilder = /** @type {any} */ (AxeBuilderImport);
 import { writeJson } from '../lib/fs-utils.mjs';
-import { fileSafeFromUrl } from '../lib/urls.mjs';
+import { fileSafeFromUrl, normalizeUrl } from '../lib/urls.mjs';
 import { isValidRunOnly, findMatchingOverride, applyAxeOverride } from '../lib/axe-utils.mjs';
 import { liftRuleSummaries, liftIncompleteSummaries } from '../lib/axe-artifact.mjs';
 import { classifyPageOutcome, challengeCleared, challengeHostsFor } from '../lib/page-guard.mjs';
@@ -208,13 +208,23 @@ export async function run(ctx) {
    * @param {import('playwright').Page} page
    * @param {string} url
    * @param {{ id: string, width: number, height: number }} viewport
+   * @param {Set<string>} seenFinalUrls - Per-viewport set of already-scanned final URLs (E4 dedupe).
    * @returns {Promise<any>}
    */
-  async function runForPage(page, url, viewport) {
+  async function runForPage(page, url, viewport, seenFinalUrls) {
     const response = await page.goto(url, {
       waitUntil: config.scan.waitUntil,
       timeout: config.scan.timeoutMs,
     });
+
+    // E4: the post-redirect final URL (mirrors discover.mjs's
+    // normalizeUrl(page.url())) so redirect source + target fold to one page.
+    let finalUrl;
+    try {
+      finalUrl = normalizeUrl(page.url());
+    } catch {
+      finalUrl = url;
+    }
 
     // E1: classify the landed page BEFORE spending axe + a screenshot on it. A
     // challenge/empty page is recorded as a pageOutcome with empty violations —
@@ -239,8 +249,30 @@ export async function run(ctx) {
       // queue (E7) picks it up. Detail arrays mirror the ok-page shape.
       return {
         title: await page.title().catch(() => ''),
+        finalUrl,
         pageOutcome: outcome.outcome,
         degradedReason: outcome.reason,
+        screenshot: null,
+        violations: [],
+        passes: 0,
+        incomplete: 0,
+        inapplicable: 0,
+        passesDetail: [],
+        incompleteDetail: [],
+        inapplicableDetail: [],
+        _preScanStates: [],
+      };
+    }
+
+    // E4: redirect dedupe. If this view's final URL was already scanned at this
+    // viewport, skip axe + screenshot and record a redirect-duplicate (excluded
+    // everywhere via isAuditableView). The set is updated AFTER a successful axe
+    // below, so a thrown retry of the same url is not mistaken for a duplicate.
+    if (seenFinalUrls && seenFinalUrls.has(finalUrl)) {
+      return {
+        title: await page.title().catch(() => ''),
+        finalUrl,
+        redirectedToAlreadyScanned: true,
         screenshot: null,
         violations: [],
         passes: 0,
@@ -330,8 +362,11 @@ export async function run(ctx) {
     }
 
     const axeResults = await builder.analyze();
+    // E4: mark this final URL scanned only AFTER a successful axe run.
+    if (seenFinalUrls) seenFinalUrls.add(finalUrl);
     return {
       title: await page.title().catch(() => ''),
+      finalUrl,
       screenshot: config.scan.fullPageScreenshots !== false ? screenshotPath : null,
       violations: axeResults.violations,
       // Count keys preserved for backward compatibility with v0.3 consumers.
@@ -362,6 +397,10 @@ export async function run(ctx) {
   // subsequent URLs or subsequent viewports.
   for (const vp of viewports) {
     logger.info({ viewport: vp.id }, 'viewport start');
+    // E4: per-viewport seen-set of final URLs — redirect source + target are
+    // scanned once per viewport (the duplicate is recorded, not re-axed).
+    /** @type {Set<string>} */
+    const seenFinalUrls = new Set();
     for (const url of sampleUrls) {
       let attempt = 0;
       let success = false;
@@ -383,7 +422,7 @@ export async function run(ctx) {
         try {
           attempt += 1;
           logger.info({ url, viewport: vp.id, attempt }, 'scanning');
-          const result = await runForPage(page, url, vp);
+          const result = await runForPage(page, url, vp, seenFinalUrls);
           allResults.push({ url, viewport: vp.id, attempts: attempt, ...result });
           logger.info({ url, viewport: vp.id, violations: result.violations.length }, 'scanned');
           success = true;
