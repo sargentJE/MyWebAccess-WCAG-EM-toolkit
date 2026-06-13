@@ -201,3 +201,21 @@ test('§5: WCAG-EM inversion does not let a challenge page flip an SC verdict', 
     '1.4.3 must not be failed by a skipped challenge page',
   );
 });
+
+test('§5 DISCLOSE: automatedCoverage flags PARTIAL when a page is excluded (no false "complete")', () => {
+  const wcag = toWcagEmSummary(
+    { config: { wcagEm: { conformanceTarget: 'AA' } } },
+    { axeResults, processResults: [], sampleMetadata: { finalSampleCount: 2 } },
+  );
+  const cov = wcag.automatedCoverage;
+  assert.equal(cov.status, 'partial', 'coverage is partial — a page was excluded');
+  assert.equal(cov.adequate, false, 'excluding a page means coverage is not adequate');
+  assert.equal(cov.pagesAudited, 1, 'one real page audited');
+  assert.equal(cov.pagesExcluded, 1, 'one challenge page excluded');
+  assert.ok(
+    cov.scopeExclusions.some(
+      (e) => e.outcome === 'challenge' && e.examples.includes(CHALLENGE_URL),
+    ),
+    'the challenge page is named in scopeExclusions so the gap is disclosed, not hidden',
+  );
+});

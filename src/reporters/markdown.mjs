@@ -118,6 +118,9 @@ export async function emit(summary, ctx) {
     randomSampleIntroducedNewClusters: [],
     expandStructuredSampleRecommended: false,
   };
+  // E1 DISCLOSE: automated-coverage honesty line (so a clean result is never
+  // read as complete coverage when pages were excluded).
+  const cov = summary.wcagEmSummary?.automatedCoverage;
 
   const lines = [
     toolIdentityMarkdownHeader().trimEnd(),
@@ -143,6 +146,13 @@ export async function emit(summary, ctx) {
       : []),
     `- Process runs: ${summary.processRuns}`,
     `- Grouped findings: ${summary.groupedFindingCount}`,
+    ...(cov
+      ? [
+          `- Automated coverage: ${cov.status}${cov.adequate ? '' : ' — PARTIAL'} (${cov.pagesAudited}${
+            cov.pagesSelected != null ? `/${cov.pagesSelected}` : ''
+          } selected pages audited${cov.pagesExcluded ? `; ${cov.pagesExcluded} excluded — see Scan health` : ''})`,
+        ]
+      : []),
     '',
     ...renderScanHealth(summary.executionHealth),
     '## Random vs structured sample comparison',

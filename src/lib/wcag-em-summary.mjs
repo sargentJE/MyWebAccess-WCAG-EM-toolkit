@@ -41,7 +41,7 @@
 
 // SECTION: Imports
 import { withActAndWcagMetadata } from './axe-utils.mjs';
-import { isAuditableView } from './scan-results.mjs';
+import { isAuditableView, viewStatus } from './scan-results.mjs';
 
 // SECTION: Constants
 
@@ -172,6 +172,7 @@ export const SC_LEVEL_MAP = /** @type {const} */ ({
  *   sampleMetadata?: Record<string, any>,
  * }} rawResults - Bundle of raw axe + process results. Not a draft summary.
  * @returns {{
+ *   automatedCoverage: { status: 'complete'|'partial'|'none', adequate: boolean, pagesSelected: number|null, pagesAudited: number, pagesExcluded: number, scopeExclusions: Array<{ outcome: string, count: number, examples: string[] }> },
  *   criteriaOutcomes: CriterionOutcome[],
  *   evaluationDate: string,
  *   processesEvaluated: string[],
@@ -380,7 +381,57 @@ export function toWcagEmSummary(ctx, rawResults) {
   }
   criteriaOutcomes.sort((a, b) => compareScs(a.sc, b.sc));
 
+  // E1 DISCLOSE: excluding could-not-audit pages from the SC verdicts above
+  // would otherwise let a criterion read `passed` purely because the page that
+  // would have failed it was skipped. Record what the automated layer actually
+  // covered so a clean result is never mistaken for complete coverage. A per-SC
+  // denominator is deliberately NOT synthesized: an excluded page's axe never
+  // ran, so which criteria it would have touched is unknown — the honest
+  // statement is run-level ("N of M selected pages audited; the rest assessed
+  // for no criterion").
+  /** @type {Set<string>} */
+  const auditedUrls = new Set();
+  /** @type {Map<string, Set<string>>} */
+  const excludedByOutcome = new Map();
+  for (const page of axeResults) {
+    const url = String(page?.url ?? '');
+    if (isAuditableView(page)) {
+      auditedUrls.add(url);
+    } else {
+      const key = typeof page?.pageOutcome === 'string' ? page.pageOutcome : viewStatus(page);
+      const set = excludedByOutcome.get(key) ?? new Set();
+      set.add(url);
+      excludedByOutcome.set(key, set);
+    }
+  }
+  const scopeExclusions = [...excludedByOutcome.entries()]
+    .map(([outcome, urls]) => ({
+      outcome,
+      count: urls.size,
+      examples: [...urls].sort().slice(0, 5),
+    }))
+    .sort((a, b) => (a.outcome < b.outcome ? -1 : a.outcome > b.outcome ? 1 : 0));
+  const pagesAudited = auditedUrls.size;
+  const pagesExcluded = scopeExclusions.reduce((n, e) => n + e.count, 0);
+  const pagesSelected =
+    typeof sampleMetadata?.finalSampleCount === 'number' ? sampleMetadata.finalSampleCount : null;
+  /** @type {'complete' | 'partial' | 'none'} */
+  let coverageStatus;
+  if (pagesAudited === 0) coverageStatus = 'none';
+  else if (pagesExcluded > 0 || (pagesSelected !== null && pagesAudited < pagesSelected))
+    coverageStatus = 'partial';
+  else coverageStatus = 'complete';
+  const automatedCoverage = {
+    status: coverageStatus,
+    adequate: coverageStatus === 'complete',
+    pagesSelected,
+    pagesAudited,
+    pagesExcluded,
+    scopeExclusions,
+  };
+
   return {
+    automatedCoverage,
     criteriaOutcomes,
     evaluationDate: new Date().toISOString(),
     processesEvaluated: Array.isArray(ctx?.config?.processes)
