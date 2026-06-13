@@ -275,3 +275,42 @@ test('markdown reporter: Example HTML is collapsed to one line and backtick-safe
   );
   assert.ok(!got.includes('`code`'), 'no raw backtick survives to break the span');
 });
+
+test('markdown reporter: grouped-finding Example target is backtick-safe', async (t) => {
+  const { ctx, reportsDir } = await makeCtx(t);
+  const summary = {
+    tool: TOOL_IDENTITY,
+    site: 'tgt-backtick',
+    generatedAt: '2026-04-29T00:00:00.000Z',
+    inventoryCount: 1,
+    finalSampleCount: 1,
+    samplePagesScanned: 1,
+    processRuns: 0,
+    groupedFindingCount: 1,
+    comparison: {
+      randomSampleIntroducedNewRuleIds: [],
+      randomSampleIntroducedNewClusters: [],
+      expandStructuredSampleRecommended: false,
+    },
+    findings: [
+      {
+        id: 'color-contrast',
+        impact: 'serious',
+        classification: 'wcag',
+        pageCount: 1,
+        // Raw selector carrying backticks + a newline — the previously-unescaped
+        // targets[0] interpolation site (markdown.mjs).
+        targets: ['.menu `x`\n  .item'],
+      },
+    ],
+  };
+  await markdownReporter.emit(summary, ctx);
+  const got = await fs.readFile(path.join(reportsDir, 'summary.md'), 'utf8');
+  // Parity with Example HTML: collapsed to one line + backticks neutralised so
+  // the inline code span can't be broken by a selector value.
+  assert.ok(
+    got.includes("- Example target: `.menu 'x' .item`"),
+    'target selector collapsed + backticks neutralised',
+  );
+  assert.ok(!got.includes('`x`'), 'no raw backtick survives to break the span');
+});
