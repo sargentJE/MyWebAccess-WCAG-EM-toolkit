@@ -132,6 +132,31 @@ export function classifyCrawlFailure(error, request) {
   return 'other';
 }
 
+// ANCHOR: DOCUMENT_EXT — accessibility-reviewable document families (PDF + office
+// docs). Drives the E5 manual-review inventory INDEPENDENTLY of the
+// documentLinkPatterns skip-config, so PDFs are listed for review whether or not
+// the config skips them from crawling.
+const DOCUMENT_EXT = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i;
+
+/**
+ * Return a document type (e.g. `pdf`) when the URL points at an
+ * accessibility-reviewable document, else null. Pathname-only (mirrors
+ * `urlSkippedByExtension`); bad URLs return null.
+ *
+ * @param {string} url
+ * @returns {string | null}
+ */
+export function documentTypeOf(url) {
+  let pathname;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+  const m = pathname.match(DOCUMENT_EXT);
+  return m ? m[1].toLowerCase() : null;
+}
+
 // SECTION: Public API
 
 /**
@@ -157,6 +182,22 @@ export async function run(ctx) {
   let failedRequestCount = 0;
   /** @type {Map<string, number>} */
   const failureReasons = new Map();
+  // E5: in-scope document links (PDFs / office docs) captured for the
+  // manual-review queue — never crawled-as-pages silently, never dropped.
+  /** @type {Map<string, string>} */
+  const documentLinks = new Map();
+
+  // E5: warn when documentLinkPatterns is overridden so it no longer skips PDFs
+  // — they would be crawled as pages (axe can't meaningfully scan a PDF). The
+  // document inventory still lists them for manual review either way.
+  const skipsPdf = (config.crawl.documentLinkPatternsCompiled ?? []).some(
+    (/** @type {RegExp} */ rx) => rx.test('/probe.pdf'),
+  );
+  if (!skipsPdf) {
+    logger.warn(
+      'config.crawl.documentLinkPatterns does not skip PDFs — they will be crawled as pages; see document-inventory.json for the manual-review list',
+    );
+  }
   const seeds = [normalizeUrl(config.rootUrl)];
 
   // ANCHOR: SitemapSeeding — optional uplift when the site advertises a sitemap.
@@ -171,6 +212,8 @@ export async function run(ctx) {
     config.scope,
   )) {
     if (!urlAllowedByScope(url, config.rootUrl, config.scope)) continue;
+    const seedDocType = documentTypeOf(url);
+    if (seedDocType) documentLinks.set(url, seedDocType);
     if (urlExcludedByPatterns(url, config.crawl.excludeUrlPatternsCompiled ?? [])) continue;
     if (urlSkippedByExtension(url, config.crawl.documentLinkPatternsCompiled ?? [])) {
       excludedByExtension.add(url);
@@ -247,6 +290,10 @@ export async function run(ctx) {
             excludedOutOfScope.add(normalized);
             return false;
           }
+          // E5: inventory in-scope document links for manual review, regardless
+          // of whether documentLinkPatterns skips them below.
+          const docType = documentTypeOf(normalized);
+          if (docType) documentLinks.set(normalized, docType);
           if (urlExcludedByPatterns(normalized, config.crawl.excludeUrlPatternsCompiled ?? [])) {
             excludedByPattern.add(normalized);
             return false;
@@ -309,6 +356,17 @@ export async function run(ctx) {
   );
   await writeJson(path.join(paths.inventoryDir, 'page-clusters.json'), pageClusters);
   await writeJson(path.join(paths.inventoryDir, 'process-candidates.json'), processCandidates);
+  // E5: document inventory — accessibility-reviewable documents (PDFs / office
+  // docs) found in scope, for the E7 manual-review queue. Never crawled as pages.
+  const documentInventory = [...documentLinks.entries()]
+    .map(([url, type]) => ({ url, type }))
+    .sort((a, b) => a.url.localeCompare(b.url));
+  await writeJson(path.join(paths.inventoryDir, 'document-inventory.json'), {
+    tool: TOOL_IDENTITY,
+    site: config.name,
+    count: documentInventory.length,
+    documents: documentInventory,
+  });
   await writeJson(path.join(paths.inventoryDir, 'inventory-metadata.json'), {
     tool: TOOL_IDENTITY,
     site: config.name,

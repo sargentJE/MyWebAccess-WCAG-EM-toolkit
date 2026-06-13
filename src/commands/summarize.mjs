@@ -236,6 +236,29 @@ export function buildExecutionHealth({
   const maxPagesConfigured = inventoryMetadata?.maxPagesConfigured ?? null;
   const reachedMaxPages = inventoryMetadata?.reachedMaxPages === true;
 
+  // E5: surface force-included structured URLs that never made it into the
+  // inventory (override visibility — R3). Annotate WHY: a URL that landed on a
+  // challenge is `blocked`; otherwise the crawl simply did not reach it
+  // (`not-in-inventory`) — opposite treatments (re-scan vs widen the crawl).
+  const challengeUrlSet = new Set(
+    pagesUnauditable
+      .filter((p) => p.views.some((v) => v.outcome === 'challenge'))
+      .map((p) => p.url),
+  );
+  const structuredMissingFromInventory = (
+    Array.isArray(sampleMetadata?.structuredMissingFromInventory)
+      ? sampleMetadata.structuredMissingFromInventory
+      : []
+  ).map((u) => {
+    let key;
+    try {
+      key = normalizeUrl(u);
+    } catch {
+      key = u;
+    }
+    return { url: u, reason: challengeUrlSet.has(key) ? 'blocked' : 'not-in-inventory' };
+  });
+
   const executionHealth = {
     sampleListedCount: sampleMetadata?.finalSampleCount ?? null,
     pagesInSample: byUrl.size,
@@ -248,6 +271,8 @@ export function buildExecutionHealth({
     pagesUnauditable,
     challengePages: pagesUnauditable.filter((p) => p.views.some((v) => v.outcome === 'challenge'))
       .length,
+    // E5: force-included structured URLs missing from the inventory, annotated.
+    structuredMissingFromInventory,
     pageViewsScanned,
     pageViewsFailed,
     pageViewsUnauditable,
@@ -287,6 +312,13 @@ export function buildExecutionHealth({
   for (const p of processStepFailures) {
     warnings.push(
       `process "${p.name}" step "${p.state}" failed at ${p.startUrl}: ${p.error ?? 'unknown error'}`,
+    );
+  }
+  for (const m of structuredMissingFromInventory) {
+    warnings.push(
+      m.reason === 'blocked'
+        ? `force-included sample URL was blocked (challenge), not audited: ${m.url}`
+        : `force-included sample URL is not in the crawl inventory: ${m.url} — verify it is reachable / in scope`,
     );
   }
   if (reachedMaxPages) {
