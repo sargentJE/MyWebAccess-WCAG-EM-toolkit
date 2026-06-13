@@ -19,8 +19,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
-import { normalizeUrl, selectorComponentHint } from '../lib/urls.mjs';
-import { classifyRule, withActAndWcagMetadata } from '../lib/axe-utils.mjs';
+import { normalizeUrl } from '../lib/urls.mjs';
+import { withActAndWcagMetadata } from '../lib/axe-utils.mjs';
+import { groupFindings } from '../lib/group-findings.mjs';
 import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
@@ -314,121 +315,22 @@ export async function run(ctx) {
   );
 
   // SECTION: Grouping
-  /** @type {Map<string, any>} */
-  const groupedByRule = new Map();
-  /** @type {Map<string, any>} */
-  const groupedByComponent = new Map();
-  /** @type {Set<string>} */
-  const structuredRuleIds = new Set();
-  /** @type {Set<string>} */
-  const randomClusters = new Set();
-  /** @type {Set<string>} */
-  const structuredClusters = new Set();
-
-  /**
-   * @param {{ sourceType: string, pageUrl: string, rule: any, target: string | null, html: string | null, failureSummary?: string | null }} f
-   */
-  function addRuleFinding({ sourceType, pageUrl, rule, target, html, failureSummary = null }) {
-    const key = rule.id;
-    if (!groupedByRule.has(key)) {
-      const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig: config.reporting });
-      groupedByRule.set(key, {
-        id: rule.id,
-        impact: rule.impact ?? null,
-        help: rule.help ?? null,
-        helpUrl: rule.helpUrl ?? null,
-        tags: rule.tags ?? [],
-        classification: meta.classification,
-        actRuleIds: meta.actRuleIds,
-        wcagCriteria: meta.wcagCriteria,
-        occurrences: 0,
-        pages: new Set(),
-        targets: new Set(),
-        examples: [],
-        sourceTypes: new Set(),
-        pageTypes: new Set(),
-        clusters: new Set(),
-      });
-    }
-    const entry = groupedByRule.get(key);
-    entry.occurrences += 1;
-    entry.pages.add(pageUrl);
-    entry.sourceTypes.add(sourceType);
-    if (target) entry.targets.add(target);
-    const inv = inventoryByUrl.get(pageUrl);
-    if (inv?.pageType) entry.pageTypes.add(inv.pageType);
-    if (inv?.clusterKey) entry.clusters.add(inv.clusterKey);
-    if (entry.examples.length < 5) entry.examples.push({ pageUrl, target, html, failureSummary });
-
-    if (structuredSet.has(pageUrl)) structuredRuleIds.add(rule.id);
-    if (structuredSet.has(pageUrl) && inv?.clusterKey) structuredClusters.add(inv.clusterKey);
-    if (randomSet.has(pageUrl) && inv?.clusterKey) randomClusters.add(inv.clusterKey);
-  }
-
-  /**
-   * @param {{ pageUrl: string, rule: any, target: string | null }} f
-   */
-  function addComponentFinding({ pageUrl, rule, target }) {
-    const componentHint = selectorComponentHint(target ?? '');
-    const key = `${rule.id}::${componentHint}`;
-    if (!groupedByComponent.has(key)) {
-      const meta = withActAndWcagMetadata(rule, { actMap, reportingConfig: config.reporting });
-      groupedByComponent.set(key, {
-        key,
-        actRuleIds: meta.actRuleIds,
-        wcagCriteria: meta.wcagCriteria,
-        ruleId: rule.id,
-        componentHint,
-        impact: rule.impact ?? null,
-        classification: classifyRule(rule, config.reporting).classification,
-        pages: new Set(),
-        targets: new Set(),
-        occurrences: 0,
-      });
-    }
-    const entry = groupedByComponent.get(key);
-    entry.occurrences += 1;
-    entry.pages.add(pageUrl);
-    if (target) entry.targets.add(target);
-  }
-
-  for (const pageResult of axeResults) {
-    const pageUrl = normalizeUrl(pageResult.url);
-    for (const violation of pageResult.violations || []) {
-      for (const node of violation.nodes || []) {
-        const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
-        addRuleFinding({
-          sourceType: 'page-scan',
-          pageUrl,
-          rule: violation,
-          target,
-          html: node.html ?? null,
-          failureSummary: typeof node.failureSummary === 'string' ? node.failureSummary : null,
-        });
-        addComponentFinding({ pageUrl, rule: violation, target });
-      }
-    }
-  }
-
-  for (const processResult of processResults) {
-    const processUrl = normalizeUrl(processResult.startUrl);
-    for (const state of processResult.states || []) {
-      for (const violation of state.violations || []) {
-        for (const node of violation.nodes || []) {
-          const target = Array.isArray(node.target) ? node.target.join(' | ') : null;
-          addRuleFinding({
-            sourceType: `process:${processResult.name}:${state.state}`,
-            pageUrl: processUrl,
-            rule: violation,
-            target,
-            html: node.html ?? null,
-            failureSummary: typeof node.failureSummary === 'string' ? node.failureSummary : null,
-          });
-          addComponentFinding({ pageUrl: processUrl, rule: violation, target });
-        }
-      }
-    }
-  }
+  // Extracted to lib/group-findings.mjs so the two cross-cutting epics that edit
+  // it (E1 skip non-auditable views; E4 group by final-URL identity) touch a
+  // small, unit-testable function rather than this command body.
+  const {
+    groupedByRule,
+    groupedByComponent,
+    structuredRuleIds,
+    randomClusters,
+    structuredClusters,
+  } = groupFindings(axeResults, processResults, {
+    actMap,
+    inventoryByUrl,
+    structuredSet,
+    randomSet,
+    reportingConfig: config.reporting,
+  });
 
   // SECTION: Incomplete grouping (needs-review items for reporters)
   /**
