@@ -33,6 +33,24 @@ import { sortFindings } from './_sort.mjs';
 // SECTION: Module identity
 export const name = 'markdown';
 
+// SECTION: Inline-code escaping
+
+/**
+ * Normalise a value for safe embedding in a markdown inline-code span:
+ * neutralise backticks (which would otherwise break the span), collapse
+ * whitespace runs to single spaces (axe selectors/outerHTML can be multi-line),
+ * and trim. Markdown was the only reporter interpolating selectors raw, so a
+ * backtick in a selector or snippet could break the rendered span; this brings
+ * it to parity with the HTML/JUnit reporters' escaping. Backslashes are kept
+ * verbatim — they are real data and the HTML reporter keeps them too.
+ *
+ * @param {unknown} value - Raw selector or HTML snippet.
+ * @returns {string} A single-line, backtick-free string.
+ */
+function mdInlineCode(value) {
+  return String(value).replace(/`/g, "'").replace(/\s+/g, ' ').trim();
+}
+
 // SECTION: Scan health
 
 /**
@@ -151,7 +169,7 @@ export async function emit(summary, ctx) {
     if (item.help) lines.push(`- Help: ${item.help}`);
     if (item.helpUrl) lines.push(`- Rule URL: ${item.helpUrl}`);
     if (Array.isArray(item.targets) && item.targets.length) {
-      lines.push(`- Example target: \`${item.targets[0]}\``);
+      lines.push(`- Example target: \`${mdInlineCode(item.targets[0])}\``);
     }
     lines.push('');
   }
@@ -171,12 +189,9 @@ export async function emit(summary, ctx) {
       if (item.helpUrl) lines.push(`- Rule URL: ${item.helpUrl}`);
       const ex = Array.isArray(item.examples) && item.examples.length ? item.examples[0] : null;
       const exTarget = ex?.target ?? item.firstTarget;
-      if (exTarget) lines.push(`- Example target: \`${exTarget}\``);
+      if (exTarget) lines.push(`- Example target: \`${mdInlineCode(exTarget)}\``);
       if (ex?.html) {
-        // Collapse whitespace (axe outerHTML may be multi-line) and neutralise
-        // backticks so the inline code span can't be broken by the snippet.
-        const snippet = String(ex.html).replace(/`/g, "'").replace(/\s+/g, ' ').trim();
-        lines.push(`- Example HTML: \`${snippet}\``);
+        lines.push(`- Example HTML: \`${mdInlineCode(ex.html)}\``);
       }
       lines.push('');
     }
