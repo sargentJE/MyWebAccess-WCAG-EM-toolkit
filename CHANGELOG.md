@@ -6,6 +6,67 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+### Changed
+
+- **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
+  the scanner cannot audit — Cloudflare/WAF **challenge** interstitials and
+  **empty** documents — are classified at the scan/process write-site
+  (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
+  verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
+  portal-export / report-builder / html reporters), not just `summary.json`.
+  _Breaking for diff-based consumers:_ such pages drop out of findings and stop
+  incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
+  findings for false **passes**, `wcag-em-summary.json` gains an
+  `automatedCoverage` block (`status` + `pagesSelected`/`pagesAudited` +
+  `scopeExclusions`); `executionHealth` gains
+  `pagesUnauditable`/`challengePages`/`processStepFailures`; and
+  `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
+  config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
+  `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
+- **Fair, deterministic, recursion-aware sitemap seeding (E2, ADR-0018).**
+  `getSitemapSeeds` no longer drains its `maxUrls` budget in config order (which
+  starved later sitemaps — a live run seeded 6 of 230 blog posts). It now
+  expands the `<sitemapindex>` tree (classifying documents by root element, not
+  URL extension), bounds total document fetches (`sitemapSeeding.maxSitemapDocs`,
+  default 50), then allocates the budget **round-robin across leaf sitemaps** so
+  one large sitemap can't shut out the rest. `inventory-metadata.json` gains a
+  `sitemaps` block (per-leaf `found`/`contributed`/`clipped`,
+  `reachedSitemapCap`, `neverReached`). Fetches stay sequential and leaves/locs
+  are sorted, so seeds are reproducible for a fixed `randomSeed` — but a prior
+  run's sample will not byte-reproduce. _Note:_ seed fairness is not Step-3c
+  **sample** fairness; the random tier still draws from the whole inventory
+  (residual skew is surfaced by E1's `automatedCoverage`, not hidden).
+- **Redirect-aware scanning (E4, ADR-0019).** `scan.mjs` captures the
+  post-redirect `finalUrl` and a per-viewport seen-set folds a redirect source +
+  target into one audited page (a live run double-counted `/contact-us` + its
+  `301 → /get-in-touch` target). Grouping, execution-health, and incomplete
+  findings key page identity on `finalUrl ?? url`, which also fixes a
+  pre-existing inventory-lookup miss for redirected pages. Sample-tier
+  membership keeps the original sample URL, so a redirected structured page stays
+  in the random-vs-structured comparison. `summary.findings[].pages` (and so
+  EARL `earl:subject` / JUnit case names) now carry the final URL.
+  Portal-export / report-builder already avoid the double-count (the duplicate is
+  skipped via `isAuditableView`); re-keying their labels to the final URL is a
+  deferred companion-coordinated follow-up.
+- **Override visibility + document inventory (E5).** Force-included structured
+  URLs missing from the crawl inventory are now surfaced in `executionHealth` +
+  the Scan-health block + `scanWarnings`, **annotated** `blocked` (landed on a
+  challenge → re-scan) vs `not-in-inventory` (crawl did not reach it → widen
+  scope) — previously a silent `logger.warn`. `documentLinkPatterns` keeps its
+  array-replace semantics (a documented cross-subsystem invariant), but a new
+  one-shot warning fires when an override stops skipping PDFs (they would be
+  crawled as pages). A new `document-inventory.json` lists in-scope
+  accessibility-reviewable documents (PDFs / office docs) for the E7 manual-review
+  queue — detected independently of the skip-config, so they are never
+  crawled-as-pages silently nor dropped.
+- **Evidence-driven manual backlog (E7).** `manual-backlog.md` gains two
+  evidence sections (appended deterministically, no config flag): _Screenshots to
+  eyeball_ — pages captured at more than one viewport, the responsive
+  overlap/clipping candidates; and a _Manual-review queue (could not auto-audit)_
+  listing the challenge/blocked pages (after the §0a strategy) and the
+  `document-inventory.json` PDFs a browser cannot axe-scan. "Could not
+  auto-audit" is now an explicit, actionable hand-off rather than an absence.
+
 ### Added
 
 - **Documentation guides** (`docs/guides/`) — the how-to-use genre the 2026-06
@@ -90,34 +151,6 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Changed
 
-- **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
-  the scanner cannot audit — Cloudflare/WAF **challenge** interstitials and
-  **empty** documents — are classified at the scan/process write-site
-  (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
-  verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
-  portal-export / report-builder / html reporters), not just `summary.json`.
-  _Breaking for diff-based consumers:_ such pages drop out of findings and stop
-  incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
-  findings for false **passes**, `wcag-em-summary.json` gains an
-  `automatedCoverage` block (`status` + `pagesSelected`/`pagesAudited` +
-  `scopeExclusions`); `executionHealth` gains
-  `pagesUnauditable`/`challengePages`/`processStepFailures`; and
-  `inventory-metadata.json` gains `failedRequestCount`/`failureReasons`. New
-  config `scan.challenge.{waitForAutoSolveMs,hosts}`; the WAF bypass header /
-  `cf_clearance` reuse the existing `auth.extraHTTPHeaders` / `auth.storageState`.
-- **Fair, deterministic, recursion-aware sitemap seeding (E2, ADR-0018).**
-  `getSitemapSeeds` no longer drains its `maxUrls` budget in config order (which
-  starved later sitemaps — a live run seeded 6 of 230 blog posts). It now
-  expands the `<sitemapindex>` tree (classifying documents by root element, not
-  URL extension), bounds total document fetches (`sitemapSeeding.maxSitemapDocs`,
-  default 50), then allocates the budget **round-robin across leaf sitemaps** so
-  one large sitemap can't shut out the rest. `inventory-metadata.json` gains a
-  `sitemaps` block (per-leaf `found`/`contributed`/`clipped`,
-  `reachedSitemapCap`, `neverReached`). Fetches stay sequential and leaves/locs
-  are sorted, so seeds are reproducible for a fixed `randomSeed` — but a prior
-  run's sample will not byte-reproduce. _Note:_ seed fairness is not Step-3c
-  **sample** fairness; the random tier still draws from the whole inventory
-  (residual skew is surfaced by E1's `automatedCoverage`, not hidden).
 - **`samplePagesScanned` redefined to PAGES** (unique pages with at least one
   successful view); the previous value counted page-view entries (pages x
   viewports) INCLUDING failures, so a 5-page 2-viewport audit reported 10

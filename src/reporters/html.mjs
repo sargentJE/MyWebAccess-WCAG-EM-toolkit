@@ -193,6 +193,9 @@ function renderScanHealth(summary) {
   const preScanFailures = Array.isArray(health.preScanFailures) ? health.preScanFailures : [];
   const unauditable = Array.isArray(health.pagesUnauditable) ? health.pagesUnauditable : [];
   const stepFailures = Array.isArray(health.processStepFailures) ? health.processStepFailures : [];
+  const structuredMissing = Array.isArray(health.structuredMissingFromInventory)
+    ? health.structuredMissingFromInventory
+    : [];
   const truncated = health.reachedMaxPages === true;
   if (
     failed.length === 0 &&
@@ -201,6 +204,7 @@ function renderScanHealth(summary) {
     preScanFailures.length === 0 &&
     unauditable.length === 0 &&
     stepFailures.length === 0 &&
+    structuredMissing.length === 0 &&
     !truncated
   ) {
     return '';
@@ -230,6 +234,13 @@ function renderScanHealth(summary) {
   }
   for (const p of stepFailures) {
     out += html`<li>Process "${p.name}" step "${p.state}" failed at <code>${p.startUrl}</code>: ${p.error ?? 'unknown error'}</li>\n`;
+  }
+  for (const m of structuredMissing) {
+    const label =
+      m.reason === 'blocked'
+        ? 'Force-included sample URL blocked (challenge), not audited'
+        : 'Force-included sample URL not in crawl inventory';
+    out += html`<li>${label}: <code>${m.url}</code></li>\n`;
   }
   out += `</ul>\n`;
   return out;

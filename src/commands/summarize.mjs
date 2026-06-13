@@ -22,7 +22,7 @@ import { readJsonMaybe, writeJson, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { withActAndWcagMetadata } from '../lib/axe-utils.mjs';
 import { groupFindings } from '../lib/group-findings.mjs';
-import { viewStatus } from '../lib/scan-results.mjs';
+import { isAuditableView, viewIdentity, viewStatus } from '../lib/scan-results.mjs';
 import { warnLegacyAliasResolved } from '../lib/auth.mjs';
 import { buildManualBacklog } from '../lib/manual-backlog.mjs';
 import { toWcagEmSummary } from '../lib/wcag-em-summary.mjs';
@@ -120,20 +120,23 @@ export function buildExecutionHealth({
     // NOTE: never crash health accounting on a malformed entry — a failed
     // page-view with a missing/invalid url still counts under a sentinel
     // rather than throwing (normalizeUrl rejects non-URLs) or vanishing.
-    const rawUrl = typeof entry?.url === 'string' && entry.url ? entry.url : null;
-    let url;
-    try {
-      url = rawUrl ? normalizeUrl(rawUrl) : '(unknown-url)';
-    } catch {
-      url = rawUrl ?? '(unknown-url)';
-    }
-
-    // E1: three-way split. A could-not-audit view (challenge / empty /
-    // redirect-duplicate) is neither scanned nor failed — it goes in a distinct
-    // bucket so coverage counters and the fully-scanned/degraded/failed page
-    // classification never see it (and so an all-challenge page is NOT counted
-    // as "fully scanned"). An execution error keeps its existing failed-path.
     const status = viewStatus(entry);
+    // E4: a redirect-duplicate was already audited under its canonical (final)
+    // URL — fold it (don't double-count or mis-bucket it as unauditable).
+    if (status === 'redirect-duplicate') continue;
+
+    // E4: key by the redirect-folded identity (finalUrl ?? url) so a redirect
+    // source + target fold to one page, consistent with the grouped findings.
+    // NOTE: never crash health accounting on a malformed entry — fall back to a
+    // sentinel (viewIdentity already try/catches normalization).
+    const rawId = entry?.finalUrl ?? entry?.url;
+    const url = typeof rawId === 'string' && rawId ? viewIdentity(entry) : '(unknown-url)';
+
+    // E1: three-way split. A could-not-audit view (challenge / empty) is neither
+    // scanned nor failed — it goes in a distinct bucket so coverage counters and
+    // the fully-scanned/degraded/failed page classification never see it (and so
+    // an all-challenge page is NOT counted as "fully scanned"). An execution
+    // error keeps its existing failed-path.
     if (status !== 'auditable' && status !== 'errored') {
       pageViewsUnauditable += 1;
       const views = unauditableByUrl.get(url) ?? [];
@@ -233,6 +236,29 @@ export function buildExecutionHealth({
   const maxPagesConfigured = inventoryMetadata?.maxPagesConfigured ?? null;
   const reachedMaxPages = inventoryMetadata?.reachedMaxPages === true;
 
+  // E5: surface force-included structured URLs that never made it into the
+  // inventory (override visibility — R3). Annotate WHY: a URL that landed on a
+  // challenge is `blocked`; otherwise the crawl simply did not reach it
+  // (`not-in-inventory`) — opposite treatments (re-scan vs widen the crawl).
+  const challengeUrlSet = new Set(
+    pagesUnauditable
+      .filter((p) => p.views.some((v) => v.outcome === 'challenge'))
+      .map((p) => p.url),
+  );
+  const structuredMissingFromInventory = (
+    Array.isArray(sampleMetadata?.structuredMissingFromInventory)
+      ? sampleMetadata.structuredMissingFromInventory
+      : []
+  ).map((u) => {
+    let key;
+    try {
+      key = normalizeUrl(u);
+    } catch {
+      key = u;
+    }
+    return { url: u, reason: challengeUrlSet.has(key) ? 'blocked' : 'not-in-inventory' };
+  });
+
   const executionHealth = {
     sampleListedCount: sampleMetadata?.finalSampleCount ?? null,
     pagesInSample: byUrl.size,
@@ -245,6 +271,8 @@ export function buildExecutionHealth({
     pagesUnauditable,
     challengePages: pagesUnauditable.filter((p) => p.views.some((v) => v.outcome === 'challenge'))
       .length,
+    // E5: force-included structured URLs missing from the inventory, annotated.
+    structuredMissingFromInventory,
     pageViewsScanned,
     pageViewsFailed,
     pageViewsUnauditable,
@@ -284,6 +312,13 @@ export function buildExecutionHealth({
   for (const p of processStepFailures) {
     warnings.push(
       `process "${p.name}" step "${p.state}" failed at ${p.startUrl}: ${p.error ?? 'unknown error'}`,
+    );
+  }
+  for (const m of structuredMissingFromInventory) {
+    warnings.push(
+      m.reason === 'blocked'
+        ? `force-included sample URL was blocked (challenge), not audited: ${m.url}`
+        : `force-included sample URL is not in the crawl inventory: ${m.url} — verify it is reachable / in scope`,
     );
   }
   if (reachedMaxPages) {
@@ -429,7 +464,8 @@ export async function run(ctx) {
   /** @type {Map<string, any>} */
   const incompletesByRule = new Map();
   for (const pageResult of axeResults) {
-    const pageUrl = normalizeUrl(pageResult.url);
+    if (!isAuditableView(pageResult)) continue;
+    const pageUrl = viewIdentity(pageResult);
     for (const inc of pageResult.incompleteDetail ?? []) {
       if (inc.nodesCount === 0) continue;
       const key = inc.id;
@@ -455,8 +491,10 @@ export async function run(ctx) {
     }
   }
   for (const processResult of processResults) {
+    if (!isAuditableView(processResult)) continue;
     const processUrl = normalizeUrl(processResult.startUrl);
     for (const state of processResult.states || []) {
+      if (!isAuditableView(state)) continue;
       for (const inc of state.incompleteDetail ?? []) {
         if (inc.nodesCount === 0) continue;
         const key = inc.id;
@@ -529,7 +567,9 @@ export async function run(ctx) {
 
   /** @type {Set<string>} */
   const ruleIdsSeenInRandom = new Set();
-  for (const pageResult of axeResults.filter((item) => randomSet.has(normalizeUrl(item.url)))) {
+  for (const pageResult of axeResults.filter(
+    (item) => isAuditableView(item) && randomSet.has(normalizeUrl(item.url)),
+  )) {
     for (const violation of pageResult.violations || []) ruleIdsSeenInRandom.add(violation.id);
   }
   const newRuleIdsOnlyInRandom = [...ruleIdsSeenInRandom]
@@ -613,8 +653,13 @@ export async function run(ctx) {
     ...wcagEmSummary,
   });
 
-  // ANCHOR: ManualBacklog — findings-aware. Replaces the original static
-  // template. Prepend the markdown tool-identity header.
+  // ANCHOR: ManualBacklog — findings-aware + evidence-driven (E7). Prepend the
+  // markdown tool-identity header.
+  const documentInventory = await readJsonMaybe(
+    path.join(paths.inventoryDir, 'document-inventory.json'),
+    /** @type {Record<string, any>} */ ({}),
+    logger,
+  );
   await writeText(
     path.join(paths.reportsDir, 'manual-backlog.md'),
     toolIdentityMarkdownHeader() +
@@ -622,6 +667,19 @@ export async function run(ctx) {
         findings: groupedFindings,
         inventory,
         processes: config.processes ?? [],
+        // E7: multi-viewport screenshots → "screenshots to eyeball" (responsive
+        // overlap candidates); keyed by the redirect-folded identity.
+        screenshots: axeResults
+          .filter((r) => isAuditableView(r) && typeof r.screenshot === 'string')
+          .map((r) => ({ url: viewIdentity(r), viewport: r.viewport, screenshot: r.screenshot })),
+        // E7: the could-not-auto-audit hand-off — challenge/blocked pages (after
+        // §0a) + the PDF document inventory.
+        manualReview: {
+          challengePages: (executionHealth.pagesUnauditable ?? []).map(
+            (/** @type {any} */ p) => p.url,
+          ),
+          documents: Array.isArray(documentInventory?.documents) ? documentInventory.documents : [],
+        },
       }),
   );
 
