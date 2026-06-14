@@ -69,6 +69,23 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ### Added
 
+- **Pluggable browser transport (E8, opt-in, ADR-0020).** New `scan.browser`
+  config (`engine` `playwright`|`patchright`, `cdpEndpoint`, `channel`,
+  `headless`) plus a `WCAG_EM_CDP_ENDPOINT` env override. Set `cdpEndpoint` to
+  attach over the Chrome DevTools Protocol to an already-running, human-cleared
+  browser so AUTHORIZED audits can scan pages behind a Cloudflare managed
+  challenge — the scan reuses the external browser's default context (riding its
+  `cf_clearance`) and only disconnects on completion (never closes it). Optional
+  stealth engine `patchright` (loaded on demand via dynamic import; install it
+  separately — it is not a declared dependency, so the default install stays
+  lean) and a `headless` knob. Default behaviour is byte-identical (no
+  `scan.browser` block ⇒ headless Chromium via Playwright). `auth.*` is ignored
+  under `cdpEndpoint` (the external browser owns the session); preflight skips
+  the local-Chromium check under CDP/patchright. The durable fix for challenged
+  domains remains domain-side (WAF allowlist / Web Bot Auth via
+  `auth.extraHTTPHeaders`). Landed behind a behaviour-neutral browser-transport
+  seam (`src/lib/browser.mjs` — `acquireBrowserSession` / `openPageView` /
+  `disposeBrowserSession`).
 - **Documentation guides** (`docs/guides/`) — the how-to-use genre the 2026-06
   docs review found missing: a [config authoring guide](docs/guides/config-guide.md)
   (every schema field with defaults, the process step DSL specification,

@@ -67,7 +67,7 @@ program
  * requirement flag.
  *
  * @param {import('commander').Command} cmd
- * @param {{ requirePlaywright?: boolean }} [subOpts]
+ * @param {{ requirePlaywright?: boolean, browserTransportAware?: boolean }} [subOpts]
  * @returns {Promise<import('../src/lib/context.mjs').RunContext>}
  */
 async function buildCtxFromProgram(cmd, subOpts = {}) {
@@ -78,6 +78,7 @@ async function buildCtxFromProgram(cmd, subOpts = {}) {
     outDir: opts.outDir,
     logLevel,
     requirePlaywright: subOpts.requirePlaywright,
+    browserTransportAware: subOpts.browserTransportAware,
   });
 }
 
@@ -146,7 +147,12 @@ program
   .description('Run axe-core over every page in the sample.')
   .action(
     asHandler(async (cmd) => {
-      const ctx = await buildCtxFromProgram(cmd, { requirePlaywright: true });
+      // browserTransportAware: standalone scan attaches externally under CDP, so
+      // its local-Chromium preflight check is config-aware (skipped under CDP).
+      const ctx = await buildCtxFromProgram(cmd, {
+        requirePlaywright: true,
+        browserTransportAware: true,
+      });
       const { run } = await import('../src/commands/scan.mjs');
       await run(ctx);
     }),
@@ -157,7 +163,11 @@ program
   .description('Run axe-core over each configured process/state.')
   .action(
     asHandler(async (cmd) => {
-      const ctx = await buildCtxFromProgram(cmd, { requirePlaywright: true });
+      // browserTransportAware: see scan — config-aware preflight under CDP.
+      const ctx = await buildCtxFromProgram(cmd, {
+        requirePlaywright: true,
+        browserTransportAware: true,
+      });
       const { run } = await import('../src/commands/scan-processes.mjs');
       await run(ctx);
     }),

@@ -120,7 +120,28 @@ expand-your-structured-sample recommendation in
 | `fullPageScreenshots` | `true`                            | Full-page PNG per page x viewport; embedded in the HTML report and carried into the report-builder draft.                                                                                                                                                                                                                                |
 | `beforeScan`          | none                              | Pre-axe page setup actions — see section 4.                                                                                                                                                                                                                                                                                              |
 | `challenge`           | detection on; wait off            | Bot/WAF challenge handling (E1). `waitForAutoSolveMs` (0–60000, default `0`) bounds the wait for a managed challenge to auto-clear before a page is recorded as unauditable; `hosts` adds extra hosts to the title+status heuristic (the `cf-mitigated` check is host-independent). Use `auth.extraHTTPHeaders` for a WAF bypass header. |
+| `browser`             | headless Chromium via Playwright  | Browser transport (E8). Defaults to a headless Chromium launched via Playwright (byte-identical to prior releases); set `cdpEndpoint` to attach over CDP to an already-running, human-cleared browser instead. See below.                                                                                                                |
 | `axe`                 | A+AA tag profile                  | See below.                                                                                                                                                                                                                                                                                                                               |
+
+`browser` sub-fields:
+
+| Field         | Default        | Notes                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `engine`      | `"playwright"` | `"playwright"` (the bundled dependency) \| `"patchright"`, a stealth-patched, API-compatible drop-in for sites with aggressive bot detection. `patchright` is an OPTIONAL dependency installed separately: `npm install patchright && npx patchright install chromium`.                                                                                                                       |
+| `cdpEndpoint` | none           | Chrome DevTools Protocol endpoint (e.g. `http://127.0.0.1:9222`). When set, the scanner attaches over CDP to an already-running, human-cleared browser and reuses its default context — riding that session (e.g. a Cloudflare `cf_clearance`) — instead of launching its own. The `WCAG_EM_CDP_ENDPOINT` env var overrides this. AUTHORIZED audits only. Under it, `auth.*` is also ignored. |
+| `channel`     | none           | Branded channel to launch (`"chrome"`, `"msedge"`). Launch path only; ignored when `cdpEndpoint` is set.                                                                                                                                                                                                                                                                                      |
+| `headless`    | `true`         | Whether the launched browser runs headless. Launch path only; ignored when `cdpEndpoint` is set. Set `false` to watch the scan or let a managed challenge auto-solve in a visible window.                                                                                                                                                                                                     |
+
+Under `cdpEndpoint` the external browser owns the session, so `auth.*`,
+`channel`, and `headless` are all ignored. The `WCAG_EM_CDP_ENDPOINT`
+environment variable overrides `cdpEndpoint` for ad-hoc attaches.
+
+Only `scan` and `scan-processes` attach over CDP; `discover` always crawls with
+a locally-launched browser, so on a protected domain it is challenged and still
+needs a local Chromium. For a challenged-domain audit, seed the challenged URLs
+via `sample.structuredManual` so `scan` reaches them over the cleared CDP
+session. (`discover` / `audit` keep the local-Chromium preflight check;
+standalone `scan` / `scan-processes` skip it under CDP.)
 
 `axe` sub-fields:
 

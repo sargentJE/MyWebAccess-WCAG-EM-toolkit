@@ -28,6 +28,7 @@ const COMMITTED_CONFIGS = [
   'configs/example-site.json',
   'configs/example-site-best-practice.json',
   'configs/example-site-with-auth.json',
+  'configs/example-site-with-cdp.json',
   'configs/example-site-with-processes.json',
   'configs/legacy-events.json',
 ];
