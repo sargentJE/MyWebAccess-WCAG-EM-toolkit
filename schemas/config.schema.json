@@ -302,6 +302,30 @@
             }
           }
         },
+        "browser": {
+          "type": "object",
+          "description": "Pluggable browser transport (E8, opt-in; ADR-0020). Default is a headless Chromium via Playwright (byte-identical to prior releases). Set cdpEndpoint to attach over the Chrome DevTools Protocol to an already-running, human-cleared browser so AUTHORIZED audits can scan pages behind a Cloudflare managed challenge — the scan reuses that browser's default context (riding its cf_clearance) and only disconnects on completion. Under cdpEndpoint, auth/channel/headless are ignored (the external browser owns the session).",
+          "additionalProperties": false,
+          "properties": {
+            "engine": {
+              "enum": ["playwright", "patchright"],
+              "description": "Automation engine. playwright (default) is the bundled dependency. patchright is a stealth-patched, API-compatible drop-in for sites with aggressive bot detection; it is an OPTIONAL dependency installed separately (npm install patchright && npx patchright install chromium)."
+            },
+            "cdpEndpoint": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chrome DevTools Protocol endpoint to attach to — e.g. http://127.0.0.1:9222 from a browser started with --remote-debugging-port (a CDP endpoint, NOT a Playwright launchServer wsEndpoint). When set, the scanner connects over CDP and reuses the existing default context (riding its cookies) instead of launching its own browser. Note: only scan + scan-processes attach over CDP; discover still crawls with a local browser, so seed challenged URLs via sample.structuredManual. The WCAG_EM_CDP_ENDPOINT environment variable overrides this. AUTHORIZED audits only."
+            },
+            "channel": {
+              "type": "string",
+              "description": "Browser channel to launch (e.g. chrome, msedge, chrome-beta). Launch path only; ignored when cdpEndpoint is set."
+            },
+            "headless": {
+              "type": "boolean",
+              "description": "Whether the launched browser runs headless. Default true (unchanged from prior releases). Launch path only; ignored when cdpEndpoint is set. Set false to watch the scan or let a managed challenge auto-solve in a visible window."
+            }
+          }
+        },
         "axe": {
           "type": "object",
           "additionalProperties": false,

@@ -212,6 +212,6 @@ export async function run(ctx) {
 
 // SECTION: Standalone runner
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const ctx = await buildContext({ requirePlaywright: true });
+  const ctx = await buildContext({ requirePlaywright: true, browserTransportAware: true });
   await run(ctx);
 }

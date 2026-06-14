@@ -28,6 +28,30 @@ test('accepts a minimal valid config', async () => {
   assert.equal(result.errors, null);
 });
 
+test('accepts a valid scan.browser block (E8)', async () => {
+  const ok = {
+    ...validConfig,
+    scan: {
+      browser: { engine: 'patchright', cdpEndpoint: 'http://127.0.0.1:9222', headless: false },
+    },
+  };
+  const result = await validateConfig(ok);
+  assert.equal(result.valid, true);
+  assert.equal(result.errors, null);
+});
+
+test('rejects an unknown scan.browser.engine (enum)', async () => {
+  const broken = { ...validConfig, scan: { browser: { engine: 'selenium' } } };
+  const result = await validateConfig(broken);
+  assert.equal(result.valid, false);
+});
+
+test('rejects an unknown scan.browser field (additionalProperties:false)', async () => {
+  const broken = { ...validConfig, scan: { browser: { proxy: 'http://x:1' } } };
+  const result = await validateConfig(broken);
+  assert.equal(result.valid, false);
+});
+
 test('rejects missing rootUrl', async () => {
   const { rootUrl: _rootUrl, ...broken } = validConfig;
   const result = await validateConfig(broken);

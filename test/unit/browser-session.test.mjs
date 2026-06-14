@@ -45,6 +45,37 @@ function fakeLaunchSession() {
   return { session, browser, context, page };
 }
 
+/**
+ * A fake CDP session: a connected browser exposing an existing default context
+ * (unless `withDefaultContext:false`) plus a page that records `setViewportSize`
+ * + `close`. Spies expose call counts.
+ *
+ * @param {{ withDefaultContext?: boolean }} [opts]
+ * @returns {{ session: any, browser: any, defaultContext: any, page: any }}
+ */
+function fakeCdpSession(opts = {}) {
+  const withDefaultContext = opts.withDefaultContext !== false;
+  const page = /** @type {any} */ ({
+    __sentinel: 'page',
+    setViewportSize: mock.fn(anyAsync),
+    close: mock.fn(anyAsync),
+  });
+  const defaultContext = { newPage: mock.fn(async () => page), close: mock.fn(anyAsync) };
+  /** @type {any[]} */
+  const contextsArr = withDefaultContext ? [defaultContext] : [];
+  const browser = {
+    contexts: mock.fn(() => contextsArr),
+    newContext: mock.fn(async () => {
+      const c = { newPage: mock.fn(async () => page), close: mock.fn(anyAsync) };
+      contextsArr.push(c);
+      return c;
+    }),
+    close: mock.fn(anyAsync),
+  };
+  const session = /** @type {any} */ ({ transport: 'cdp', browser, warnings: [] });
+  return { session, browser, defaultContext, page };
+}
+
 const VP = { id: 'desktop', width: 1280, height: 800 };
 
 // SECTION: Tests
@@ -85,5 +116,61 @@ test('openPageView (launch): empty auth options → only viewport in newContext'
 test('disposeBrowserSession (launch): closes the browser once', async () => {
   const { session, browser } = fakeLaunchSession();
   await disposeBrowserSession(session);
+  assert.strictEqual(browser.close.mock.callCount(), 1);
+});
+
+// SECTION: CDP transport — the keystone (reuse the human-cleared default context)
+
+test('openPageView (cdp): reuses contexts()[0], sets viewport on the page, NEVER newContext', async () => {
+  const { session, browser, defaultContext, page } = fakeCdpSession();
+
+  const view = await openPageView(session, VP, {
+    httpCredentials: { username: 'u', password: 'p' },
+  });
+
+  assert.ok(browser.contexts.mock.callCount() >= 1, 'reads the existing contexts');
+  assert.strictEqual(
+    browser.newContext.mock.callCount(),
+    0,
+    'must NOT create a fresh (incognito) context under cdp — it would drop cf_clearance',
+  );
+  assert.strictEqual(
+    defaultContext.newPage.mock.callCount(),
+    1,
+    'page opened in the shared context',
+  );
+  assert.strictEqual(view.page, page);
+  assert.deepStrictEqual(page.setViewportSize.mock.calls[0].arguments[0], {
+    width: 1280,
+    height: 800,
+  });
+});
+
+test('openPageView (cdp): release closes the PAGE, never the shared context', async () => {
+  const { session, defaultContext, page } = fakeCdpSession();
+  const view = await openPageView(session, VP, {});
+  await view.release();
+  assert.strictEqual(page.close.mock.callCount(), 1, 'page closed');
+  assert.strictEqual(defaultContext.close.mock.callCount(), 0, 'shared context NOT closed');
+});
+
+test('openPageView (cdp): falls back to newContext only when no default context exists', async () => {
+  const { session, browser } = fakeCdpSession({ withDefaultContext: false });
+  await openPageView(session, VP, {});
+  assert.strictEqual(browser.newContext.mock.callCount(), 1, 'fallback context created');
+});
+
+test('disposeBrowserSession (cdp): disconnects via browser.close once', async () => {
+  const { session, browser } = fakeCdpSession();
+  await disposeBrowserSession(session);
+  assert.strictEqual(browser.close.mock.callCount(), 1);
+});
+
+test('disposeBrowserSession (cdp): a disconnect error is swallowed (never fails the run)', async () => {
+  const { session, browser } = fakeCdpSession();
+  browser.close = mock.fn(async () => {
+    throw new Error('disconnect blip');
+  });
+  await disposeBrowserSession(session); // must not throw
   assert.strictEqual(browser.close.mock.callCount(), 1);
 });

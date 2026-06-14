@@ -24,6 +24,7 @@ import { loadConfig } from './config.mjs';
 import { assertValidConfig } from './validate-config.mjs';
 import { createLogger } from './logger.mjs';
 import { runPreflight } from './preflight.mjs';
+import { browserNeedsLocalBinary } from './browser.mjs';
 
 // SECTION: Public API
 
@@ -148,7 +149,13 @@ function compileActionRegex(action) {
  * @property {string} [outDir] - Override for `--out-dir`.
  * @property {import('./logger.mjs').LogLevel} [logLevel] - Override for `--log-level`.
  * @property {boolean} [skipPreflight] - Useful for unit tests; do not use from commands.
- * @property {boolean} [requirePlaywright] - Pass through to preflight.
+ * @property {boolean} [requirePlaywright] - This command uses a browser.
+ * @property {boolean} [browserTransportAware] - When true, the local-Chromium
+ *   preflight check is suppressed if config/env selects an EXTERNAL browser (CDP)
+ *   or the patchright engine. Set ONLY by the standalone scan stages
+ *   (`scan` / `scan-processes`), which attach externally under CDP. `discover`
+ *   and `audit` leave it false because `discover` ALWAYS launches a local
+ *   browser (Crawlee), so they need the binary regardless of `scan.browser`.
  */
 
 /**
@@ -238,12 +245,25 @@ export async function buildContext(options = {}) {
     sampleJsonPath: path.join(outDir, 'sample.json'),
   };
 
+  // ANCHOR: RequirePlaywrightEffective — a browser command states its need via
+  // options.requirePlaywright. For a TRANSPORT-AWARE command (standalone scan /
+  // scan-processes, which attach externally under CDP), the local ms-playwright
+  // binary check is suppressed when config/env selects an external browser (CDP)
+  // or the patchright engine — `browserNeedsLocalBinary` reads config + env
+  // (WCAG_EM_CDP_ENDPOINT). `discover` and `audit` are NOT transport-aware:
+  // `discover` always launches a local browser (Crawlee), so they need the
+  // binary regardless of `scan.browser`. The EFFECTIVE value is persisted below
+  // so a later ensurePreflight re-runs the same check set.
+  const requirePlaywright =
+    options.requirePlaywright === true &&
+    (options.browserTransportAware ? browserNeedsLocalBinary(loaded.config, process.env) : true);
+
   // ANCHOR: StepE — preflight
   if (!options.skipPreflight) {
     const pf = await runPreflight({
       configPath,
       outDir,
-      requirePlaywright: options.requirePlaywright,
+      requirePlaywright,
     });
     if (!pf.ok) {
       const err = new Error(`Preflight failed:\n  - ${pf.failures.join('\n  - ')}`);
@@ -272,10 +292,10 @@ export async function buildContext(options = {}) {
   if (!options.skipPreflight) {
     defineHidden(ctx, 'preflightRan', true);
   }
-  // ANCHOR: RequirePlaywrightIntent — recorded (non-enumerable) so a later
-  //   ensurePreflight on a skipPreflight context re-runs the SAME check set
-  //   the caller asked for at build time, browser check included.
-  defineHidden(ctx, 'requirePlaywright', options.requirePlaywright === true);
+  // ANCHOR: RequirePlaywrightIntent — record the EFFECTIVE value (config-aware:
+  //   browser check suppressed for CDP/patchright) so a later ensurePreflight on
+  //   a skipPreflight context re-runs the SAME check set, browser check included.
+  defineHidden(ctx, 'requirePlaywright', requirePlaywright);
 
   return ctx;
 }

@@ -1,0 +1,16 @@
+{
+  "name": "example-site-with-cdp",
+  "rootUrl": "https://example.com/",
+  "scope": {
+    "mode": "same-hostname"
+  },
+  "crawl": {},
+  "sample": {},
+  "scan": {
+    "browser": {
+      "engine": "playwright",
+      "cdpEndpoint": "http://127.0.0.1:9222",
+      "headless": true
+    }
+  }
+}
