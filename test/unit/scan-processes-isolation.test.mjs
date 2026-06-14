@@ -8,14 +8,18 @@
  * per-process try/catch in `scan-processes.mjs`, so a bad viewport config or
  * Playwright allocation failure aborted the whole `config.processes[]` loop
  * (ALL subsequent processes lost). After the extraction, `runOneProcess`
- * owns its own allocation inside a try/catch/finally; a failing process
- * becomes an `{ error }` result and the loop continues.
+ * acquires its page-view through the browser seam (`withScannedPage`) inside a
+ * try/catch; a failing process becomes an `{ error }` result and the loop
+ * continues.
  *
- * This test injects a fake browser whose `newContext()` throws on the
- * second call and confirms:
+ * This test injects a fake browser **session** whose `newContext()` throws on
+ * the second call and confirms:
  *   - Three process definitions → three result entries.
  *   - First + third have valid `states` populated.
  *   - Second has `error` set and did NOT abort the outer loop.
+ *
+ * The seam takes a `BrowserSession` ({ transport, browser, warnings }) rather
+ * than a raw browser, so the harness wraps the fake browser in a launch session.
  */
 
 // SECTION: Imports
@@ -55,14 +59,14 @@ function fakePage() {
 }
 
 /**
- * Build a fake browser whose `newContext` throws on the Nth call (1-indexed).
- * Captures the options object passed to each `newContext` call so tests can
- * assert the auth contextOptions were threaded through.
+ * Build a fake browser **session** whose `newContext` throws on the Nth call
+ * (1-indexed). Captures the options object passed to each `newContext` call so
+ * tests can assert the auth contextOptions were threaded through.
  *
  * @param {number} throwOnCall - Which call to throw on (1-indexed).
- * @returns {{ browser: any, callCount: () => number, lastOptions: () => any }}
+ * @returns {{ session: any, callCount: () => number, lastOptions: () => any }}
  */
-function fakeBrowserThrowingOn(throwOnCall) {
+function fakeSessionThrowingOn(throwOnCall) {
   let callCount = 0;
   /** @type {any} */
   let lastOptions = null;
@@ -81,7 +85,8 @@ function fakeBrowserThrowingOn(throwOnCall) {
       }
     ),
   };
-  return { browser, callCount: () => callCount, lastOptions: () => lastOptions };
+  const session = /** @type {any} */ ({ transport: 'launch', browser, warnings: [] });
+  return { session, callCount: () => callCount, lastOptions: () => lastOptions };
 }
 
 /** @returns {any} */
@@ -112,11 +117,11 @@ function buildCtx() {
 // SECTION: Tests
 
 test('runOneProcess returns error-result when newContext throws (loop continues)', async () => {
-  const { browser } = fakeBrowserThrowingOn(1);
+  const { session } = fakeSessionThrowingOn(1);
   const ctx = buildCtx();
 
   const result = await runOneProcess(
-    browser,
+    session,
     {
       name: 'broken',
       startUrl: 'https://example.com/',
@@ -133,11 +138,11 @@ test('runOneProcess returns error-result when newContext throws (loop continues)
 });
 
 test('runOneProcess succeeds when newContext succeeds', async () => {
-  const { browser } = fakeBrowserThrowingOn(999); // never throws
+  const { session } = fakeSessionThrowingOn(999); // never throws
   const ctx = buildCtx();
 
   const result = await runOneProcess(
-    browser,
+    session,
     {
       name: 'happy',
       startUrl: 'https://example.com/',
@@ -154,7 +159,7 @@ test('runOneProcess succeeds when newContext succeeds', async () => {
 });
 
 test('three processes with the second throwing — all three get results, loop does not abort', async () => {
-  const { browser } = fakeBrowserThrowingOn(2);
+  const { session } = fakeSessionThrowingOn(2);
   const ctx = buildCtx();
 
   const defs = [
@@ -168,7 +173,7 @@ test('three processes with the second throwing — all three get results, loop d
   for (const def of defs) {
     results.push(
       await runOneProcess(
-        browser,
+        session,
         def,
         ctx,
         { id: 'desktop', width: 1440, height: 900 },
@@ -187,11 +192,11 @@ test('three processes with the second throwing — all three get results, loop d
 });
 
 test('runOneProcess threads contextOptions (httpCredentials) into newContext', async () => {
-  const harness = fakeBrowserThrowingOn(999);
+  const harness = fakeSessionThrowingOn(999);
   const ctx = buildCtx();
 
   await runOneProcess(
-    harness.browser,
+    harness.session,
     {
       name: 'auth-probe',
       startUrl: 'https://example.com/',
@@ -212,11 +217,11 @@ test('runOneProcess threads contextOptions (httpCredentials) into newContext', a
 });
 
 test('runOneProcess uses empty contextOptions default when not passed', async () => {
-  const harness = fakeBrowserThrowingOn(999);
+  const harness = fakeSessionThrowingOn(999);
   const ctx = buildCtx();
 
   await runOneProcess(
-    harness.browser,
+    harness.session,
     {
       name: 'no-auth',
       startUrl: 'https://example.com/',
@@ -234,11 +239,11 @@ test('runOneProcess uses empty contextOptions default when not passed', async ()
 });
 
 test('empty pattern returns state:not-run without invoking the dispatch', async () => {
-  const { browser } = fakeBrowserThrowingOn(999);
+  const { session } = fakeSessionThrowingOn(999);
   const ctx = buildCtx();
 
   const result = await runOneProcess(
-    browser,
+    session,
     { name: 'empty', startUrl: 'https://x/', pattern: null, steps: [] },
     ctx,
     { id: 'desktop', width: 1440, height: 900 },
