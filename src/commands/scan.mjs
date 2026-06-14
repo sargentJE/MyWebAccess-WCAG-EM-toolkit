@@ -18,7 +18,6 @@
 // SECTION: Imports
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { chromium } from 'playwright';
 // NOTE: TypeScript's checkJs with NodeNext module resolution doesn't always pick
 // up the .d.mts default-export shape; cast via any to match the runtime
 // behaviour documented in @axe-core/playwright's README.
@@ -33,6 +32,7 @@ import { resolveViewports } from '../lib/viewports.mjs';
 import { applyAuth } from '../lib/auth.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
+import { acquireBrowserSession, openPageView, disposeBrowserSession } from '../lib/browser.mjs';
 
 // SECTION: Pure helpers (exported for testability)
 
@@ -196,7 +196,11 @@ export async function run(ctx) {
   const { contextOptions: authContextOptions, warnings: authWarnings } = applyAuth(config);
   for (const w of authWarnings) logger.warn(w);
 
-  const browser = await chromium.launch({ headless: true });
+  // ANCHOR: BrowserSession — the transport seam owns launch-vs-attach + each
+  // page-view's context lifecycle. Launch today; warnings (e.g. transport
+  // selection) are surfaced once here, mirroring the applyAuth warnings above.
+  const session = await acquireBrowserSession(config, logger);
+  for (const w of session.warnings) logger.warn(w);
   /** @type {any[]} */
   const allResults = [];
   let pagesFailed = 0;
@@ -408,21 +412,16 @@ export async function run(ctx) {
       let lastError = null;
 
       while (attempt <= config.scan.retries && !success) {
-        // NOTE: applyAuth's ContextOptions type is intentionally looser than
-        // Playwright's BrowserContextOptions (storageState accepts `object`
-        // for the inline form). Cast to any at the spread site so checkJs
-        // accepts the union without narrowing every field.
-        const context = await browser.newContext(
-          /** @type {any} */ ({
-            viewport: { width: vp.width, height: vp.height },
-            ...authContextOptions,
-          }),
-        );
-        const page = await context.newPage();
+        // Acquire the page-view OUTSIDE the try so a context/page allocation
+        // failure propagates exactly as before (fatal), while runForPage errors
+        // stay caught + retried. The seam owns context creation + teardown so the
+        // transport is a single decision; `runForPage` is unchanged — it still
+        // receives the page + the per-viewport seen-set.
+        const view = await openPageView(session, vp, authContextOptions);
         try {
           attempt += 1;
           logger.info({ url, viewport: vp.id, attempt }, 'scanning');
-          const result = await runForPage(page, url, vp, seenFinalUrls);
+          const result = await runForPage(view.page, url, vp, seenFinalUrls);
           allResults.push({ url, viewport: vp.id, attempts: attempt, ...result });
           logger.info({ url, viewport: vp.id, violations: result.violations.length }, 'scanned');
           success = true;
@@ -433,7 +432,7 @@ export async function run(ctx) {
             'scan attempt failed',
           );
         } finally {
-          await context.close();
+          await view.release();
         }
       }
 
@@ -452,7 +451,7 @@ export async function run(ctx) {
     logger.info({ viewport: vp.id }, 'viewport done');
   }
 
-  await browser.close();
+  await disposeBrowserSession(session, logger);
   await writeJson(path.join(paths.resultsDir, 'axe-results.json'), allResults);
   logger.info(
     {

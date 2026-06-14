@@ -21,12 +21,12 @@
 
 // SECTION: Imports
 import path from 'node:path';
-import { chromium } from 'playwright';
 import { writeJson } from '../lib/fs-utils.mjs';
 import { runProcessSteps } from '../lib/process-runner.mjs';
 import { resolveViewports } from '../lib/viewports.mjs';
 import { applyAuth } from '../lib/auth.mjs';
 import { buildContext, ensurePreflight } from '../lib/context.mjs';
+import { acquireBrowserSession, openPageView, disposeBrowserSession } from '../lib/browser.mjs';
 
 // SECTION: Internal helpers
 
@@ -80,16 +80,18 @@ function expandPattern(processDef) {
 // SECTION: Public API
 
 /**
- * Run a single process definition against a shared browser. Allocates its
- * own context + page inside a try/catch so a failure here (bad viewport,
- * Playwright allocation refused) becomes an error field on the result,
- * not an escaped throw that aborts the outer loop.
+ * Run a single process definition against a shared browser session. Acquires
+ * its page-view through the browser seam (`openPageView`) inside the try/catch
+ * so an allocation failure (bad viewport, Playwright allocation refused) becomes
+ * an `error` field on the result rather than an escaped throw that would abort
+ * the outer `config.processes[]` loop. Steps are expanded BEFORE a page is
+ * acquired, so a not-run process allocates no page.
  *
- * `context.close()` in `finally` is guarded — if `newContext` threw,
- * `context` is undefined and the close is skipped to avoid a cascade
- * `TypeError` that would mask the original error.
+ * Teardown is the page-view's `release` in a guarded `finally` — a close failure
+ * is warned, never allowed to mask the result, and is skipped when acquisition
+ * itself threw (no page-view to release).
  *
- * @param {import('playwright').Browser} browser - Shared browser instance.
+ * @param {import('../lib/browser.mjs').BrowserSession} session - Shared session.
  * @param {any} processDef - Entry from `config.processes[]`.
  * @param {import('../lib/context.mjs').RunContext} ctx
  * @param {{ id: string, width: number, height: number }} viewport
@@ -102,22 +104,12 @@ function expandPattern(processDef) {
  *     object (default) means "no auth" — no-op.
  * @returns {Promise<any>} The process result (pushed into processResults).
  */
-export async function runOneProcess(browser, processDef, ctx, viewport, contextOptions = {}) {
-  /** @type {import('playwright').BrowserContext | undefined} */
-  let context;
+export async function runOneProcess(session, processDef, ctx, viewport, contextOptions = {}) {
+  /** @type {import('../lib/browser.mjs').PageView | undefined} */
+  let view;
   /** @type {any[]} */
   const states = [];
   try {
-    // NOTE: applyAuth's ContextOptions type is intentionally looser than
-    // Playwright's BrowserContextOptions (storageState accepts `object`
-    // for the inline form). Cast at the spread site matches scan.mjs.
-    context = await browser.newContext(
-      /** @type {any} */ ({
-        viewport: { width: viewport.width, height: viewport.height },
-        ...contextOptions,
-      }),
-    );
-    const page = await context.newPage();
     const steps = expandPattern(processDef);
 
     if (steps.length === 0) {
@@ -131,8 +123,9 @@ export async function runOneProcess(browser, processDef, ctx, viewport, contextO
     }
 
     ctx.logger.info({ name: processDef.name, viewport: viewport.id }, 'process start');
+    view = await openPageView(session, viewport, contextOptions);
     const stepResults = await runProcessSteps(processDef, steps, {
-      page,
+      page: view.page,
       config: ctx.config,
       logger: ctx.logger,
       paths: ctx.paths,
@@ -163,9 +156,12 @@ export async function runOneProcess(browser, processDef, ctx, viewport, contextO
       states,
     };
   } finally {
-    if (context) {
+    // Guarded teardown (matches the prior inline guarded close): a release
+    // failure is warned, never allowed to mask the process result. `view` is
+    // undefined when openPageView threw (allocation failure) — skip release.
+    if (view) {
       try {
-        await context.close();
+        await view.release();
       } catch (closeErr) {
         const msg = closeErr instanceof Error ? closeErr.message : String(closeErr);
         ctx.logger.warn({ viewport: viewport.id, err: msg }, 'process context close failed');
@@ -190,7 +186,9 @@ export async function run(ctx) {
   const { contextOptions: authContextOptions, warnings: authWarnings } = applyAuth(config);
   for (const w of authWarnings) logger.warn(w);
 
-  const browser = await chromium.launch({ headless: true });
+  // ANCHOR: BrowserSession — same transport seam as scan.mjs; launch today.
+  const session = await acquireBrowserSession(config, logger);
+  for (const w of session.warnings) logger.warn(w);
   /** @type {any[]} */
   const processResults = [];
 
@@ -201,12 +199,12 @@ export async function run(ctx) {
   for (const vp of viewports) {
     logger.info({ viewport: vp.id }, 'viewport start');
     for (const processDef of config.processes ?? []) {
-      processResults.push(await runOneProcess(browser, processDef, ctx, vp, authContextOptions));
+      processResults.push(await runOneProcess(session, processDef, ctx, vp, authContextOptions));
     }
     logger.info({ viewport: vp.id }, 'viewport done');
   }
 
-  await browser.close();
+  await disposeBrowserSession(session, logger);
   await writeJson(path.join(paths.resultsDir, 'process-results.json'), processResults);
   logger.info({ processesRun: processResults.length }, 'scan-processes done');
   return { processesRun: processResults.length };
