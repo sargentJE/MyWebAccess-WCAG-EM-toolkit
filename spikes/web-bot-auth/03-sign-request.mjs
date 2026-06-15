@@ -37,7 +37,9 @@ export async function signRequest({
   persist = false,
 }) {
   expires = expires ?? new Date(created.getTime() + EXPIRES_WINDOW_MS);
-  const signatureAgentValue = JSON.stringify(directoryUrl); // structured-field string: "https://…"
+  // Cloudflare requires Signature-Agent at the ORIGIN/root; it appends the well-known
+  // path itself (live verifier rejects a path: "Only support signature-agent at the root").
+  const signatureAgentValue = JSON.stringify(new URL(directoryUrl).origin);
 
   const request = new Request(target, { headers: { 'Signature-Agent': signatureAgentValue } });
   const signer = await signerFromJWK(privateJwk);

@@ -42,12 +42,14 @@ if (keyPath) {
 
 const created = new Date();
 const expires = new Date(created.getTime() + EXPIRES_WINDOW_MS);
-const signatureAgent = JSON.stringify(directoryUrl);
+// Cloudflare requires Signature-Agent at the origin/root; it appends the well-known path itself.
+const signatureAgentOrigin = new URL(directoryUrl).origin;
+const signatureAgent = JSON.stringify(signatureAgentOrigin);
 const request = new Request(url, { headers: { 'Signature-Agent': signatureAgent } });
 const signed = await signatureHeaders(request, await signerFromJWK(jwk), { created, expires });
 
 console.log(`→ GET ${url}`);
-console.log(`  Signature-Agent: ${directoryUrl}`);
+console.log(`  Signature-Agent: ${signatureAgentOrigin}`);
 console.log(`  Signature-Input: ${signed['Signature-Input']}`);
 console.log('');
 
