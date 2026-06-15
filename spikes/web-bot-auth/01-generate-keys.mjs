@@ -30,7 +30,9 @@ export async function generateKeys({ persist = true } = {}) {
 
   const kid = await jwkToKeyID(publicJwk, helpers.WEBCRYPTO_SHA256, helpers.BASE64URL_DECODE);
   for (const jwk of [publicJwk, privateJwk]) {
-    jwk.alg = 'Ed25519';
+    // No `alg`: Cloudflare's workerd importKey requires the RFC 8037 value "EdDSA" (or no
+    // alg) for Ed25519 and throws DOMDataError on "Ed25519"; omitting it keeps the key
+    // portable (matches the RFC 9421 reference key shape). Node's WebCrypto is lenient.
     jwk.use = 'sig';
     jwk.kid = kid;
   }
