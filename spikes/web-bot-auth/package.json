@@ -7,7 +7,8 @@
   "scripts": {
     "spike": "node --no-warnings round-trip.mjs",
     "spike:negative": "node --no-warnings round-trip.mjs --negative",
-    "serve": "node --no-warnings serve-directory.mjs"
+    "serve": "node --no-warnings serve-directory.mjs",
+    "self-test": "node --no-warnings self-test.mjs"
   },
   "dependencies": {
     "web-bot-auth": "0.1.3",

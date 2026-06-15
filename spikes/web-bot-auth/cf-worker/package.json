@@ -1,0 +1,10 @@
+{
+  "name": "mywebaccess-auditor-directory",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker serving the Web Bot Auth signed key directory for auditor.mywebaccess.co.uk. Deploy with wrangler; bind WBA_PRIVATE_JWK as a secret.",
+  "dependencies": {
+    "web-bot-auth": "0.1.3"
+  }
+}

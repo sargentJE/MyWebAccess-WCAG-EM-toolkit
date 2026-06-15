@@ -1,0 +1,15 @@
+# Wrangler config for the Web Bot Auth directory Worker.
+# Deploy from this directory after: npm i web-bot-auth@0.1.3
+#   npx wrangler secret put WBA_PRIVATE_JWK   # paste the production private JWK
+#   npx wrangler deploy
+name = "mywebaccess-auditor-directory"
+main = "worker.mjs"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Serve the directory on the real identity host. Add auditor.mywebaccess.co.uk as a
+# Custom Domain in the Cloudflare dashboard (Workers & Pages → this Worker → Settings
+# → Domains & Routes), or uncomment and adjust:
+# routes = [
+#   { pattern = "auditor.mywebaccess.co.uk", custom_domain = true },
+# ]
