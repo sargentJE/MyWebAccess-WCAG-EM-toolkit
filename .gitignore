@@ -23,3 +23,14 @@ test/.tmp/
 # Web Bot Auth spike private key material (belt-and-suspenders — the spike's own
 # spikes/web-bot-auth/.gitignore is the primary guard, written before any keygen).
 spikes/web-bot-auth/.keys/
+
+# Local-only, per-engagement audit configs. The committed configs are the
+# example-*.json templates + legacy-events.json; anything else under configs/ is a
+# local audit instance and is kept out of git by convention.
+configs/*.json
+!configs/example-*.json
+!configs/legacy-events.json
+
+# Local operational run helpers (per-engagement; not committed).
+/run-cdp-audit.sh
+/run-demo.sh

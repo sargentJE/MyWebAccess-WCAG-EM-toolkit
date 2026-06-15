@@ -9,9 +9,48 @@ roadmap, the Layer-3b carry-forwards, the post-`portal-export` review, and the
 ([docs/reviews/2026-06-toolkit-review.md](docs/reviews/2026-06-toolkit-review.md),
 which carries evidence, the full roadmap rationale, and the Sprint 1 plan).
 
-_Last updated: 2026-06-12 (pre-push board accuracy audit: every open item
-re-verified against code; Sprint 1 merged to main; docs sprint D1-D6 +
-review fix on `docs/guides-sprint` — see CHANGELOG [Unreleased])_
+_Last updated: 2026-06-15 (post-E8 + live-validation pass — see "Recently
+landed" below). Prior: 2026-06-12 pre-push board accuracy audit — every open
+item re-verified against code; Sprint 1 merged to main; docs sprint D1-D6 +
+review fix on `docs/guides-sprint`._
+
+## Recently landed (2026-06-13 → 15, post-Sprint-1)
+
+The "truthful coverage" epics and the browser-transport feature merged to main
+after the 06-12 audit; the canonical record is `CHANGELOG.md [Unreleased]`.
+
+- [x] **E1–E7 truthful-coverage epics** — page-outcome could-not-audit
+      (ADR-0017), fair/deterministic sitemap seeding (ADR-0018), redirect-aware
+      scanning (ADR-0019), override visibility + document inventory,
+      evidence-driven manual backlog, markdown reporter escaping. Review:
+      [docs/reviews/2026-06-epics-E1-E7.md](docs/reviews/2026-06-epics-E1-E7.md).
+- [x] **E8 pluggable browser transport** — opt-in CDP attach + optional
+      `patchright` engine + `WCAG_EM_CDP_ENDPOINT` (ADR-0020), for AUTHORIZED
+      audits of WAF/Cloudflare-gated pages. Default behaviour byte-identical.
+- [x] **Live MyVision CDP dogfood + accuracy validation** — all 33 sampled
+      pages incl. the force-included events audited over CDP (0 challenged);
+      findings validated against the live rendered site (no false positives;
+      `#958e09` sale-price contrast confirmed at 3.41:1). Record:
+      [docs/reviews/2026-06-myvision-cdp-validation.md](docs/reviews/2026-06-myvision-cdp-validation.md).
+
+Carry-forward spawned by the above:
+
+- [ ] **Durable WAF access (E8 follow-up).** CDP-attach is a per-session bridge
+      (a `cf_clearance` lasts ~30–60 min); the durable path is to become a
+      _trusted_ auditor — **Web Bot Auth registration** (Cloudflare Verified Bots,
+      message-signature on-ramp) — not bypass. Decision:
+      [ADR-0021](docs/adr/0021-waf-challenge-access-strategy.md) (proposed).
+      Phased execution plan with abandon/kill gates:
+      [docs/plans/2026-06-web-bot-auth-registration.md](docs/plans/2026-06-web-bot-auth-registration.md)
+      — ops Phases 0–1 (keypair, signed JWKS directory, Cloudflare application,
+      decisive `/event*` verified-bot test on our own zone) can start without
+      code; the signing build (Phase 2) is held for review per Jamie.
+- [ ] **Report distinct-node counts, not raw occurrences, in summaries.** The
+      live validation re-confirmed `region` shows 664 occurrences across 33
+      pages; surface the 6 best-practice rules as advisory rather than fail-framed.
+      Overlaps the open `occurrenceCount` P1 item below.
+- [ ] **E4 final-URL re-key in `portal-export` / `report-builder`** — deferred
+      companion-coordinated follow-up (export labels still key on the source URL).
 
 ## Docs
 
