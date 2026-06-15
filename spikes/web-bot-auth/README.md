@@ -59,7 +59,7 @@ buried.
 | `04-verify.mjs` | The checks: KAT, independent raw-crypto verify, divergent-@authority cross-check, corroborating library verify, directory verify, negative control. |
 | `round-trip.mjs` | Orchestrates 01→04 in-process, offline. Exit 0 ⇔ all pass. |
 | `serve-directory.mjs` | **Phase-1 ops helper** (not a gate step): serves the signed directory at the well-known path, signed per-request for the incoming Host, ready to tunnel to Cloudflare. `npm run serve`. |
-| `self-test.mjs` | **Phase-1 ops helper:** signs a request and sends it to a verifier endpoint (Cloudflare `/debug`, crawltest) to confirm the wire format is accepted. `npm run self-test`. |
+| `self-test.mjs` | **Phase-1 ops helper:** signs a request and sends it to a verifier endpoint (Cloudflare `/v0/api/verify`, crawltest) to confirm the wire format is accepted. `npm run self-test`. |
 | `cf-worker/` | **Phase-1 hosting template:** a Cloudflare Worker (production port of `serve-directory.mjs`, signs per-request) + `wrangler.toml`, to host the directory at `auditor.mywebaccess.co.uk`. |
 | `lib/profile.mjs` | Confirmed profile constants + the deterministic KAT fixture (RFC 9421 test key). |
 | `lib/sigbase.mjs` | **Independent** RFC 9421 signature-base reconstruction + raw Ed25519 sign/verify (Node crypto only). |
@@ -132,7 +132,7 @@ printed `kid`. Host is fixed: `auditor.mywebaccess.co.uk` (`DIRECTORY_URL` in
 Confirms Cloudflare's verifier accepts the signature **format** before you host anything.
 
 ```bash
-npm run self-test                          # signs with the RFC 9421 test key → CF /debug
+npm run self-test                          # signs with the RFC 9421 test key → CF /v0/api/verify
 npm run self-test -- --url https://crawltest.com/cdn-cgi/web-bot-auth
 ```
 

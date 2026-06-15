@@ -7,8 +7,8 @@
  *
  * Two modes:
  *   - Format check (default): signs with the RFC 9421 test key, which Cloudflare's
- *     debug endpoint recognises directly — proves our wire format is accepted with
- *     no hosted directory.
+ *     verify endpoint (/v0/api/verify) recognises directly — proves our wire format
+ *     is accepted with no hosted directory.
  *   - Live identity check: pass --key <prod.jwk> once the directory is hosted; the
  *     verifier fetches your Signature-Agent directory to get the key.
  *
@@ -28,7 +28,7 @@ function arg(name, def) {
   return i !== -1 ? process.argv[i + 1] : def;
 }
 
-const url = arg('url', 'https://http-message-signatures-example.research.cloudflare.com/debug');
+const url = arg('url', 'https://http-message-signatures-example.research.cloudflare.com/v0/api/verify');
 const directoryUrl = arg('directory', DIRECTORY_URL);
 const keyPath = arg('key');
 
@@ -62,32 +62,41 @@ try {
   const verifiedHeader = resp.headers.get('x-signature-verified') ?? resp.headers.get('signature-verified');
   if (verifiedHeader != null) console.log(`  verified header: ${verifiedHeader}`);
 
-  // The Cloudflare /debug endpoint returns an HTML page that shows the result by
-  // styling a <header class="success|failure">. Extract the verdict from that rather
-  // than dumping raw HTML/CSS (whose class *names* would confuse a naive grep).
-  const isHtml = /html/i.test(ct) || /^\s*<(?:!doctype|html)/i.test(body);
+  // Cloudflare's /v0/api/verify returns plain text: "valid" | "invalid: <reason>" |
+  // "neutral" (no Signature header seen). Other endpoints (e.g. crawltest) may return
+  // HTML, so fall back to reading a verdict from the page.
+  const trimmed = body.trim();
+  const lower = trimmed.toLowerCase();
+  const isHtml = /html/i.test(ct) || /^\s*<(?:!doctype|html)/i.test(trimmed);
+
   let verdict;
-  if (isHtml) {
+  let detail = '';
+  if (lower === 'valid' || lower.startsWith('valid')) {
+    verdict = 'VERIFIED';
+  } else if (lower.startsWith('invalid')) {
+    verdict = 'NOT VERIFIED';
+    detail = trimmed;
+  } else if (lower === 'neutral') {
+    verdict = 'NEUTRAL — the verifier saw no Signature header (did the request reach it intact?)';
+  } else if (isHtml) {
     const stripped = body
       .replace(/<style[\s\S]*?<\/style>/gi, ' ')
       .replace(/<script[\s\S]*?<\/script>/gi, ' ');
     const headerClass = (stripped.match(/<header[^>]*class="([^"]*)"/i) || [])[1] || '';
     const text = stripped.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const success = /\bsuccess\b/i.test(headerClass) || /\b(verified|valid signature|signature is valid)\b/i.test(text);
+    const success = /\bsuccess\b/i.test(headerClass) || /\b(verified|valid signature)\b/i.test(text);
     const failure = /\bfailure\b/i.test(headerClass) || /\b(not verified|invalid signature|verification failed)\b/i.test(text);
     verdict = success && !failure ? 'VERIFIED' : failure && !success ? 'NOT VERIFIED' : 'UNCLEAR';
-    console.log(`  page result class: ${headerClass || '(none found)'}`);
-    console.log(`  page text: ${text.slice(0, 500)}`);
+    console.log(`  page text: ${text.slice(0, 300)}`);
   } else {
-    console.log(body.slice(0, 1200));
-    const t = body.toLowerCase();
-    verdict = /not verified|invalid|fail|error/.test(t) ? 'NOT VERIFIED' : /verified|valid|"?ok"?|pass/.test(t) ? 'VERIFIED' : 'UNCLEAR';
+    verdict = /invalid|not verified|fail|error/.test(lower) ? 'NOT VERIFIED' : /valid|verified|pass/.test(lower) ? 'VERIFIED' : 'UNCLEAR';
+    console.log(`  response body: ${trimmed.slice(0, 300)}`);
   }
 
   console.log('');
-  console.log(`VERDICT: ${verdict}${resp.ok ? '' : ` (HTTP ${resp.status})`}`);
-  if (verdict === 'UNCLEAR') console.log('(Could not parse a verdict — paste the output and the maintainer can read it, or try --url https://crawltest.com/cdn-cgi/web-bot-auth.)');
-  process.exit(verdict === 'NOT VERIFIED' || !resp.ok ? 1 : 0);
+  console.log(`VERDICT: ${verdict}${detail ? ` — ${detail}` : ''}${resp.ok ? '' : ` (HTTP ${resp.status})`}`);
+  if (verdict === 'UNCLEAR') console.log('(Unrecognised response — paste it, or try --url https://crawltest.com/cdn-cgi/web-bot-auth.)');
+  process.exit(verdict.startsWith('VERIFIED') ? 0 : 1);
 } catch (err) {
   console.error(`network error reaching ${url}: ${err.message}`);
   console.error('(If this environment has no outbound access, run this from your own machine.)');
