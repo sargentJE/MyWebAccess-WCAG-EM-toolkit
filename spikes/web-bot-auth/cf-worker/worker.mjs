@@ -37,31 +37,41 @@ export default {
       return new Response('WBA_PRIVATE_JWK secret not set\n', { status: 500 });
     }
 
-    const privateJwk = JSON.parse(env.WBA_PRIVATE_JWK);
-    const publicJwk = { kty: privateJwk.kty, crv: privateJwk.crv, x: privateJwk.x };
-    const kid = await jwkToKeyID(publicJwk, helpers.WEBCRYPTO_SHA256, helpers.BASE64URL_DECODE);
+    try {
+      const stored = JSON.parse(env.WBA_PRIVATE_JWK);
+      // workerd's crypto.subtle.importKey rejects an Ed25519 JWK whose `alg` !== "EdDSA"
+      // (workerd ec.c++: JSG_REQUIRE(alg == "EdDSA", DOMDataError, ...)). Our generator may
+      // stamp alg:"Ed25519"/use/key_ops; strip to the members importKey needs so an
+      // already-deployed key works unchanged. Mirrors the library's own verify-path strip.
+      const privateJwk = { kty: stored.kty, crv: stored.crv, x: stored.x, d: stored.d };
+      const publicJwk = { kty: stored.kty, crv: stored.crv, x: stored.x };
+      const kid = await jwkToKeyID(publicJwk, helpers.WEBCRYPTO_SHA256, helpers.BASE64URL_DECODE);
 
-    const directory = {
-      keys: [{ kid, kty: publicJwk.kty, crv: publicJwk.crv, x: publicJwk.x }],
-      purpose: DIRECTORY_PURPOSE,
-    };
-    const body = JSON.stringify(directory);
+      const directory = { keys: [{ kid, ...publicJwk }], purpose: DIRECTORY_PURPOSE };
+      const body = JSON.stringify(directory);
 
-    const signer = await Ed25519Signer.fromJWK(privateJwk);
-    const response = new Response(body, {
-      headers: { 'content-type': MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY },
-    });
-    const created = new Date();
-    const expires = new Date(created.getTime() + DIRECTORY_EXPIRES_MS);
-    const signed = await directoryResponseHeaders({ request, response }, [signer], { created, expires });
+      const signer = await Ed25519Signer.fromJWK(privateJwk);
+      const response = new Response(body, {
+        headers: { 'content-type': MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY },
+      });
+      const created = new Date();
+      const expires = new Date(created.getTime() + DIRECTORY_EXPIRES_MS);
+      const signed = await directoryResponseHeaders({ request, response }, [signer], { created, expires });
 
-    return new Response(body, {
-      headers: {
-        'content-type': MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY,
-        Signature: signed['Signature'],
-        'Signature-Input': signed['Signature-Input'],
-        'cache-control': 'no-store',
-      },
-    });
+      return new Response(body, {
+        headers: {
+          'content-type': MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY,
+          Signature: signed['Signature'],
+          'Signature-Input': signed['Signature-Input'],
+          'cache-control': 'no-store',
+        },
+      });
+    } catch (err) {
+      // Surface the real reason instead of a bare Cloudflare 1101.
+      return new Response(`directory signing error: ${err && err.message ? err.message : err}\n`, {
+        status: 500,
+        headers: { 'content-type': 'text/plain' },
+      });
+    }
   },
 };
