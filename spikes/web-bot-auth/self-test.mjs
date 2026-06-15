@@ -56,13 +56,38 @@ try {
     headers: { 'Signature-Agent': signatureAgent, ...signed },
   });
   const body = await resp.text();
-  console.log(`← ${resp.status} ${resp.statusText}`);
-  const verified = resp.headers.get('x-signature-verified') ?? resp.headers.get('signature-verified');
-  if (verified != null) console.log(`  verified header: ${verified}`);
-  console.log(body.slice(0, 1200));
-  // Heuristic exit code: non-2xx, or a body that explicitly reports failure, is a fail.
-  const looksBad = !resp.ok || /invalid|fail|error|not verified|unverified/i.test(body);
-  process.exit(looksBad ? 1 : 0);
+  const ct = resp.headers.get('content-type') || '';
+  console.log(`← ${resp.status} ${resp.statusText}  (${ct.split(';')[0] || 'no content-type'})`);
+
+  const verifiedHeader = resp.headers.get('x-signature-verified') ?? resp.headers.get('signature-verified');
+  if (verifiedHeader != null) console.log(`  verified header: ${verifiedHeader}`);
+
+  // The Cloudflare /debug endpoint returns an HTML page that shows the result by
+  // styling a <header class="success|failure">. Extract the verdict from that rather
+  // than dumping raw HTML/CSS (whose class *names* would confuse a naive grep).
+  const isHtml = /html/i.test(ct) || /^\s*<(?:!doctype|html)/i.test(body);
+  let verdict;
+  if (isHtml) {
+    const stripped = body
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ');
+    const headerClass = (stripped.match(/<header[^>]*class="([^"]*)"/i) || [])[1] || '';
+    const text = stripped.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const success = /\bsuccess\b/i.test(headerClass) || /\b(verified|valid signature|signature is valid)\b/i.test(text);
+    const failure = /\bfailure\b/i.test(headerClass) || /\b(not verified|invalid signature|verification failed)\b/i.test(text);
+    verdict = success && !failure ? 'VERIFIED' : failure && !success ? 'NOT VERIFIED' : 'UNCLEAR';
+    console.log(`  page result class: ${headerClass || '(none found)'}`);
+    console.log(`  page text: ${text.slice(0, 500)}`);
+  } else {
+    console.log(body.slice(0, 1200));
+    const t = body.toLowerCase();
+    verdict = /not verified|invalid|fail|error/.test(t) ? 'NOT VERIFIED' : /verified|valid|"?ok"?|pass/.test(t) ? 'VERIFIED' : 'UNCLEAR';
+  }
+
+  console.log('');
+  console.log(`VERDICT: ${verdict}${resp.ok ? '' : ` (HTTP ${resp.status})`}`);
+  if (verdict === 'UNCLEAR') console.log('(Could not parse a verdict — paste the output and the maintainer can read it, or try --url https://crawltest.com/cdn-cgi/web-bot-auth.)');
+  process.exit(verdict === 'NOT VERIFIED' || !resp.ok ? 1 : 0);
 } catch (err) {
   console.error(`network error reaching ${url}: ${err.message}`);
   console.error('(If this environment has no outbound access, run this from your own machine.)');
