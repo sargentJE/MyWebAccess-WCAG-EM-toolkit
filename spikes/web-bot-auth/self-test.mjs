@@ -16,6 +16,9 @@
  *   node --no-warnings self-test.mjs
  *   node --no-warnings self-test.mjs --url https://crawltest.com/cdn-cgi/web-bot-auth
  *   node --no-warnings self-test.mjs --key /secure/path/private.jwk --directory https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory
+ *   node --no-warnings self-test.mjs --key /secure/path/private.jwk --url https://<challenged-target>/path --raw
+ *     # --raw: send a signed request to a REAL target (not the CF verifier) and report the HTTP
+ *     # status only (200 = allowed/cleared, 403 + cf-mitigated = challenged). Used for the R2 test.
  */
 import { readFile } from 'node:fs/promises';
 import { signatureHeaders } from 'web-bot-auth';
@@ -31,6 +34,7 @@ function arg(name, def) {
 const url = arg('url', 'https://http-message-signatures-example.research.cloudflare.com/v0/api/verify');
 const directoryUrl = arg('directory', DIRECTORY_URL);
 const keyPath = arg('key');
+const rawMode = process.argv.includes('--raw');
 
 let jwk;
 if (keyPath) {
@@ -67,6 +71,17 @@ try {
 
   const verifiedHeader = resp.headers.get('x-signature-verified') ?? resp.headers.get('signature-verified');
   if (verifiedHeader != null) console.log(`  verified header: ${verifiedHeader}`);
+
+  if (rawMode) {
+    // Real target (not the CF verifier): the HTTP status is the signal, not a verify verdict.
+    const cfMitigated = resp.headers.get('cf-mitigated');
+    if (cfMitigated) console.log(`  cf-mitigated: ${cfMitigated}`);
+    console.log(`  body: ${body.replace(/\s+/g, ' ').trim().slice(0, 200)}`);
+    console.log('');
+    console.log(`STATUS: ${resp.status} — ${resp.status < 400 ? 'allowed through (no challenge / cleared)' : 'blocked or challenged'}`);
+    console.log("(raw mode: a real target, not Cloudflare's verifier — read the status above, not a VERDICT)");
+    process.exit(resp.status < 400 ? 0 : 1);
+  }
 
   // Cloudflare's /v0/api/verify returns plain text: "valid" | "invalid: <reason>" |
   // "neutral" (no Signature header seen). Other endpoints (e.g. crawltest) may return

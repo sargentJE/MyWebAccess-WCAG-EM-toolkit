@@ -110,11 +110,17 @@ library, stop — the approach is not viable for us.
    enter the key-directory URL (User-Agent values optional); describe the purpose
    truthfully (per-engagement accessibility auditor, authorized samples).
 
-**GATE (the decisive experiment, R2):** approved, then **re-test MyVision
-`/event*`** — a Cloudflare zone _we control_, so we can both verify ourselves and
-observe the result. Write a WAF rule referencing **`cf.bot_management.verified_bot`**
-and confirm our signed traffic is recognised AND that the `/event*` challenge
-clears for it.
+**GATE (the decisive experiment, R2):** approved, then determine whether verified
+status clears an _explicit_ Managed Challenge — **without assuming control of the
+client's Cloudflare zone** (we control only the auditor zone `mywebaccess.co.uk`, not
+MyVision's). Two complementary checks: **(a) controlled** — on our own
+`mywebaccess.co.uk` zone, add an explicit Managed-Challenge WAF rule on a throwaway
+path and confirm whether a signed/verified request clears it (and that a
+Skip-on-`cf.client.bot` / `cf.bot_management.verified_bot` rule lets it through); **(b)
+empirical** — send a signed request to a live challenged client path (e.g. MyVision
+`/event*`) and read the HTTP status (200 = cleared, 403/`cf-mitigated: challenge` =
+not), which needs no client-zone access because Cloudflare verifies the signature
+network-wide.
 **KILL / fork:** if verified status does **not** clear an _explicit_ path
 challenge (only Bot Management's bot-identification), the value narrows to
 "bot-challenged sites"; fall back to ADR-0021 layer 3 — the directory identity is
@@ -182,14 +188,14 @@ estimable and the review pattern is known.
 
 ## Risk register + kill-criteria
 
-| #   | Risk                                                        | Mitigation                                                                  | Kill / fork                                                                   |
-| --- | ----------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| R1  | Cloudflare won't verify a low-volume per-engagement auditor | Phases 0–1 cheap; identity reusable as an allowlist credential              | If rejected AND clients won't allowlist → registration dead; CDP bridge stays |
-| R2  | Verified status doesn't clear an _explicit_ path challenge  | Decisive Phase-1 test on MyVision `/event*` (we own the zone)               | If it doesn't clear → client allowlist becomes primary                        |
-| R3  | Browser sub-resource signing scope/perf; route() leakage    | Sign only document/navigation + same-origin XHR; measure; prefer proxy (2b) | —                                                                             |
-| R4  | Announcing identity changes served content                  | Keep real UA; content-parity diff in Phase 2                                | If parity fails → audit-fidelity blocker, rethink                             |
-| R5  | Private-key leakage                                         | Operator secret store; reuse gitignore/redaction guards; CI never sees it   | —                                                                             |
-| R6  | Spec/lib churn ("not audited" lib; IETF draft)              | Pin the lib; isolate behind one module                                      | —                                                                             |
+| #   | Risk                                                        | Mitigation                                                                                                                               | Kill / fork                                                                          |
+| --- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| R1  | Cloudflare won't verify a low-volume per-engagement auditor | Phases 0–1 cheap; identity reusable as an allowlist credential                                                                           | If rejected AND clients won't allowlist → registration dead; CDP bridge stays        |
+| R2  | Verified status doesn't clear an _explicit_ path challenge  | Controlled test on our own `mywebaccess.co.uk` zone + an empirical signed-request test against the client (no client-zone access needed) | If it doesn't clear → client adds a one-line "allow our verified bot" rule (layer 3) |
+| R3  | Browser sub-resource signing scope/perf; route() leakage    | Sign only document/navigation + same-origin XHR; measure; prefer proxy (2b)                                                              | —                                                                                    |
+| R4  | Announcing identity changes served content                  | Keep real UA; content-parity diff in Phase 2                                                                                             | If parity fails → audit-fidelity blocker, rethink                                    |
+| R5  | Private-key leakage                                         | Operator secret store; reuse gitignore/redaction guards; CI never sees it                                                                | —                                                                                    |
+| R6  | Spec/lib churn ("not audited" lib; IETF draft)              | Pin the lib; isolate behind one module                                                                                                   | —                                                                                    |
 
 ## Signing profile — confirmed (2026-06-15 research)
 

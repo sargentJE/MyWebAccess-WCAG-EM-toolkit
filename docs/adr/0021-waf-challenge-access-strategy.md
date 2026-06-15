@@ -117,8 +117,9 @@ default and bypass explicitly off the table:
    audit onboarding.
 
 4. **Interactive CDP clearance is the opt-in tactical bridge** — for one-off
-   authorized audits before registration/allowlisting is in place, or
-   self-controlled sites (e.g. MyVision). Trigger may be automatic-on-detection,
+   authorized audits before registration/allowlisting is in place, or sites where a
+   human can clear the challenge in-session (e.g. the MyVision dogfood — the auditor
+   does not control the client's Cloudflare edge). Trigger may be automatic-on-detection,
    but the _capability_ stays consciously opt-in per audit.
 
 5. **No automatic stealth bypass as a core feature.** `patchright` remains an
