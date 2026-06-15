@@ -59,6 +59,8 @@ buried.
 | `04-verify.mjs` | The checks: KAT, independent raw-crypto verify, divergent-@authority cross-check, corroborating library verify, directory verify, negative control. |
 | `round-trip.mjs` | Orchestrates 01→04 in-process, offline. Exit 0 ⇔ all pass. |
 | `serve-directory.mjs` | **Phase-1 ops helper** (not a gate step): serves the signed directory at the well-known path, signed per-request for the incoming Host, ready to tunnel to Cloudflare. `npm run serve`. |
+| `self-test.mjs` | **Phase-1 ops helper:** signs a request and sends it to a verifier endpoint (Cloudflare `/debug`, crawltest) to confirm the wire format is accepted. `npm run self-test`. |
+| `cf-worker/` | **Phase-1 hosting template:** a Cloudflare Worker (production port of `serve-directory.mjs`, signs per-request) + `wrangler.toml`, to host the directory at `auditor.mywebaccess.co.uk`. |
 | `lib/profile.mjs` | Confirmed profile constants + the deterministic KAT fixture (RFC 9421 test key). |
 | `lib/sigbase.mjs` | **Independent** RFC 9421 signature-base reconstruction + raw Ed25519 sign/verify (Node crypto only). |
 | `lib/thumbprint.mjs` | **Independent** RFC 7638 / RFC 8037 thumbprint (Node `crypto`), cross-checks the library's `keyid`. |
@@ -106,59 +108,102 @@ declared directly (not left transitive) because the spike imports it for the
 tag-agnostic directory verify. Both are **pre-1.0 and self-described "not audited"**;
 the lockfile is committed so the whole tree is reproducible (R6).
 
-## Phase 1 — human runbook (NOT done in this spike)
+## Phase 1 — human runbook (executable; NOT done in this spike)
 
-Order: generate prod key → serve + tunnel → self-test → submit → decisive R2 test.
-All of this is **human ops** (hosting, secrets, the Cloudflare dashboard).
+All of this is **human ops** (DNS, secrets, the Cloudflare dashboard); the tools here
+make each step turnkey. Run from `spikes/web-bot-auth/` after `npm ci`.
 
-1. **Generate + secure the production keypair.** `node 01-generate-keys.mjs`, then
-   MOVE `.keys/private.jwk` into your operator secret store (never the repo or logs);
-   keep the public key for the directory. The identity **host is decided**:
-   `auditor.mywebaccess.co.uk` — the directory lives at
-   `https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory`
-   (wired in as `DIRECTORY_URL` in `lib/profile.mjs`, the default `Signature-Agent`).
+**Prerequisites:** Node 22; a Cloudflare account controlling `mywebaccess.co.uk` DNS;
+`npx wrangler` (Cloudflare CLI); optionally `cloudflared` for a quick tunnel.
 
-2. **Serve the signed directory and expose it.**
+### Step 1 — Production keypair
 
-   ```bash
-   npm run serve -- --key /secure/path/private.jwk --port 8788
-   # in another shell:
-   cloudflared tunnel --url http://localhost:8788
+```bash
+cd spikes/web-bot-auth && npm ci
+node 01-generate-keys.mjs                 # writes .keys/{private,public}.jwk (gitignored)
+```
+
+Then **move `.keys/private.jwk` into your secret store** (never commit it); note the
+printed `kid`. Host is fixed: `auditor.mywebaccess.co.uk` (`DIRECTORY_URL` in
+`lib/profile.mjs`). _Done when:_ the private key is in your secret store.
+
+### Step 2 — Wire self-test (no DNS yet)
+
+Confirms Cloudflare's verifier accepts the signature **format** before you host anything.
+
+```bash
+npm run self-test                          # signs with the RFC 9421 test key → CF /debug
+npm run self-test -- --url https://crawltest.com/cdn-cgi/web-bot-auth
+```
+
+_Done when:_ the endpoint reports the signature verified. (Default uses the RFC 9421
+test key the debug endpoint recognises — no directory needed yet.)
+
+### Step 3 — Host the signed directory at `auditor.mywebaccess.co.uk`
+
+Recommended: the included Cloudflare Worker (`cf-worker/`), which signs the directory
+per request from your secret key.
+
+```bash
+cd cf-worker
+npm i web-bot-auth@0.1.3
+npx wrangler secret put WBA_PRIVATE_JWK     # paste the production private JWK (one line)
+npx wrangler deploy
+```
+
+Then add the custom domain: dashboard → **Workers & Pages → this Worker → Settings →
+Domains & Routes → Add → Custom Domain →** `auditor.mywebaccess.co.uk` (Cloudflare
+provisions DNS + TLS). _Done when:_
+
+```bash
+curl -sSD - https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory | head -20
+# → 200, content-type application/http-message-signatures-directory+json,
+#   Signature + Signature-Input response headers, body {"keys":[…],"purpose":"…"}
+```
+
+(Alternatives to the Worker: run `serve-directory.mjs` on any always-on host behind the
+subdomain, or serve a static directory re-signed on a schedule.) Then re-run the
+self-test against the real key + host:
+
+```bash
+npm run self-test -- --key /secure/path/private.jwk \
+  --directory https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory \
+  --url https://crawltest.com/cdn-cgi/web-bot-auth
+```
+
+### Step 4 — Submit to Cloudflare
+
+Dashboard → **Manage Account → Configurations → Bot Submission Form** → method
+**"Request Signature"** → directory URL
+`https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory`
+(User-Agent values optional). Purpose text:
+
+> Per-engagement automated accessibility auditor (WCAG-EM) for the MyWeb Access
+> service. Signs only authorized client-audit traffic; respects robots.txt; local-only
+> tooling, no AI. Identity is cryptographic (Web Bot Auth), not evasion.
+
+_Done when:_ the submission is accepted/queued.
+
+### Step 5 — Decisive go/no-go (R2) on MyVision `/event*`
+
+On the MyVision zone you control (**Security → WAF → Custom rules**):
+
+1. **Observe** — rule with action **Log**, expression:
    ```
+   starts_with(http.request.uri.path, "/event") and cf.bot_management.verified_bot
+   ```
+   Send signed traffic (your scanner over the cleared identity, or
+   `npm run self-test -- --key … --url https://<myvision-host>/event…`) and confirm it
+   matches — i.e. `cf.bot_management.verified_bot` is true for it.
+2. **Confirm the challenge clears** — if `/event*` still challenges, add a rule
+   **Skip → Managed Challenge** (+ remaining custom rules) on the same expression, and
+   confirm an `/event*` page audits with **no** challenge.
 
-   `serve-directory.mjs` signs the directory **per request** using the incoming Host,
-   so it works behind any tunnel host without pre-configuration. With no `--key` it
-   uses an ephemeral key (wiring test only — it prints a warning). For production you
-   host this behind a stable HTTPS hostname.
-
-3. **Self-test over the wire** — the first point you can truthfully claim "Cloudflare
-   accepts the signature". Send a signed request (same `signatureHeaders` flow as
-   `03-sign-request.mjs`, with `Signature-Agent` pointing at your directory URL) to
-   `https://http-message-signatures-example.research.cloudflare.com/debug` and/or
-   `https://crawltest.com/cdn-cgi/web-bot-auth` (the latter gives detailed feedback).
-
-4. **Submit the application:** dashboard → **Manage Account → Configurations → Bot
-   Submission Form** → method **"Request Signature"** → enter your directory URL
-   (User-Agent values optional). Suggested purpose text:
-
-   > Per-engagement automated accessibility auditor (WCAG-EM) for the MyWeb Access
-   > service. Signs only authorized client-audit traffic; respects robots.txt;
-   > local-only tooling, no AI. Identity is cryptographic (Web Bot Auth), not evasion.
-
-5. **Decisive go/no-go (R2)** on the MyVision `/event*` zone (you control it):
-   - **Observe** first — a Custom Rule (action **Log**) to confirm your signed traffic
-     is recognised as verified:
-     ```
-     starts_with(http.request.uri.path, "/event") and cf.bot_management.verified_bot
-     ```
-   - **Confirm the challenge clears** — either it stops challenging the verified
-     traffic, or add a Skip rule (**Skip → All remaining custom rules / Managed
-     challenge**) on the same expression and confirm `/event*` audits with no challenge.
-   - **GATE:** verified **and** the challenge clears → Phase 2 is worth building.
-   - **KILL / fork:** if verified status does **not** clear an *explicit* path
-     challenge (only Bot-Management identification), fall back to ADR-0021 layer 3 —
-     reuse the same verified identity as an allowlist credential (one durable rule per
-     client). The registration is not wasted.
+- **GATE:** verified **and** the challenge clears → **Phase 2 is justified** (build the
+  `src/lib/web-bot-auth.mjs` signing seam; mirror E8).
+- **KILL / fork:** if verified status does **not** clear an *explicit* path challenge
+  (only Bot-Management identification), fall back to ADR-0021 layer 3 — reuse the same
+  verified identity as a per-client allowlist credential (one durable rule). Not wasted.
 
 ## Cleanup
 
