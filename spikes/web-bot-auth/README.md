@@ -190,26 +190,55 @@ Dashboard → **Manage Account → Configurations → Bot Submission Form** → 
 
 _Done when:_ the submission is accepted/queued.
 
-### Step 5 — Decisive go/no-go (R2) on MyVision `/event*`
+### Step 5 — Decisive go/no-go (R2) — no client-zone access required
 
-On the MyVision zone you control (**Security → WAF → Custom rules**):
+You control only the auditor zone (`mywebaccess.co.uk`), **not** the client's (e.g.
+MyVision). So don't try to write rules on the client zone. Answer the R2 question —
+*does verified status clear an explicit Managed Challenge?* — two complementary ways.
 
-1. **Observe** — rule with action **Log**, expression:
+**(a) Controlled test on your own `mywebaccess.co.uk` zone** (after step 4 approval) —
+reproduce an explicit challenge you fully control, then hit it signed:
+
+1. Dashboard → `mywebaccess.co.uk` → **Security → WAF → Custom rules → Create rule**:
+   - Name: `R2 - managed challenge (test)`
+   - Expression: `(http.host eq "www.mywebaccess.co.uk" and http.request.uri.path eq "/__wba-r2-test")`
+   - Action: **Managed Challenge** → Deploy.
+2. Baseline (unsigned) — expect a challenge:
+   ```bash
+   curl -sS -D - -o /dev/null https://www.mywebaccess.co.uk/__wba-r2-test
+   # → HTTP 403 with a "cf-mitigated: challenge" header
    ```
-   starts_with(http.request.uri.path, "/event") and cf.bot_management.verified_bot
+3. Signed/verified — does it clear?
+   ```bash
+   npm run self-test -- --key .keys/private.jwk --url https://www.mywebaccess.co.uk/__wba-r2-test --raw
+   # STATUS >=400 (still challenged) → verified status does NOT clear an explicit challenge
+   # STATUS  <400 (e.g. 404 from origin) → it DOES clear it
    ```
-   Send signed traffic (your scanner over the cleared identity, or
-   `npm run self-test -- --key … --url https://<myvision-host>/event…`) and confirm it
-   matches — i.e. `cf.bot_management.verified_bot` is true for it.
-2. **Confirm the challenge clears** — if `/event*` still challenges, add a rule
-   **Skip → Managed Challenge** (+ remaining custom rules) on the same expression, and
-   confirm an `/event*` page audits with **no** challenge.
+4. _(Only if your plan exposes a verified-bot field.)_ Add a higher-priority **Skip**
+   rule — `(... path eq "/__wba-r2-test" and cf.client.bot)` (or
+   `cf.bot_management.verified_bot` on Enterprise), Action **Skip → Managed Challenge** —
+   and re-run step 3 signed: it should now clear while unsigned still challenges. That is
+   the "allow our verified bot" rule a *client* would add on their zone.
+5. **Delete the test rule(s)** when done.
 
-- **GATE:** verified **and** the challenge clears → **Phase 2 is justified** (build the
-  `src/lib/web-bot-auth.mjs` signing seam; mirror E8).
-- **KILL / fork:** if verified status does **not** clear an *explicit* path challenge
-  (only Bot-Management identification), fall back to ADR-0021 layer 3 — reuse the same
-  verified identity as a per-client allowlist credential (one durable rule). Not wasted.
+**(b) Empirical test against the client, no client-zone access** (after step 4 approval):
+
+```bash
+npm run self-test -- --key .keys/private.jwk --url https://<a-myvision-event-url> --raw
+# STATUS  <400                          → your verified identity cleared the challenge
+# STATUS 403 + cf-mitigated: challenge  → it did not
+```
+
+Cloudflare verifies your signature network-wide, so you observe the real outcome without
+touching the client's config. (Caveat: a signed GET ≠ a signed *browser* audit — treat it
+as a strong first signal, confirmed later by the Phase-2 signed-browser run.)
+
+- **GATE:** the challenge clears for your verified identity → **Phase 2 is justified**
+  (build the `src/lib/web-bot-auth.mjs` signing seam; mirror E8).
+- **KILL / fork:** if verified status does **not** clear an *explicit* challenge, fall
+  back to ADR-0021 layer 3 — the *client* adds a one-line "allow our verified bot" rule on
+  *their* zone (their cooperation, not your access). The identity is the durable credential
+  either way — not wasted.
 
 ## Cleanup
 
