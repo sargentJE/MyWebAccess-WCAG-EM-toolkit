@@ -58,6 +58,7 @@ buried.
 | `03-sign-request.mjs` | `signatureHeaders` with `Signature-Agent` set first → request tag, covers `@authority` + `signature-agent`. |
 | `04-verify.mjs` | The checks: KAT, independent raw-crypto verify, divergent-@authority cross-check, corroborating library verify, directory verify, negative control. |
 | `round-trip.mjs` | Orchestrates 01→04 in-process, offline. Exit 0 ⇔ all pass. |
+| `serve-directory.mjs` | **Phase-1 ops helper** (not a gate step): serves the signed directory at the well-known path, signed per-request for the incoming Host, ready to tunnel to Cloudflare. `npm run serve`. |
 | `lib/profile.mjs` | Confirmed profile constants + the deterministic KAT fixture (RFC 9421 test key). |
 | `lib/sigbase.mjs` | **Independent** RFC 9421 signature-base reconstruction + raw Ed25519 sign/verify (Node crypto only). |
 | `lib/thumbprint.mjs` | **Independent** RFC 7638 / RFC 8037 thumbprint (Node `crypto`), cross-checks the library's `keyid`. |
@@ -107,21 +108,55 @@ the lockfile is committed so the whole tree is reproducible (R6).
 
 ## Phase 1 — human runbook (NOT done in this spike)
 
-1. Decide the production identity host (open question). Publish the **signed JWKS**
-   at `https://<host>/.well-known/http-message-signatures-directory` (HTTPS,
-   content-type above). The `out/` artifacts here are the reference. A tunnel
-   (cloudflared/ngrok) is fine for the test.
-2. **Self-test over the wire** against
-   `https://http-message-signatures-example.research.cloudflare.com` and/or
-   `https://crawltest.com/cdn-cgi/web-bot-auth` — the first point at which
-   "Cloudflare accepts the signature" can truthfully be claimed.
-3. Generate + secure the **production** keypair in the operator secret store (never
-   the repo or logs).
-4. **Bot Submission Form:** dashboard → Manage Account → Configurations → Bot
-   Submission Form → method "Request Signature" → directory URL (User-Agent optional).
-5. **Decisive go/no-go:** on the MyVision `/event*` zone (we control it), add a WAF
-   rule on `cf.bot_management.verified_bot` and confirm signed traffic is recognised
-   **and** the challenge clears.
+Order: generate prod key → serve + tunnel → self-test → submit → decisive R2 test.
+All of this is **human ops** (hosting, secrets, the Cloudflare dashboard).
+
+1. **Generate + secure the production keypair.** `node 01-generate-keys.mjs`, then
+   MOVE `.keys/private.jwk` into your operator secret store (never the repo or logs);
+   keep the public key for the directory. Decide the identity **host** (open question)
+   — the directory must live at `https://<host>/.well-known/http-message-signatures-directory`.
+
+2. **Serve the signed directory and expose it.**
+
+   ```bash
+   npm run serve -- --key /secure/path/private.jwk --port 8788
+   # in another shell:
+   cloudflared tunnel --url http://localhost:8788
+   ```
+
+   `serve-directory.mjs` signs the directory **per request** using the incoming Host,
+   so it works behind any tunnel host without pre-configuration. With no `--key` it
+   uses an ephemeral key (wiring test only — it prints a warning). For production you
+   host this behind a stable HTTPS hostname.
+
+3. **Self-test over the wire** — the first point you can truthfully claim "Cloudflare
+   accepts the signature". Send a signed request (same `signatureHeaders` flow as
+   `03-sign-request.mjs`, with `Signature-Agent` pointing at your directory URL) to
+   `https://http-message-signatures-example.research.cloudflare.com/debug` and/or
+   `https://crawltest.com/cdn-cgi/web-bot-auth` (the latter gives detailed feedback).
+
+4. **Submit the application:** dashboard → **Manage Account → Configurations → Bot
+   Submission Form** → method **"Request Signature"** → enter your directory URL
+   (User-Agent values optional). Suggested purpose text:
+
+   > Per-engagement automated accessibility auditor (WCAG-EM) for the MyWeb Access
+   > service. Signs only authorized client-audit traffic; respects robots.txt;
+   > local-only tooling, no AI. Identity is cryptographic (Web Bot Auth), not evasion.
+
+5. **Decisive go/no-go (R2)** on the MyVision `/event*` zone (you control it):
+   - **Observe** first — a Custom Rule (action **Log**) to confirm your signed traffic
+     is recognised as verified:
+     ```
+     starts_with(http.request.uri.path, "/event") and cf.bot_management.verified_bot
+     ```
+   - **Confirm the challenge clears** — either it stops challenging the verified
+     traffic, or add a Skip rule (**Skip → All remaining custom rules / Managed
+     challenge**) on the same expression and confirm `/event*` audits with no challenge.
+   - **GATE:** verified **and** the challenge clears → Phase 2 is worth building.
+   - **KILL / fork:** if verified status does **not** clear an *explicit* path
+     challenge (only Bot-Management identification), fall back to ADR-0021 layer 3 —
+     reuse the same verified identity as an allowlist credential (one durable rule per
+     client). The registration is not wasted.
 
 ## Cleanup
 
