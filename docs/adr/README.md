@@ -31,11 +31,12 @@ rejected_.
 | [0018](./0018-fair-deterministic-sitemap-seeding.md) | Fair, deterministic, recursion-aware sitemap seeding               | accepted | 2026-06-13 |
 | [0019](./0019-redirect-aware-scanning.md)            | Redirect-aware scanning (final-URL identity)                       | accepted | 2026-06-13 |
 | [0020](./0020-pluggable-browser-transport.md)        | Pluggable browser transport (CDP attach + stealth engine)          | accepted | 2026-06-14 |
+| [0021](./0021-waf-challenge-access-strategy.md)      | Access strategy for WAF-challenged pages (register, don't bypass)  | proposed | 2026-06-15 |
 
 ## Numbering convention
 
-ADR numbers are append-only. All reserved seats through 0020 are
-now filled. The next available number is **0021**.
+ADR numbers are append-only. All reserved seats through 0021 are
+now filled. The next available number is **0022**.
 
 ## Citation convention
 
@@ -46,7 +47,7 @@ references survive refactors that line numbers don't. See commit
 
 ## Adding a new ADR
 
-1. Pick the next available number (sequence resumes at 0021).
+1. Pick the next available number (sequence resumes at 0022).
 2. Copy the template from any recent ADR (0007 / 0008 / 0009 are
    current-style references).
 3. Fill `Status`, `Date`, `Deciders`, `Consulted`, then the

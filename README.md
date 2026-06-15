@@ -66,15 +66,16 @@ All commands accept `--config <path>`, `--out-dir <path>`,
 Start from [`configs/example-site.json`](./configs/example-site.json)
 and adapt to your site. Key fields:
 
-| Field                         | Purpose                                                                                                       |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `rootUrl`                     | Starting URL for the crawler                                                                                  |
-| `crawl.maxPages`              | Maximum pages to discover                                                                                     |
-| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                                                   |
-| `crawl.documentLinkPatterns`  | Non-HTML links to skip (PDF/archive/media preset; set `[]` to crawl documents)                                |
-| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                                                     |
-| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export`, `report-builder-starter` |
-| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                                                    |
+| Field                         | Purpose                                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rootUrl`                     | Starting URL for the crawler                                                                                                                             |
+| `crawl.maxPages`              | Maximum pages to discover                                                                                                                                |
+| `crawl.navigationTimeoutSecs` | Per-page navigation timeout                                                                                                                              |
+| `crawl.documentLinkPatterns`  | Non-HTML links to skip (PDF/archive/media preset; set `[]` to crawl documents)                                                                           |
+| `scan.axe.withTags`           | axe-core tag filter (e.g. `["wcag2aa", "best-practice"]`)                                                                                                |
+| `scan.browser.cdpEndpoint`    | Opt-in: attach over CDP to a running, human-cleared browser for **authorized** audits of WAF/Cloudflare-gated pages (default launches headless Chromium) |
+| `reporting.reporters`         | Output formats: `json`, `markdown`, `html`, `earl-jsonld`, `junit`, `portal-export`, `report-builder-starter`                                            |
+| `reporting.failOnFindings`    | CI exit-code control (impacts + threshold)                                                                                                               |
 
 Every field is documented in the
 [config authoring guide](./docs/guides/config-guide.md) — including the
@@ -140,6 +141,13 @@ For paid client work — the best-practice rule profile, WCAG-EM scoping,
 process definitions, politeness, and the full recon-to-exports workflow — see
 the
 [config guide's production audit profile](./docs/guides/config-guide.md#production-client-audit-the-myweb-access-workflow).
+
+Pages behind a Cloudflare/WAF **managed challenge** are excluded from findings
+and disclosed rather than silently passed (ADR-0017). For an **authorized**
+audit, the scanner can attach over CDP to a human-cleared browser
+(`scan.browser.cdpEndpoint` / `WCAG_EM_CDP_ENDPOINT`) so those pages still get
+real findings — see the config guide's `scan.browser` transport section and
+[ADR-0020](./docs/adr/0020-pluggable-browser-transport.md).
 
 ## What this toolkit does not claim
 
