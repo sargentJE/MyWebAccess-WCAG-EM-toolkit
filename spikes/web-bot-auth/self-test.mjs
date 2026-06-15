@@ -37,13 +37,17 @@ if (keyPath) {
   jwk = JSON.parse(await readFile(keyPath, 'utf8'));
 } else {
   jwk = RFC_9421_ED25519_TEST_KEY;
-  console.log('• Using the RFC 9421 test key (the debug endpoint recognises it). Pass --key for your production key once the directory is hosted.\n');
+  console.log("• Test-key mode: RFC 9421 test key, Signature-Agent set to the verifier's own origin\n  so it verifies against the bundled test key (no hosting needed). Pass --key <prod.jwk>\n  --directory <your-origin> once your own directory is hosted.\n");
 }
 
 const created = new Date();
 const expires = new Date(created.getTime() + EXPIRES_WINDOW_MS);
-// Cloudflare requires Signature-Agent at the origin/root; it appends the well-known path itself.
-const signatureAgentOrigin = new URL(directoryUrl).origin;
+// Signature-Agent must be an ORIGIN/root (Cloudflare appends the well-known path):
+//  - test-key mode (no --key): point at the VERIFIER's own origin, which serves the bundled
+//    RFC 9421 test-key directory, so verification needs no directory of ours (its key-resolution
+//    short-circuits to the local test key when Signature-Agent is its own origin).
+//  - production mode (--key): point at OUR directory's origin (must be hosted, else CF errors 1016).
+const signatureAgentOrigin = keyPath ? new URL(directoryUrl).origin : new URL(url).origin;
 const signatureAgent = JSON.stringify(signatureAgentOrigin);
 const request = new Request(url, { headers: { 'Signature-Agent': signatureAgent } });
 const signed = await signatureHeaders(request, await signerFromJWK(jwk), { created, expires });
