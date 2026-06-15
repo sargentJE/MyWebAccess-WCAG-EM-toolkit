@@ -49,7 +49,8 @@ export const RFC_9421_ED25519_TEST_KEY = Object.freeze({
 // reproduces them too. Frozen literals double as an R6 churn detector.
 //
 // Fixed inputs: target https://example.com/, Signature-Agent =
-// JSON.stringify(KAT_DIRECTORY_URL), created/expires below, 64 zero-byte
+// JSON.stringify(new URL(KAT_DIRECTORY_URL).origin) [Cloudflare requires the root],
+// created/expires below, 64 zero-byte
 // nonce. (created/expires are in the past, so the KAT verifies with raw webcrypto
 // only — the library verifiers reject expired signatures; see README.)
 export const KAT = Object.freeze({
@@ -58,5 +59,5 @@ export const KAT = Object.freeze({
   nonce: Buffer.from(new Uint8Array(64)).toString('base64'), // 64×0x00 → "AAAA…AA=="
   keyid: 'poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U', // RFC 7638 thumbprint of the test key
   // Exact signature value (base64, unwrapped from the `sig1=:…:` structured field):
-  signature: 'yLAlbsIH6jpZUKhYbPvro4FLOkabACbCR7u3TggWgdumATQmfBUIq1uUerahnbJgYadlVBOtiGetVnrtv3fEBA==',
+  signature: 'RyFDNlmULbdTR0DaD97y9gBmKNI1AXwFATei3L69FW0kQC1r64uY/iJq27HyqGKxYkWhBETu0IKgtkeUfxyPDg==',
 });

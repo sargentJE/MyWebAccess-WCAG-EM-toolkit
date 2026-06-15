@@ -95,6 +95,12 @@ A spec-wrong library is therefore caught, not masked.
   the IETF/Cloudflare sources are plural.)
 - **Directory content-type:** `application/http-message-signatures-directory+json`.
 - **Request covered components:** `("@authority" "signature-agent")`.
+- **`Signature-Agent` header value:** the **origin** (e.g. `https://auditor.mywebaccess.co.uk`),
+  **NOT** the full directory URL. Cloudflare's verifier requires it at the root and appends
+  `/.well-known/http-message-signatures-directory` itself — confirmed live against
+  `/v0/api/verify` (`invalid: Only support signature-agent at the root` when a path is sent).
+  Earlier research said "point it at the directory URL" — the live verifier corrects that.
+  (The Bot Submission Form still takes the full directory URL.)
 - **`keyid`:** the base64url RFC 7638 JWK SHA-256 thumbprint of the Ed25519 key.
 - **`expires`:** short (~60 s here) to bound replay.
 - **Key type:** Ed25519 (`kty:"OKP"`, `crv:"Ed25519"`).
