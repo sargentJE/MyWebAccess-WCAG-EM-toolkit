@@ -113,8 +113,10 @@ All of this is **human ops** (hosting, secrets, the Cloudflare dashboard).
 
 1. **Generate + secure the production keypair.** `node 01-generate-keys.mjs`, then
    MOVE `.keys/private.jwk` into your operator secret store (never the repo or logs);
-   keep the public key for the directory. Decide the identity **host** (open question)
-   — the directory must live at `https://<host>/.well-known/http-message-signatures-directory`.
+   keep the public key for the directory. The identity **host is decided**:
+   `auditor.mywebaccess.co.uk` — the directory lives at
+   `https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory`
+   (wired in as `DIRECTORY_URL` in `lib/profile.mjs`, the default `Signature-Agent`).
 
 2. **Serve the signed directory and expose it.**
 

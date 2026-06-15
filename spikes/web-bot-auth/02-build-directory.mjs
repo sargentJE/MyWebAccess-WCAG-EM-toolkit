@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { directoryResponseHeaders, MediaType, jwkToKeyID, helpers } from 'web-bot-auth';
 import { Ed25519Signer } from 'web-bot-auth/crypto';
-import { PLACEHOLDER_DIRECTORY_URL, DIRECTORY_PURPOSE, EXPIRES_WINDOW_MS } from './lib/profile.mjs';
+import { DIRECTORY_URL, DIRECTORY_PURPOSE, EXPIRES_WINDOW_MS } from './lib/profile.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, 'out');
@@ -29,14 +29,14 @@ export async function buildDirectory({ publicJwk, privateJwk, persist = true }) 
   const body = JSON.stringify(directory);
 
   const signer = await Ed25519Signer.fromJWK(privateJwk);
-  const request = new Request(PLACEHOLDER_DIRECTORY_URL, { method: 'GET' });
+  const request = new Request(DIRECTORY_URL, { method: 'GET' });
   const response = new Response(body, { headers: { 'content-type': MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY } });
   const created = new Date();
   const expires = new Date(created.getTime() + EXPIRES_WINDOW_MS);
   const signed = await directoryResponseHeaders({ request, response }, [signer], { created, expires });
 
   const artifact = {
-    url: PLACEHOLDER_DIRECTORY_URL,
+    url: DIRECTORY_URL,
     contentType: MediaType.HTTP_MESSAGE_SIGNATURES_DIRECTORY,
     directory,
     body,

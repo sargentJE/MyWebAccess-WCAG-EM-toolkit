@@ -40,7 +40,7 @@ import {
   DIRECTORY_CONTENT_TYPE,
   WELL_KNOWN_PATH,
   COVERED_COMPONENTS,
-  PLACEHOLDER_DIRECTORY_URL,
+  KAT_DIRECTORY_URL,
   PLACEHOLDER_TARGET_URL,
 } from './lib/profile.mjs';
 import { signRequest } from './03-sign-request.mjs';
@@ -74,7 +74,7 @@ export async function runKAT() {
   const { signed, base, signatureAgentValue } = await signRequest({
     privateJwk: RFC_9421_ED25519_TEST_KEY,
     target: PLACEHOLDER_TARGET_URL,
-    directoryUrl: PLACEHOLDER_DIRECTORY_URL,
+    directoryUrl: KAT_DIRECTORY_URL,
     created,
     expires,
     nonce: KAT.nonce,

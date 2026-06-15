@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { signatureHeaders } from 'web-bot-auth';
 import { signerFromJWK } from 'web-bot-auth/crypto';
-import { PLACEHOLDER_TARGET_URL, PLACEHOLDER_DIRECTORY_URL, EXPIRES_WINDOW_MS } from './lib/profile.mjs';
+import { PLACEHOLDER_TARGET_URL, DIRECTORY_URL, EXPIRES_WINDOW_MS } from './lib/profile.mjs';
 import { signatureInputValue, reconstructSignatureBase } from './lib/sigbase.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +30,7 @@ const OUT_DIR = join(HERE, 'out');
 export async function signRequest({
   privateJwk,
   target = PLACEHOLDER_TARGET_URL,
-  directoryUrl = PLACEHOLDER_DIRECTORY_URL,
+  directoryUrl = DIRECTORY_URL,
   created = new Date(),
   expires,
   nonce,

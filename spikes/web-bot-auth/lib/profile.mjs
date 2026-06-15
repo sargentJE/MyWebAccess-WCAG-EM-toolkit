@@ -17,12 +17,18 @@ export const DIRECTORY_CONTENT_TYPE = 'application/http-message-signatures-direc
 export const COVERED_COMPONENTS = ['@authority', 'signature-agent']; // request signature
 export const EXPIRES_WINDOW_MS = 60_000; // Cloudflare suggests ~1 minute to bound replay
 
-// ── Placeholders (Phase 0 is offline; nothing is hosted or fetched) ──────────
-// The real identity host is a Phase-1 decision (open question in the plan). The
-// `.example` TLD is reserved (RFC 2606) so this can never resolve by accident.
-export const PLACEHOLDER_DIRECTORY_URL =
-  'https://auditor.myweb.example/.well-known/http-message-signatures-directory';
+// ── Identity host + offline placeholders ─────────────────────────────────────
+// The real auditor identity host, chosen 2026-06 (ADR-0021). Phase 1 hosts the
+// signed directory here; in this offline spike it is only ever a string used as
+// the Signature-Agent value (the spike never fetches it).
+export const DIRECTORY_URL =
+  'https://auditor.mywebaccess.co.uk/.well-known/http-message-signatures-directory';
+// Arbitrary target for the offline round-trip (never fetched).
 export const PLACEHOLDER_TARGET_URL = 'https://example.com/';
+// FROZEN test-vector input for the KAT ONLY — a reserved `.example` host (RFC 2606).
+// Must NEVER change, or the frozen KAT signature/Signature-Input below break.
+export const KAT_DIRECTORY_URL =
+  'https://auditor.myweb.example/.well-known/http-message-signatures-directory';
 export const DIRECTORY_PURPOSE =
   'Authorized WCAG-EM accessibility auditing for contracted MyWeb Access engagements';
 
@@ -43,7 +49,7 @@ export const RFC_9421_ED25519_TEST_KEY = Object.freeze({
 // reproduces them too. Frozen literals double as an R6 churn detector.
 //
 // Fixed inputs: target https://example.com/, Signature-Agent =
-// JSON.stringify(PLACEHOLDER_DIRECTORY_URL), created/expires below, 64 zero-byte
+// JSON.stringify(KAT_DIRECTORY_URL), created/expires below, 64 zero-byte
 // nonce. (created/expires are in the past, so the KAT verifies with raw webcrypto
 // only — the library verifiers reject expired signatures; see README.)
 export const KAT = Object.freeze({
