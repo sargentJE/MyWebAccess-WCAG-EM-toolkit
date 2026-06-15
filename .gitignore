@@ -19,3 +19,7 @@ coverage/
 
 # Test scratch
 test/.tmp/
+
+# Web Bot Auth spike private key material (belt-and-suspenders — the spike's own
+# spikes/web-bot-auth/.gitignore is the primary guard, written before any keygen).
+spikes/web-bot-auth/.keys/

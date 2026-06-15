@@ -26,3 +26,8 @@ src/types/config.d.ts
 # test/unit/reporters-html.test.mjs failing on the reformatted output. The
 # rest of the file's prose is also tightly hand-laid for diff readability.
 src/reporters/html.mjs
+
+# Phase-0 Web Bot Auth feasibility spike — self-contained throwaway with its own
+# pinned deps; not part of the toolkit and not subject to repo style. See
+# spikes/web-bot-auth/README.md.
+spikes/

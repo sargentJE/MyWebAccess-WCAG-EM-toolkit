@@ -32,6 +32,7 @@ export default [
       'test/fixtures/static-site/**',
       'src/types/**', // generated
       'package-lock.json',
+      'spikes/**', // Phase-0 throwaway spikes with their own pinned deps; not toolkit source
     ],
   },
 

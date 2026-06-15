@@ -1,0 +1,17 @@
+# Web Bot Auth spike — local-only artefacts. Written FIRST, before any key is
+# generated, so private key material can never reach git. See the repo plan:
+# "Private keys — the real safeguard is the spike-local .gitignore, written FIRST."
+
+# Throwaway keypairs (generated at runtime by 01-generate-keys.mjs). NEVER commit.
+.keys/
+*.jwk
+*.pem
+*secret*
+
+# Captured signature base + signed directory artefacts (human-inspectable, also the
+# Phase-1 reference). Regenerated on every run; not source.
+out/
+
+# Spike-local dependencies. The lockfile (package-lock.json) IS committed for
+# reproducibility — only node_modules/ is ignored.
+node_modules/
