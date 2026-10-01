@@ -100,9 +100,18 @@ actionable verdicts.
 
 ### 5. Output shape
 
+_Amendment 2026-10-01 (TEST-06):_ `tool` gains `gitSha` and `dirty` (build
+provenance; both `null` outside a git checkout of the toolkit itself).
+
 ```jsonc
 {
-  "tool": { "name": "…", "version": "…", "axeCore": "…" },
+  "tool": {
+    "name": "…",
+    "version": "…",
+    "axeCore": "…",
+    "gitSha": "… | null",
+    "dirty": "boolean | null",
+  },
   "criteriaOutcomes": [
     {
       "sc": "1.4.3",

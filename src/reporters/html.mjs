@@ -30,7 +30,7 @@ import fs from 'node:fs/promises';
 import { readJsonMaybe, writeText } from '../lib/fs-utils.mjs';
 import { normalizeUrl } from '../lib/urls.mjs';
 import { isAuditableView } from '../lib/scan-results.mjs';
-import { TOOL_IDENTITY } from '../lib/version.mjs';
+import { TOOL_IDENTITY, formatVersionLabel } from '../lib/version.mjs';
 import { sortFindings } from './_sort.mjs';
 import { safeUrl, html } from './_template.mjs';
 
@@ -135,7 +135,7 @@ export async function emit(summary, ctx) {
 
 /** @returns {string} */
 function renderToolBanner() {
-  return html`<div class="tool-banner">Tool: ${TOOL_IDENTITY.name} ${TOOL_IDENTITY.version} (axe-core ${TOOL_IDENTITY.axeCore})</div>\n`;
+  return html`<div class="tool-banner">Tool: ${TOOL_IDENTITY.name} ${formatVersionLabel(TOOL_IDENTITY)} (axe-core ${TOOL_IDENTITY.axeCore})</div>\n`;
 }
 
 /**

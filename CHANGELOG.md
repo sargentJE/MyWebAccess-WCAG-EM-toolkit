@@ -140,6 +140,15 @@ major version.
 
 ### Added
 
+- **Build provenance in every artefact's `tool` stamp.** `tool` now always
+  carries five keys: `name`, `version`, `axeCore`, `gitSha` and `dirty`. When
+  the toolkit runs from a git checkout, `gitSha` is that checkout's HEAD and
+  `dirty` says whether tracked files differ from it. Otherwise both are
+  `null`. The markdown header and HTML banner show the version as
+  `1.2.0+<sha7>[.dirty]` (SemVer build metadata). Consumers that compare
+  `tool` objects exactly should expect the two new keys; the portal and
+  report-builder exports map tool fields individually and are unaffected.
+
 - **Pluggable browser transport (E8, opt-in, ADR-0020).** New `scan.browser`
   config (`engine` `playwright`|`patchright`, `cdpEndpoint`, `channel`,
   `headless`) plus a `WCAG_EM_CDP_ENDPOINT` env override. Set `cdpEndpoint` to

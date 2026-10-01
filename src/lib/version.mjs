@@ -13,6 +13,13 @@
  * Reading at import time means the `npm version` bump flows
  * through mechanically — no hardcoded constants to update.
  *
+ * Build provenance: `version` alone cannot distinguish a tagged release from
+ * an untagged checkout with behaviour-changing commits on top (the 2026-09
+ * review found main stamping 1.1.0 after 55 such commits, TEST-06). When the
+ * package root IS a git checkout, `gitSha` + `dirty` record the exact build;
+ * otherwise both are `null`. The shape is the same in every install mode so
+ * artefact consumers never see keys appear and disappear.
+ *
  * The `@axe-core/playwright` package's `exports` map does NOT publish
  * `./package.json` as a subpath, so
  * `import pkg from '@axe-core/playwright/package.json'` is blocked on
@@ -26,7 +33,9 @@
 // SECTION: Imports
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { gitDiscoveryEnv } from './git-env.mjs';
 
 // SECTION: Constants
 
@@ -39,6 +48,10 @@ const selfPkg = JSON.parse(fs.readFileSync(selfPkgUrl, 'utf8'));
 const axePkgPath = findAxeCorePackageJson();
 const axePkg = JSON.parse(fs.readFileSync(axePkgPath, 'utf8'));
 
+// This package's root directory (where package.json lives).
+const PACKAGE_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const provenance = readGitProvenance(PACKAGE_ROOT);
+
 // SECTION: Public API
 
 /**
@@ -48,13 +61,28 @@ const axePkg = JSON.parse(fs.readFileSync(axePkgPath, 'utf8'));
  * object literals as `{ tool: TOOL_IDENTITY, ...rest }` so the stamp appears
  * as the first property of each JSON file.
  *
- * @type {Readonly<{ name: string, version: string, axeCore: string }>}
+ * @type {Readonly<{ name: string, version: string, axeCore: string, gitSha: string | null, dirty: boolean | null }>}
  */
 export const TOOL_IDENTITY = Object.freeze({
   name: String(selfPkg.name ?? 'wcag-em-a11y-toolkit'),
   version: String(selfPkg.version ?? '0.0.0'),
   axeCore: String(axePkg.version ?? '0.0.0'),
+  gitSha: provenance.gitSha,
+  dirty: provenance.dirty,
 });
+
+/**
+ * Human-facing version label: the package version, plus SemVer build
+ * metadata identifying the exact checkout when there is one
+ * (`1.2.0+42bb6b9`, `1.2.0+42bb6b9.dirty`). Pure, for tests and reporters.
+ *
+ * @param {{ version: string, gitSha: string | null, dirty: boolean | null }} identity
+ * @returns {string}
+ */
+export function formatVersionLabel(identity) {
+  if (!identity.gitSha) return identity.version;
+  return `${identity.version}+${identity.gitSha.slice(0, 7)}${identity.dirty ? '.dirty' : ''}`;
+}
 
 /**
  * Compose the markdown-style tool-identity header used at the top of
@@ -65,7 +93,66 @@ export const TOOL_IDENTITY = Object.freeze({
  * @returns {string} e.g. `**Tool:** wcag-em-a11y-toolkit 1.0.0 (axe-core 4.11.2)\n\n`
  */
 export function toolIdentityMarkdownHeader() {
-  return `**Tool:** ${TOOL_IDENTITY.name} ${TOOL_IDENTITY.version} (axe-core ${TOOL_IDENTITY.axeCore})\n\n`;
+  return `**Tool:** ${TOOL_IDENTITY.name} ${formatVersionLabel(TOOL_IDENTITY)} (axe-core ${TOOL_IDENTITY.axeCore})\n\n`;
+}
+
+/**
+ * Read the git commit of the package root, only if the package root is
+ * itself the top level of a git checkout. A toolkit installed as a
+ * dependency inside another repository must NOT stamp that repository's
+ * HEAD, so the top-level path is compared with the package root first.
+ *
+ * Hardening (E9 pre-push review):
+ * - every git call runs with `gitDiscoveryEnv()`, so an inherited `GIT_DIR`
+ *   (exported by git to hooks and `rebase -x`) cannot redirect discovery to
+ *   another repository and defeat the top-level guard;
+ * - dirtiness comes from `git --no-optional-locks status`, which never writes
+ *   `.git/index` (`git diff` refreshes the index on stat-dirty files and takes
+ *   `index.lock`, which a concurrent user git command could then fail on);
+ * - an unreadable status yields `dirty: null`, never a guessed `true`.
+ *
+ * Any failure to resolve the checkout (no git binary, not a repository,
+ * unborn HEAD) yields nulls for both fields.
+ *
+ * @param {string} packageRoot - Absolute path of the directory holding package.json.
+ * @returns {{ gitSha: string | null, dirty: boolean | null }}
+ */
+export function readGitProvenance(packageRoot) {
+  const none = { gitSha: null, dirty: null };
+  /** @type {import('node:child_process').ExecFileSyncOptionsWithStringEncoding} */
+  const opts = {
+    cwd: packageRoot,
+    encoding: 'utf8',
+    env: gitDiscoveryEnv(),
+    stdio: ['ignore', 'pipe', 'ignore'],
+    timeout: 5000,
+  };
+  /** @type {string} */
+  let head;
+  try {
+    const [topLevel, sha] = execFileSync('git', ['rev-parse', '--show-toplevel', 'HEAD'], opts)
+      .trim()
+      .split('\n');
+    if (!topLevel || !sha) return none;
+    if (fs.realpathSync.native(topLevel) !== fs.realpathSync.native(packageRoot)) return none;
+    head = sha;
+  } catch {
+    return none;
+  }
+  /** @type {boolean | null} */
+  let dirty;
+  try {
+    // Tracked changes only (staged or unstaged); untracked run output does not count.
+    const status = execFileSync(
+      'git',
+      ['--no-optional-locks', 'status', '--porcelain', '--untracked-files=no'],
+      opts,
+    );
+    dirty = status.trim() !== '';
+  } catch {
+    dirty = null;
+  }
+  return { gitSha: head, dirty };
 }
 
 // SECTION: Internal helpers
