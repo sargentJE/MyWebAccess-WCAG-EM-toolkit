@@ -9,10 +9,39 @@ roadmap, the Layer-3b carry-forwards, the post-`portal-export` review, and the
 ([docs/reviews/2026-06-toolkit-review.md](docs/reviews/2026-06-toolkit-review.md),
 which carries evidence, the full roadmap rationale, and the Sprint 1 plan).
 
-_Last updated: 2026-06-15 (post-E8 + live-validation pass — see "Recently
-landed" below). Prior: 2026-06-12 pre-push board accuracy audit — every open
-item re-verified against code; Sprint 1 merged to main; docs sprint D1-D6 +
-review fix on `docs/guides-sprint`._
+_Last updated: 2026-10-01 (board reconciled against the 2026-09-30 gap review;
+open items now map to the remediation programme below). Prior: 2026-06-15
+(post-E8 + live-validation pass); 2026-06-12 pre-push board accuracy audit._
+
+## Active programme — 2026-09 gap remediation (v1.2.0 -> v2.0.0)
+
+The 2026-09-30 adversarially verified review
+([docs/reviews/2026-09-toolkit-gap-review.md](docs/reviews/2026-09-toolkit-gap-review.md))
+upheld 190 findings: 1 critical, 21 high, 82 medium, 83 low and 3 info, in 25
+root-cause packets. The approved execution plan is
+[docs/plans/2026-10-gap-remediation-programme.md](docs/plans/2026-10-gap-remediation-programme.md).
+It fixes each root once, leaves a class guard behind, and maps every finding
+ID to exactly one epic.
+
+- [ ] **Phase 0 — contain and baseline:** E9 records the review, adds a
+      known-issues advisory, applies urgent fixes and cuts **v1.2.0**.
+- [ ] **Phase 1 — safety net:** E10 behaviour-first test contract.
+- [ ] **Phase 2 — no silent coverage claim, no leak** (v2.0.0-alpha.1):
+      E11 audited view and auth liveness (SEC-01, the critical), E12 secrets,
+      E13 run lineage/effectiveness/exit taxonomy, E14 supervised lifecycle.
+- [ ] **Lane C — runs in parallel:** E15 independent single-cause fixes,
+      E16 governance/CI/docs truth.
+- [ ] **Phase 3 — trustworthy population** (alpha.2): E17 effective config
+      contract, E18 toolkit as crawl authority, E19 process states.
+- [ ] **Phase 4 — honest record** (beta.1): E20 consumer-aligned contracts,
+      E21 evaluation scope and automation competence (BREAKING), E22 sample
+      manifest and the Step 3-5 record.
+- [ ] **Phase 5 — truthful surfaces** (**v2.0.0**): E23 human report model,
+      E24 machine projections.
+- [ ] **Phase 6 — capabilities** (v2.1+, ADR-gated): E25 manual-result
+      ingestion (recommended), then E26-E31.
+
+Board items below that the programme absorbs are annotated `-> E<n>`.
 
 ## Recently landed (2026-06-13 → 15, post-Sprint-1)
 
@@ -24,6 +53,12 @@ after the 06-12 audit; the canonical record is `CHANGELOG.md [Unreleased]`.
       scanning (ADR-0019), override visibility + document inventory,
       evidence-driven manual backlog, markdown reporter escaping. Review:
       [docs/reviews/2026-06-epics-E1-E7.md](docs/reviews/2026-06-epics-E1-E7.md).
+      _Correction (2026-09 review, tracked-stale): E1's "excluded at every
+      consumer" holds for page scans only. On the process path, a challenge
+      reached by click/submit navigation is classified `ok` from the stale
+      `goto` response (PROC-01, -> E11 R8). Challenge, empty and not-run
+      process states are dropped silently while the processes are still
+      listed as evaluated (PROC-02, -> E19 R2)._
 - [x] **E8 pluggable browser transport** — opt-in CDP attach + optional
       `patchright` engine + `WCAG_EM_CDP_ENDPOINT` (ADR-0020), for AUTHORIZED
       audits of WAF/Cloudflare-gated pages. Default behaviour byte-identical.
@@ -48,9 +83,13 @@ Carry-forward spawned by the above:
 - [ ] **Report distinct-node counts, not raw occurrences, in summaries.** The
       live validation re-confirmed `region` shows 664 occurrences across 33
       pages; surface the 6 best-practice rules as advisory rather than fail-framed.
-      Overlaps the open `occurrenceCount` P1 item below.
+      Overlaps the open `occurrenceCount` P1 item below. -> E24 R1 (counts
+      defined once in the per-view index) and E23 R1 (advisory best-practice
+      section).
 - [ ] **E4 final-URL re-key in `portal-export` / `report-builder`** — deferred
       companion-coordinated follow-up (export labels still key on the source URL).
+      -> E24 R1 (the index keys on `viewIdentity`); VERD-19 (SC examples keyed on
+      the pre-redirect URL) -> E22 R6.
 
 ## Docs
 
@@ -59,7 +98,8 @@ Carry-forward spawned by the above:
       committed process example + two docs drift-guard tests.
 - [ ] Enforce the ADR-0001 coverage floors (70% src/lib, 50% src/commands) as
       an actual CI step — ci.yml's header claimed a check that never existed
-      (caught by the docs-sprint post-execution review).
+      (caught by the docs-sprint post-execution review). -> E16 R2 (with a mutation
+      smoke, since the 2026-09 review showed coverage alone missed surviving mutants).
 - [x] schema `$id` advertises `github.com/jamiesargent/...` — not the real
       `sargentJE/MyWebAccess-WCAG-EM-toolkit` remote. Fixing touches Ajv ref
       identity; do as its own change.
@@ -135,11 +175,17 @@ Carry-forward spawned by the above:
       (`canonicalSchemaVersion: 'scan-canonical/v1'` already exists). Partial
       progress (Sprint 1 T5): `reporting.validateExports` now gates emission
       against the vendored copy at write time; the published-schema swap and
-      payload `contractVersion` remain (verified absent 2026-06-12)._
+      payload `contractVersion` remain (verified absent 2026-06-12)._ -> E20
+      (consumers as source of truth; a drift check that runs each consumer's own
+      code). New 2026-09 info: the vendored schema was derived wrongly, not drifted
+      — the portal reads `instances[].htmlSnippet`, never `evidence.html`
+      (REPB-03), and portal master scores a zero-audit export 100% (REPB-02).
 - [ ] **`occurrenceCount` semantics.** Reconcile (or rename) the distinct-element
-      count emitted by `portal-export` vs the Σ-`nodesCount` shown in
-      `summary.json` / html / markdown, so auditors diffing artefacts see
-      consistent numbers. _Review-confirmed (probe P4); single-viewport runs
+      count emitted by `portal-export` vs the per-(URL x viewport) node hits in
+      `summary.json` / grouped artefacts, so auditors diffing artefacts see
+      consistent numbers. _Text corrected 2026-10-01 (REPA-11): html and markdown
+      never render `occurrences`; the real same-name collision is
+      report-builder-starter's own `occurrenceCount`._ -> E24 R1. _Review-confirmed (probe P4); single-viewport runs
       mask it, multi-viewport runs diverge. Also note render-state dependence:
       hidden carousel slides undercounted `image-alt` on the live AU run.
       Partial progress: the CHANGELOG counts glossary now DOCUMENTS the four
@@ -149,7 +195,8 @@ Carry-forward spawned by the above:
       (default generous) applied in `liftIncompleteSummaries`, to bound
       `axe-results.json` on incomplete-heavy sites. _Review-confirmed: cap
       hardcoded at 5 (summarize.mjs:274); live AU run hit 32 occurrences on one
-      rule with 5 evidenced._
+      rule with 5 evidenced._ _(2026-09: the portal's manual-review
+      `occurrenceCount` is still silently capped at this limit — REPB-14 -> E24 R1.)_
 
 ## P2 — product value
 
@@ -159,12 +206,13 @@ Carry-forward spawned by the above:
       manual writing. Source from Deque help text + standard fixes; surface via
       a `remediation` field on each rawFinding. _Review-confirmed live: the
       portal's `remediation.proposals` slot arrives empty and is preserved._
+      (Not in the 2026-10 programme; remains roadmap.)
 - [ ] **WCAG SC tag coverage.** Map the rules that currently emit `wcag: []`
       (best-practice / experimental) to SCs where one applies, to satisfy the
       portal's "provide WCAG criteria tags" prompt. _Report-builder side
       mitigated (the starter draft synthesizes the consumer's own
       Best-practice reference when a rule has no SC); the portal-side
-      `wcag: []` gap remains._
+      `wcag: []` gap remains._ (Not in the 2026-10 programme; remains roadmap.)
 - [x] **`scoreBasis` in portal export.** `averageScore: 50` shipped with 36 of the 56 A/AA
       SCs notTested and nothing in the payload conveying it (live AU run). Emit
       `{passed, failed, cantTell, notTested, inapplicable}` + `manualReviewIssues`.
@@ -183,7 +231,9 @@ Carry-forward spawned by the above:
       still detects none of the missing five). Review C6. _Enabler landed in
       the docs sprint: backlog items are now structured data
       (`buildManualBacklogItems`), so detection-driven items have a clean
-      insertion point._
+      insertion point._ Partly -> E21 R4: the backlog becomes SC-keyed, built from
+      every in-scope SC that needs manual review (CAP-03: 10 SCs currently fall off
+      both checklists). Detection of the five missing features remains roadmap.
 
 ## P3 — polish & tech-debt
 
@@ -193,17 +243,18 @@ Carry-forward spawned by the above:
       removed, no behavioural change._
 - [ ] Add a process-sourced incomplete-evidence end-to-end test (a needs-review
       finding originating from a `process-results.json` state, through to
-      `portal-export` / html).
+      `portal-export` / html). -> E19 R7 / R6.
 - [ ] Add a cross-reporter consistency test (the same finding's numbers agree
       across `portal-export` vs html / markdown) — would surface the
-      `occurrenceCount` divergence above.
+      `occurrenceCount` divergence above. -> E10 R5.
 - [x] Carry toolkit screenshots into the report-builder chain as typed
       `screenshot` evidence (path + alt) — currently lost. -> Sprint 1 T6.
 - [ ] Express notTested SCs in EARL (`earl:untested` exists in the vocabulary;
-      OUTCOME_MAP has no key and emit() never asserts them — review C3).
+      OUTCOME_MAP has no key and emit() never asserts them — review C3). -> E24 R2.
 - [ ] Artifact envelope (Sprint 2): runId + timestamps + engine versions +
       config hash on every stage output; strict loader; reports-dir clean
-      policy; per-URL override application trace.
+      policy; per-URL override application trace. -> E13 (run-manifest, strict
+      loader, exit 4) + E14 (crash-safe journal); engine versions per view -> E11 R7.
 
 ## Existing project roadmap (from `CHANGELOG.md` `[Unreleased]`)
 
@@ -212,7 +263,9 @@ Carry-forward spawned by the above:
       past automation's ceiling. An auditor-editable results file merged by
       summarize (-> combined Step 5 record, `earl:manual` assertions, portal
       cards, report-builder drafts) is the single biggest product unlock.
-      Review C6.
+      Review C6. -> E25 (recommended scope extension; E21 builds its SC-keyed
+      foundation, and v2.0 removes automated `passed`, so this becomes the next
+      critical product need).
 - [ ] Baseline/regression mode — diff successive audits to surface new and
       resolved findings between runs.
 - [ ] Plugin API — public extension surface for custom reporters and crawl
@@ -229,6 +282,8 @@ Carry-forward spawned by the above:
       `actIds` on 56/104 rules via `axe.getRules()` — derive the map from axe
       metadata in `scripts/refresh-rule-maps.mjs` instead of expanding by hand,
       and add a CI drift check (map generated against 4.11.2; installed 4.11.3).
+      -> E16 R6: derive ACT ids from `axe.getRules()` at runtime and retire the stub
+      refresh script (VERD-12: the vendored map contradicts axe's own `actIds`).
 - [x] `tool-identity` propagation into Pino log base bindings (currently stamped
       on emitted artefacts only).
       _Done 2026-06-12 (maintenance pass): tool/toolVersion/axeCore on every
@@ -238,7 +293,11 @@ Carry-forward spawned by the above:
 ## Consumer-side notes (tracked here until moved to their boards)
 
 - myweb-report-builder: accept or version `notTested` in the outcome enum;
-  derive draft finding-ID prefix from site (hardcoded `LE-` today); add a
-  draft-mode to `validate:report` (drafts validate against DraftReportSchema).
+  derive draft finding-ID prefix from site (hardcoded `LE-` today). _(The
+  draft-mode request is stale: the consumer now has `--allow-draft`. Its
+  DraftReportSchema has drifted since vendoring (REPB-01 -> E20 R2).)_
 - myaccess-portal: publish `scan-ingestion.types.ts` as the contract the
   toolkit vendors; consider surfacing the `scoreSource` rewrite as a warning.
+- The full consumer change requests (including the v2.0 release gate:
+  show "awaiting manual review" instead of a fallback score) move to
+  `docs/consumer-change-requests.md` in E20 R5.
