@@ -39,7 +39,8 @@
     "bin/",
     "src/",
     "schemas/",
-    "configs/",
+    "configs/example-*.json",
+    "configs/legacy-events.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -61,6 +62,8 @@
     "test:watch": "node --test --watch 'test/unit/**/*.test.mjs'",
     "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec 'test/unit/**/*.test.mjs' 'test/e2e/**/*.test.mjs'",
     "gen:types": "node scripts/gen-types.mjs",
+    "check:pack": "node scripts/check-pack.mjs",
+    "prepublishOnly": "node scripts/check-pack.mjs",
     "prepare": "husky || true"
   },
   "dependencies": {

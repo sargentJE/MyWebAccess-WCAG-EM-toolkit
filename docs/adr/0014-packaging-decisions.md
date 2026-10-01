@@ -90,6 +90,14 @@ This excludes `test/`, `docs/`, `.github/`, editor configs, and
 fixture data from the published tarball. `npm pack --dry-run`
 verifies the inclusion list before publish.
 
+_Amendment 2026-10-01 (SEC-08):_ an npm `files` entry overrides `.gitignore`,
+so `"configs/"` would ship every local, gitignored per-engagement config,
+and those can hold auth secrets. `files` now lists only the committed configs
+(`configs/example-*.json`, `configs/legacy-events.json`). `scripts/check-pack.mjs`
+is the guard: it fails if `npm pack` would publish any file not committed at
+HEAD, or one with uncommitted changes. It runs as `prepublishOnly`, in CI with
+planted canary configs, and in ADR-0015's publish flow.
+
 ### 4. Remove `private: true`
 
 Set `"private": false` (or remove the field) in the release commit
