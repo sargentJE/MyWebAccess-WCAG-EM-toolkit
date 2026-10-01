@@ -27,7 +27,9 @@ spikes/web-bot-auth/.keys/
 # Local-only, per-engagement audit configs. The committed configs are the
 # example-*.json templates + legacy-events.json; anything else under configs/ is a
 # local audit instance and is kept out of git by convention.
-configs/*.json
+# Any depth and any .json* variant (.jsonc, .json5, .json.bak): local copies of
+# client configs must never be committed (2026-09 review SEC-08).
+configs/**/*.json*
 !configs/example-*.json
 !configs/legacy-events.json
 

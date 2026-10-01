@@ -55,6 +55,16 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # Fails if `npm pack` would ship anything not committed at HEAD (SEC-08).
+      # A clean checkout holds no local configs, so plant untracked canaries
+      # first: if the `files` allowlist regresses, the guard sees them.
+      - name: Package contents guard
+        run: |
+          mkdir -p configs/zz-nested
+          echo '{}' > configs/zz-canary-client.json
+          echo '{}' > configs/zz-nested/canary.json
+          npm run check:pack
+
       # Non-blocking: surfaces known vulnerabilities without failing the build.
       - name: npm audit (production only, non-blocking)
         run: npm audit --omit=dev || true

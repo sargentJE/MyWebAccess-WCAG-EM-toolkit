@@ -6,6 +6,75 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
 
 ## [Unreleased]
 
+Work toward **v2.0.0**: the 2026-09 gap remediation programme
+([docs/plans/2026-10-gap-remediation-programme.md](docs/plans/2026-10-gap-remediation-programme.md)),
+which closes the findings of the
+[2026-09-30 gap review](docs/reviews/2026-09-toolkit-gap-review.md) at their root.
+Entries land here with each epic. Breaking changes are collected under a
+BREAKING / Migration heading before release.
+
+### Roadmap (deferred work, ADR-0001)
+
+- Portal contract source-of-truth — replace the empirically-derived
+  `portal-canonical-scan.schema.json` with the portal's published schema plus a
+  `contractVersion` negotiated at upload, so drift is caught at the boundary
+  rather than via a failed upload. (`reporting.validateExports` now gates
+  against the vendored copy at write time; the published-schema swap remains.)
+- Per-rule remediation library — seed remediation templates keyed by axe
+  `ruleId` so `portal-export` cards arrive pre-populated (the portal's
+  "actionable" gate currently needs manual remediation).
+- `occurrenceCount` semantics — reconcile/rename the distinct-element count
+  (`portal-export`) vs the Σ-`nodesCount` shown in `summary.json`/html/markdown.
+  (Documented in the counts glossary above; the rename/reconcile remains.)
+- Baseline/regression mode — diff successive audits to surface new and
+  resolved findings between runs.
+- Plugin API — public extension surface for custom reporters and crawl
+  strategies (ADR-0012 scopes the internal-only v1.0 boundary).
+- Authenticated SPA crawler — `auth.setupScript` runtime execution
+  pending security review (see carry-forward below).
+- Localisation — i18n for CLI output and reporter artefacts.
+
+## [1.2.0] - 2026-10-01
+
+Baseline release of the Sprint 1 "truthful outputs" work and the E1-E8
+"truthful coverage" and browser-transport work (merged 2026-06), cut before the
+v2.0 remediation programme begins. Read the
+**known limitations** advisory before client audits:
+[user manual section 8](docs/guides/user-manual.md#8-known-limitations-in-120--read-before-client-audits).
+
+### BREAKING / Migration (from 1.1.0)
+
+CLI subcommands, flags, exit codes and artefact file names are unchanged; one
+artefact moves (`sample.json`, below). Several artefact **values** change meaning to stop over-claiming. ADR-0011
+records this as a one-off exception to shipping such changes only in a
+major version.
+
+- **`samplePagesScanned` counts pages, not page-views.** 1.1.0 counted
+  (page x viewport) entries including failures. The 1.1.0 figure equals
+  `executionHealth.pageViewsScanned + pageViewsFailed + pageViewsUnauditable`,
+  plus any redirect duplicates folded into their target.
+- **Pages that could not be audited no longer count** (E1). Challenge and
+  empty pages are no longer counted in findings, coverage counters or
+  criterion verdicts. Read `wcag-em-summary.json` `automatedCoverage` and
+  `summary.executionHealth` for what was excluded and why.
+- **`sample.json` moved to `<out-dir>/sample.json`.** It previously resolved
+  against the working directory.
+- **Final URLs appear in place of requested ones** (E4). `findings[].pages`,
+  EARL `earl:subject` and JUnit testcase names now carry the post-redirect
+  URL.
+- **Samples differ from 1.1.0 for the same `randomSeed`** (E2), because
+  sitemap seeding is now fair across leaf sitemaps and deterministic. 1.1.0
+  samples do not reproduce.
+- **`incompleteFindings` gain fields and a sort order** (additive).
+  Consumers that diff whole objects will see `examples`, `occurrences` and
+  `targets`, sorted `[impact desc, ruleId asc]`.
+- **`reporting.validateExports` defaults to `warn`.** It validates the
+  portal-export and report-builder-starter outputs at write time. Both
+  reporters are new since 1.1.0 and opt-in, so 1.1.0 configs are unaffected
+  unless they enable them.
+- **`reporting.markdownReport` remains deprecated.** Its removal moves to
+  2.0.0 (ADR-0015 amended).
+
 ### Changed
 
 - **Could-not-audit pages no longer pollute the audit (E1, ADR-0017).** Pages
@@ -14,6 +83,8 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   (`pageOutcome`) and excluded from findings, coverage counters, and per-SC
   verdicts at **every** consumer (summarize, the WCAG-EM inversion, and the
   portal-export / report-builder / html reporters), not just `summary.json`.
+  _Correction (2026-10-01): this holds for page scans. Process states are not
+  yet covered (PROC-01, PROC-02); see the known-limitations advisory._
   _Breaking for diff-based consumers:_ such pages drop out of findings and stop
   incrementing `pageViewsScanned` / `samplePagesScanned`. To avoid trading false
   findings for false **passes**, `wcag-em-summary.json` gains an
@@ -68,6 +139,15 @@ names `CHANGELOG.md [Unreleased]` as the canonical home for deferred work.
   auto-audit" is now an explicit, actionable hand-off rather than an absence.
 
 ### Added
+
+- **Build provenance in every artefact's `tool` stamp.** `tool` now always
+  carries five keys: `name`, `version`, `axeCore`, `gitSha` and `dirty`. When
+  the toolkit runs from a git checkout, `gitSha` is that checkout's HEAD and
+  `dirty` says whether tracked files differ from it. Otherwise both are
+  `null`. The markdown header and HTML banner show the version as
+  `1.2.0+<sha7>[.dirty]` (SemVer build metadata). Consumers that compare
+  `tool` objects exactly should expect the two new keys; the portal and
+  report-builder exports map tool fields individually and are unaffected.
 
 - **Pluggable browser transport (E8, opt-in, ADR-0020).** New `scan.browser`
   config (`engine` `playwright`|`patchright`, `cdpEndpoint`, `channel`,
@@ -230,27 +310,6 @@ Four numbers describe scan output; they answer different questions:
   count) and NOT deduplicated across viewports.
 - **instances** (`portal-export rawFindings[].occurrenceCount`) — distinct
   affected elements, deduped by (url, selector) across viewports.
-
-### Roadmap
-
-- Portal contract source-of-truth — replace the empirically-derived
-  `portal-canonical-scan.schema.json` with the portal's published schema plus a
-  `contractVersion` negotiated at upload, so drift is caught at the boundary
-  rather than via a failed upload. (`reporting.validateExports` now gates
-  against the vendored copy at write time; the published-schema swap remains.)
-- Per-rule remediation library — seed remediation templates keyed by axe
-  `ruleId` so `portal-export` cards arrive pre-populated (the portal's
-  "actionable" gate currently needs manual remediation).
-- `occurrenceCount` semantics — reconcile/rename the distinct-element count
-  (`portal-export`) vs the Σ-`nodesCount` shown in `summary.json`/html/markdown.
-  (Documented in the counts glossary above; the rename/reconcile remains.)
-- Baseline/regression mode — diff successive audits to surface new and
-  resolved findings between runs.
-- Plugin API — public extension surface for custom reporters and crawl
-  strategies (ADR-0012 scopes the internal-only v1.0 boundary).
-- Authenticated SPA crawler — `auth.setupScript` runtime execution
-  pending security review (see carry-forward below).
-- Localisation — i18n for CLI output and reporter artefacts.
 
 ## [1.1.0] - 2026-05-14
 

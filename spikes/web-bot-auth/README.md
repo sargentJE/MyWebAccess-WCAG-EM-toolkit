@@ -185,8 +185,17 @@ Dashboard → **Manage Account → Configurations → Bot Submission Form** → 
 (User-Agent values optional). Purpose text:
 
 > Per-engagement automated accessibility auditor (WCAG-EM) for the MyWeb Access
-> service. Signs only authorized client-audit traffic; respects robots.txt; local-only
-> tooling, no AI. Identity is cryptographic (Web Bot Auth), not evasion.
+> service. Signs only authorized client-audit traffic; local-only tooling, no AI.
+> Identity is cryptographic (Web Bot Auth), not evasion.
+
+Describe only behaviour that is implemented. The toolkit does not read
+`robots.txt` yet, so do not claim robots.txt respect. Do not claim that crawls stay
+inside the agreed scope either: following redirects can currently take a crawl
+outside the configured scope until remediation epic E18 R3 re-checks every final
+URL. Opt-in
+`respectRobotsTxtFile` lands in remediation epic E18 R7, and the default for signed
+traffic is decided there (ADR-0021). If a submission already went out with the
+earlier "respects robots.txt" wording, correct it with Cloudflare.
 
 _Done when:_ the submission is accepted/queued.
 

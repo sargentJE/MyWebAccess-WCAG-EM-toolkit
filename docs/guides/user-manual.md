@@ -163,3 +163,66 @@ exist for. A manual-result ingestion flow (recording your manual outcomes back
 into the per-SC summary) is on the project roadmap; until then the combined
 record is assembled in your reporting tool — see the
 [integrations guide](./integrations.md).
+
+## 8. Known limitations in 1.2.0 — read before client audits
+
+The 2026-09-30 review
+([docs/reviews/2026-09-toolkit-gap-review.md](../reviews/2026-09-toolkit-gap-review.md))
+verified the defects below. Each is fixed at its root in the v2.0 remediation
+programme
+([docs/plans/2026-10-gap-remediation-programme.md](../plans/2026-10-gap-remediation-programme.md)).
+Until your release includes the fix, apply the operator check given for it.
+These checks contain the risk; they do not fix it.
+
+- **Expired auth sessions read as complete, passing audits** (SEC-01; fix:
+  E11). If the saved session is no longer live, protected URLs redirect to the
+  login page. The login page is then audited in their place, and coverage is
+  reported as complete. _Check:_ recapture `storageState` immediately before
+  the run. Afterwards, confirm that each protected URL's screenshot and
+  `axe-results.json` `finalUrl`/`title` show the protected content, not a
+  login form.
+- **`passed` and `inapplicable` criterion outcomes are automated-only**
+  (CAP-01; fix: E21). `passed` means at least one mapped axe rule passed on an audited page;
+  `inapplicable` means the mapped rules found nothing to test. Neither means
+  the criterion is met. _Check:_ treat every criterion that is not
+  `failed` as requiring manual evaluation, not only the `notTested` list.
+- **A rule profile can silently run nothing** (SCAN-04, OPS-01; fix: E13,
+  E17). A mistyped `scan.axe.withTags` value runs zero rules and still reports
+  complete coverage. Setting `withTags` also replaces the whole default
+  profile. _Check:_ confirm that `passes` counts in `axe-results.json` are
+  non-zero, and list every tag you need explicitly.
+- **Scope is not enforced after redirects, and `allowed-hosts` does not crawl
+  the extra hosts** (DISC-01, DISC-02; fix: E18). A `rootUrl` that redirects to
+  another host (for example apex to `www`) produces a one-page inventory and
+  still exits 0. _Check:_ set `rootUrl` to the final URL. Add pages on extra
+  hosts through `sample.structuredManual`. Review
+  `inventory-metadata.json` before sampling.
+- **Error pages and feeds can be audited as content** (DISC-03, SCAN-01; fix:
+  E11, E18). 404/500 pages and RSS/JSON links can enter the inventory, and they
+  produce false failures (for example 2.4.2 and 3.1.1). _Check:_ review the
+  inventory for error and feed URLs, and exclude them with
+  `crawl.excludeUrlPatterns`.
+- **Secrets can leave their scope** (PROC-08, SEC-02, SEC-06; fix: E12). A
+  failed process `fill` step can write its value into summaries and exports.
+  `auth.extraHttpHeaders` and `httpCredentials` are sent to every origin the
+  page loads, including third parties. Credentials embedded in URLs are
+  persisted. _Check:_ use test accounts and non-secret values for process
+  fills, use only non-secret identifying headers, and never put credentials in
+  URLs.
+- **Exports can mislead** (REPB-01, REPB-02; fix: E13, E20).
+  `report-builder-draft.json` does not validate against the report-builder's
+  current schema. A run that audited zero pages exports a payload the portal
+  scores at 100%. _Check:_ confirm Scan health and `automatedCoverage` before
+  uploading, and do not rely on the draft until the fix ships.
+- **Process results need review** (PROC-03, PROC-06, VERD-06; fix: E11, E19).
+  Process-state axe runs ignore `scan.axe` configuration. Findings are
+  attributed to the process start URL. States captured after a failed step
+  still feed criterion outcomes. The `blank-submit`/`partial-submit` patterns
+  click the first submit button on the page, often the site search. _Check:_
+  use explicit `steps` with a form-scoped submit selector, and read
+  `process-results.json` before trusting process outcomes.
+- **Interrupted or re-run pipelines** (SCAN-02, SCAN-03, STRESS-04; fix: E13,
+  E14). A hung page can stall the scan indefinitely, a crash loses every scan
+  result, and re-running `summarize` after re-sampling can merge stale results.
+  _Check:_ after any interruption or re-sample, re-run the full `audit` into a
+  fresh `--out-dir`.

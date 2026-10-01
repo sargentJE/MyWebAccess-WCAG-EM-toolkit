@@ -58,6 +58,10 @@ deprecated fields.
 Layer 4 (replaced by `reporting.reporters: ['markdown']`). The
 runtime emits `warnLegacyAliasResolved` when the old field is
 present. It will be removed in the first post-v1.0 minor release.
+_Amendment 2026-10-01:_ the removal moves to **2.0.0**. 1.1.0 did not
+remove it, and 1.2.0 is a baseline release of already-merged work. The removal
+lands in remediation epic E17 R5 (a load error with a migration note), and the
+`[2.0.0]` Migration guide (E16 R9) records it.
 
 ### Publish flow
 
@@ -65,9 +69,14 @@ present. It will be removed in the first post-v1.0 minor release.
 npm version <major|minor|patch>   # bumps package.json + package-lock.json + git tag
 npm run format:check && npm run lint && npm run typecheck && npm test
 npm pack --dry-run                # verify tarball contents against files[] whitelist
+npm run check:pack                # fail if anything packed is not committed at HEAD (SEC-08)
 npm publish --dry-run             # smoke-check registry interaction
 npm publish                       # publish to npm
 ```
+
+`npm run check:pack` is explicit because the same guard's `prepublishOnly`
+hook is skipped by `npm publish --ignore-scripts`, by `ignore-scripts=true` in
+an npmrc, and when publishing a tarball (amendment 2026-10-01).
 
 `npm version` creates the git tag automatically. The tag triggers the
 CI workflow, which runs the full gate as a final safety net.

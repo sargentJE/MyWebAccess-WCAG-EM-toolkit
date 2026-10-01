@@ -21,7 +21,7 @@ import path from 'node:path';
 import os from 'node:os';
 import * as htmlReporter from '../../src/reporters/html.mjs';
 import { listReporters } from '../../src/reporters/index.mjs';
-import { TOOL_IDENTITY } from '../../src/lib/version.mjs';
+import { TOOL_IDENTITY, formatVersionLabel } from '../../src/lib/version.mjs';
 
 // SECTION: Helpers
 
@@ -79,7 +79,10 @@ test('html reporter: emits tool banner + heading + run summary table', async (t)
   await htmlReporter.emit(baseSummary(), ctx);
   const got = await fs.readFile(path.join(reportsDir, 'summary.html'), 'utf8');
   assert.match(got, /<!DOCTYPE html>/);
-  assert.match(got, new RegExp(`Tool: ${TOOL_IDENTITY.name}`));
+  assert.ok(
+    got.includes(`Tool: ${TOOL_IDENTITY.name} ${formatVersionLabel(TOOL_IDENTITY)} (axe-core`),
+    'banner carries the build-provenance version label',
+  );
   assert.match(got, /<h1>Accessibility scan summary<\/h1>/);
   assert.match(got, /<h2>Run summary<\/h2>/);
   assert.match(got, /<th>Inventory count<\/th><td>5<\/td>/);
