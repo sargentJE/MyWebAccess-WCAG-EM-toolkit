@@ -55,6 +55,15 @@ The v1.0 release includes the full output of Layers 0–5:
 - **Config schema**: additive changes (new optional fields) are minor
   releases. Removing or renaming a field follows the deprecation
   policy in ADR-0015.
+- _Amendment 2026-10-01 (one-off exception, 1.2.0):_ the E1-E8 work changes
+  the meaning of some artefact **values** (for example `samplePagesScanned`
+  counts pages, and pages that could not be audited no longer count toward
+  coverage). Flags and exit codes are unchanged, and so are file names,
+  except that `sample.json` moves under `--out-dir`. It ships in a
+  minor release with a BREAKING / Migration note: the changes correct outputs
+  that over-claimed coverage, and holding them for 2.0 would keep those
+  claims in circulation. From v2.0, artefact shapes carry a `schemaVersion`
+  (remediation epic E10), and value-semantics changes follow semver.
 
 ## Consequences
 

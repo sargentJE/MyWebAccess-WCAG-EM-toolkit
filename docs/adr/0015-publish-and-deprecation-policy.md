@@ -58,6 +58,10 @@ deprecated fields.
 Layer 4 (replaced by `reporting.reporters: ['markdown']`). The
 runtime emits `warnLegacyAliasResolved` when the old field is
 present. It will be removed in the first post-v1.0 minor release.
+_Amendment 2026-10-01:_ the removal moves to **2.0.0**. 1.1.0 did not
+remove it, and 1.2.0 is a baseline release of already-merged work. The removal
+lands in remediation epic E17 R5 (a load error with a migration note), and the
+`[2.0.0]` Migration guide (E16 R9) records it.
 
 ### Publish flow
 

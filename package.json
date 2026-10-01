@@ -1,6 +1,6 @@
 {
   "name": "wcag-em-a11y-toolkit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "CLI toolkit for the automated layer of a WCAG-EM-aligned accessibility audit workflow.",
   "license": "MIT",
