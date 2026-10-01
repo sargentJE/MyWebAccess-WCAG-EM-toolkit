@@ -50,7 +50,12 @@ const ABOUT_HTML = `<!doctype html>
       <h2>How it behaves</h2>
       <ul>
         <li>Audits only sites we are authorized and contracted to assess.</li>
-        <li>Respects <code>robots.txt</code>.</li>
+        <li>
+          Is configured for each engagement to the scope agreed with the site owner.
+          It does not yet read <code>robots.txt</code>, and following redirects can
+          currently take a crawl outside that configured scope; fixes for both are in
+          progress.
+        </li>
         <li>Runs locally and uses no AI.</li>
         <li>
           Identifies itself cryptographically via Web Bot Auth (RFC 9421 HTTP Message

@@ -166,6 +166,12 @@ default and bypass explicitly off the table:
 - robots.txt etiquette vs. audit completeness — Verified Bots policy expects
   robots.txt respect; an accessibility audit may need disallowed paths. Reconcile
   (e.g. authorized-audit exception documented with the client).
+  _Amendment 2026-10-01 (SEC-10):_ public identity text must describe only
+  implemented behaviour. The toolkit does not read robots.txt yet, so the bot page
+  and the submission text no longer claim it. Remediation epic E18 R7 adds opt-in
+  `respectRobotsTxtFile` and settles the default for signed traffic here. Nor may
+  the text claim that crawls stay inside the agreed scope: redirects are not
+  re-checked against scope until E18 R3 (DISC-02).
 - UA / rendering-parity verification method (the fidelity guardrail above).
 - Whether interactive CDP clearance (layer 4) is worth building once registration
   exists, or whether `run-cdp-audit.sh` + allowlist suffice.
