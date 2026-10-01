@@ -156,6 +156,13 @@ real findings — see the config guide's `scan.browser` transport section and
 - it does **not** fully automate authenticated or highly dynamic flows without tuning
 - it does **not** remove the need for manual testing with keyboard, AT, zoom/reflow, and process walkthroughs
 
+**Known limitations in 1.2.0.** Verified defects remain in 1.2.0. They include
+expired auth sessions that read as complete audits, and automated-only
+`passed` criterion outcomes. Each is scheduled for a root fix in v2.0. Until
+then, apply the operator checks in the
+[user manual §8](./docs/guides/user-manual.md#8-known-limitations-in-120--read-before-client-audits)
+before relying on a client audit.
+
 ## Folder guide
 
 | Path                 | Purpose                                         |
