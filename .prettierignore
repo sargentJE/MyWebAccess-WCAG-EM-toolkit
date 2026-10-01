@@ -27,6 +27,10 @@ src/types/config.d.ts
 # rest of the file's prose is also tightly hand-laid for diff readability.
 src/reporters/html.mjs
 
+# Verbatim, path-sanitised probe transcripts from the 2026-09 gap review. They are
+# evidence records: reformatting would alter the recorded commands and outputs.
+docs/reviews/2026-09-probes/
+
 # Phase-0 Web Bot Auth feasibility spike — self-contained throwaway with its own
 # pinned deps; not part of the toolkit and not subject to repo style. See
 # spikes/web-bot-auth/README.md.
